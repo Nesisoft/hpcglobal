@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HPC Global — Website Content Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --purple:#3B1278;--purple-deep:#210A4A;--purple-mid:#5A2DAF;
+  --gold:#C9A84C;--gold-light:#E2C46A;--gold-pale:#F5E9C4;
+  --cream:#FBF7EE;--white:#fff;--ink:#1A0E30;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Outfit',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-b);background:var(--cream);color:var(--ink);line-height:1.6;}
+a{text-decoration:none;color:inherit;}
+
+/* COVER */
+.cover{
+  background:var(--purple-deep);
+  min-height:220px;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;text-align:center;padding:48px 32px;
+  border-bottom:4px solid var(--gold);
+  position:relative;overflow:hidden;
+}
+.cover::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 50%,rgba(90,45,175,.4),transparent 55%),
+              radial-gradient(circle at 75% 30%,rgba(201,168,76,.1),transparent 40%);
+}
+.cover-badge{
+  position:relative;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:12px;
+}
+.cover h1{
+  position:relative;font-family:var(--font-d);font-size:clamp(1.8rem,4vw,2.8rem);
+  font-weight:400;color:var(--white);margin-bottom:8px;
+}
+.cover p{position:relative;font-size:14px;color:rgba(255,255,255,.5);max-width:520px;}
+
+/* LAYOUT */
+.container{max-width:960px;margin:0 auto;padding:0 24px;}
+
+/* TOC */
+.toc{background:var(--purple-deep);padding:32px;border-radius:8px;margin:40px auto;max-width:960px;}
+.toc h2{font-family:var(--font-d);font-size:1.3rem;color:var(--gold);margin-bottom:20px;font-weight:400;}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+.toc-item{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.15);
+  border-radius:5px;padding:10px 14px;cursor:pointer;
+  transition:border-color .2s,background .2s;
+  color:rgba(255,255,255,.7);font-size:13px;
+}
+.toc-item:hover{border-color:var(--gold);background:rgba(201,168,76,.08);color:var(--gold-light);}
+.toc-num{
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--gold);flex-shrink:0;
+}
+
+/* PAGE SECTION */
+.page-section{
+  border:1px solid rgba(59,18,120,.1);border-radius:10px;
+  overflow:hidden;margin-bottom:32px;
+  background:var(--white);
+}
+.page-header{
+  background:var(--purple);padding:24px 28px;
+  display:flex;align-items:flex-start;gap:16px;
+}
+.page-num{
+  font-family:var(--font-d);font-size:2rem;color:rgba(201,168,76,.35);
+  font-weight:400;line-height:1;flex-shrink:0;min-width:36px;
+}
+.page-header-text h2{
+  font-family:var(--font-d);font-size:1.4rem;color:var(--white);
+  font-weight:400;margin-bottom:4px;
+}
+.page-header-text p{font-size:13px;color:rgba(255,255,255,.55);line-height:1.6;}
+.page-url{
+  display:inline-block;background:rgba(201,168,76,.15);
+  border:1px solid rgba(201,168,76,.25);border-radius:3px;
+  padding:3px 10px;font-size:11px;color:var(--gold);letter-spacing:.06em;
+  margin-top:8px;
+}
+.page-body{padding:28px;}
+
+/* BLOCKS */
+.block{margin-bottom:24px;}
+.block:last-child{margin-bottom:0;}
+.block-label{
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);font-weight:500;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.block-label::after{content:'';flex:1;height:1px;background:rgba(201,168,76,.2);}
+
+/* COMPONENTS LIST */
+.comp-list{display:flex;flex-direction:column;gap:8px;}
+.comp-item{
+  display:flex;gap:12px;align-items:flex-start;
+  background:#F9F7FD;border:1px solid rgba(59,18,120,.07);
+  border-radius:6px;padding:12px 14px;
+}
+.comp-icon{
+  width:32px;height:32px;border-radius:6px;
+  background:var(--purple-deep);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.comp-name{font-size:14px;font-weight:500;color:var(--purple-deep);margin-bottom:3px;}
+.comp-desc{font-size:13px;color:#6A5A8A;line-height:1.6;}
+.comp-tag{
+  display:inline-block;font-size:10px;letter-spacing:.06em;
+  background:#EDE8F8;color:var(--purple);padding:2px 8px;border-radius:3px;margin-top:4px;
+}
+.comp-tag.required{background:rgba(201,168,76,.15);color:#7A5500;}
+.comp-tag.optional{background:#EEF8F0;color:#2A6A3A;}
+
+/* CONTENT COLUMNS */
+.cols-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.cols-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.content-box{
+  background:#F9F7FD;border:1px solid rgba(59,18,120,.07);
+  border-radius:6px;padding:16px;
+}
+.content-box h4{font-size:13px;font-weight:500;color:var(--purple-deep);margin-bottom:8px;}
+.content-box ul{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.content-box ul li{
+  font-size:13px;color:#5A4A7A;
+  padding-left:14px;position:relative;line-height:1.5;
+}
+.content-box ul li::before{content:'–';position:absolute;left:0;color:var(--gold);}
+
+/* HERO DETAIL */
+.hero-slide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.hero-slide{
+  border-radius:6px;overflow:hidden;border:1px solid rgba(59,18,120,.1);
+}
+.hero-slide-header{
+  padding:14px 16px;display:flex;align-items:center;gap:10px;
+}
+.hero-slide-header.s1{background:var(--purple-deep);}
+.hero-slide-header.s2{background:var(--purple);}
+.hero-slide-header.s3{background:var(--purple-mid);}
+.slide-num{
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(201,168,76,.2);border:1px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--gold);flex-shrink:0;
+}
+.slide-title{font-size:13px;font-weight:500;color:var(--white);}
+.slide-sub{font-size:11px;color:rgba(255,255,255,.5);}
+.hero-slide-body{background:var(--white);padding:14px 16px;}
+.hero-slide-body ul{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.hero-slide-body ul li{font-size:12.5px;color:#5A4A7A;padding-left:14px;position:relative;}
+.hero-slide-body ul li::before{content:'→';position:absolute;left:0;color:var(--gold);font-size:11px;}
+
+/* TICKER */
+.ticker-demo{
+  background:var(--gold);padding:10px 20px;border-radius:5px;
+  display:flex;align-items:center;gap:12px;overflow:hidden;
+  margin:12px 0;
+}
+.ticker-label{
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--purple-deep);font-weight:600;white-space:nowrap;
+}
+.ticker-sep{width:1px;height:16px;background:rgba(59,18,120,.2);}
+.ticker-text{
+  font-size:12.5px;color:var(--purple-deep);
+  white-space:nowrap;overflow:hidden;
+  animation:ticker 18s linear infinite;
+}
+@keyframes ticker{0%{transform:translateX(0%)}100%{transform:translateX(-60%)}}
+
+/* NOTE BOX */
+.note{
+  background:rgba(201,168,76,.08);border-left:3px solid var(--gold);
+  border-radius:0 6px 6px 0;padding:12px 16px;
+  font-size:13px;color:#5A4A7A;line-height:1.7;
+  margin-top:12px;
+}
+.note strong{color:var(--purple-deep);}
+
+/* PRIORITY BADGE */
+.priority{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;letter-spacing:.08em;padding:3px 10px;border-radius:3px;
+  font-weight:500;
+}
+.p-must{background:#FDECEA;color:#B71C1C;}
+.p-high{background:#FFF8E1;color:#7A5500;}
+.p-nice{background:#EEF8F0;color:#2A6A3A;}
+
+/* SECTION DIVIDER */
+.section-group{margin:48px 0 20px;}
+.section-group h3{
+  font-family:var(--font-d);font-size:1.1rem;color:var(--purple-deep);
+  font-weight:400;letter-spacing:.04em;padding-bottom:8px;
+  border-bottom:2px solid rgba(59,18,120,.08);
+}
+
+/* RESPONSIVE */
+@media(max-width:640px){
+  .cols-2,.cols-3{grid-template-columns:1fr;}
+  .hero-slide-grid{grid-template-columns:1fr;}
+  .page-header{flex-direction:column;gap:8px;}
+  .toc-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-badge">HPC Global — Hopepress Chapel</div>
+  <h1>Website Content Plan</h1>
+  <p>A full page-by-page blueprint — every section, every component, every piece of content for hpcglobal.org</p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc container">
+  <h2>Pages covered in this plan</h2>
+  <div class="toc-grid">
+    <a class="toc-item" href="#p1"><div class="toc-num">1</div>Homepage</a>
+    <a class="toc-item" href="#p2"><div class="toc-num">2</div>About Us</a>
+    <a class="toc-item" href="#p3"><div class="toc-num">3</div>Leadership</a>
+    <a class="toc-item" href="#p4"><div class="toc-num">4</div>Services</a>
+    <a class="toc-item" href="#p5"><div class="toc-num">5</div>Sermons &amp; Media</a>
+    <a class="toc-item" href="#p6"><div class="toc-num">6</div>Events &amp; Calendar</a>
+    <a class="toc-item" href="#p7"><div class="toc-num">7</div>Give / Donate</a>
+    <a class="toc-item" href="#p8"><div class="toc-num">8</div>Ministries</a>
+    <a class="toc-item" href="#p9"><div class="toc-num">9</div>New Here?</a>
+    <a class="toc-item" href="#p10"><div class="toc-num">10</div>Prayer Requests</a>
+    <a class="toc-item" href="#p11"><div class="toc-num">11</div>Blog / Devotionals</a>
+    <a class="toc-item" href="#p12"><div class="toc-num">12</div>Gallery</a>
+    <a class="toc-item" href="#p13"><div class="toc-num">13</div>Contact &amp; Location</a>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════════════════════════════
+     PAGE 1 — HOMEPAGE
+════════════════════════════════════════════ -->
+<div class="section-group"><h3>Entry &amp; Core Pages</h3></div>
+
+<div class="page-section" id="p1">
+  <div class="page-header">
+    <div class="page-num">01</div>
+    <div class="page-header-text">
+      <h2>Homepage</h2>
+      <p>The church's digital front door. Must immediately communicate identity, create emotional connection, and direct every visitor type (first-timer, regular, online follower) to their next step.</p>
+      <span class="page-url">hpcglobal.org /</span>
+    </div>
+  </div>
+  <div class="page-body">
+
+    <div class="block">
+      <div class="block-label">Hero Section — Rotating Carousel</div>
+      <div class="hero-slide-grid">
+        <div class="hero-slide">
+          <div class="hero-slide-header s1">
+            <div class="slide-num">1</div>
+            <div><div class="slide-title">Identity Slide</div><div class="slide-sub">First-time visitor anchor</div></div>
+          </div>
+          <div class="hero-slide-body">
+            <ul>
+              <li>Church name + tagline ("Where Hope Meets Destiny")</li>
+              <li>One-line vision statement</li>
+              <li>Two CTAs: "I'm new here" (gold) + "Watch live" (outline)</li>
+              <li>Background: deep purple with geometric overlay</li>
+            </ul>
+          </div>
+        </div>
+        <div class="hero-slide">
+          <div class="hero-slide-header s2">
+            <div class="slide-num">2</div>
+            <div><div class="slide-title">Upcoming Event Slide</div><div class="slide-sub">Current / next major event</div></div>
+          </div>
+          <div class="hero-slide-body">
+            <ul>
+              <li>Event name + branded graphic/image</li>
+              <li>Date, time and timezone</li>
+              <li>Venue or "Online via Zoom"</li>
+              <li>CTA: "Register" or "Get reminder"</li>
+              <li>Auto-updates from Events database</li>
+            </ul>
+          </div>
+        </div>
+        <div class="hero-slide">
+          <div class="hero-slide-header s3">
+            <div class="slide-num">3</div>
+            <div><div class="slide-title">Latest YouTube Stream</div><div class="slide-sub">Most recent sermon / service</div></div>
+          </div>
+          <div class="hero-slide-body">
+            <ul>
+              <li>YouTube thumbnail (pulled via API)</li>
+              <li>Sermon title + preacher name</li>
+              <li>Date aired</li>
+              <li>CTA: "Watch now" → opens YouTube</li>
+              <li>Auto-refreshes when new video posted</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="note"><strong>Carousel behaviour:</strong> Auto-advances every 6 seconds. Dot/arrow navigation visible. On mobile, swipe-enabled. Identity slide always loads first. Pause on hover.</div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">Event Ticker (below hero)</div>
+      <div class="ticker-demo">
+        <span class="ticker-label">Upcoming</span>
+        <div class="ticker-sep"></div>
+        <span class="ticker-text">
+          🗓 Dominion Encounter — Every Sunday 9am GMT &nbsp;·&nbsp;
+          🎙 Prophetic &amp; Miracle — Fridays 6:30pm GMT &nbsp;·&nbsp;
+          🌐 Global Prophetic Highway — Sundays 9pm GMT / 4pm EST &nbsp;·&nbsp;
+          ✦ Special programme coming soon — stay connected
+        </span>
+      </div>
+      <div class="note">Gold band, scrolling text. Links to Events page. Updates automatically from Events database.</div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">Service Times Quick Bar</div>
+      <div class="cols-3">
+        <div class="content-box">
+          <h4>Dominion Encounter</h4>
+          <ul><li>Sundays 9am–11:30am GMT</li><li>Physical + YouTube Live</li><li>Link to full Services page</li></ul>
+        </div>
+        <div class="content-box">
+          <h4>Prophetic &amp; Miracle</h4>
+          <ul><li>Fridays 6:30pm–9pm GMT</li><li>Physical + YouTube Live</li><li>Link to full Services page</li></ul>
+        </div>
+        <div class="content-box">
+          <h4>Global Prophetic Highway</h4>
+          <ul><li>Sundays 9pm GMT / 4pm EST / 10pm BST</li><li>Zoom only — global</li><li>Zoom link CTA</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">About Snapshot</div>
+      <div class="comp-list">
+        <div class="comp-item">
+          <div class="comp-icon">✦</div>
+          <div>
+            <div class="comp-name">Ministry identity block</div>
+            <div class="comp-desc">2–3 sentences on who HPC Global is + the Vision &amp; Mission statements side by side. Link to full About page. Accompanied by a stat row: years in ministry, services per week, global reach.</div>
+            <span class="comp-tag required">Required</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">Featured Sections (cards grid)</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Card set A — Core actions</h4>
+          <ul>
+            <li>Watch sermons (→ Sermons page)</li>
+            <li>Upcoming events (→ Events page)</li>
+            <li>Give online (→ Give page)</li>
+            <li>Submit prayer request (→ Prayer page)</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Card set B — Community</h4>
+          <ul>
+            <li>New here? (→ New Visitor page)</li>
+            <li>Join a ministry (→ Ministries page)</li>
+            <li>Read devotionals (→ Blog page)</li>
+            <li>Contact us (→ Contact page)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">Latest Sermons Strip</div>
+      <div class="comp-list">
+        <div class="comp-item">
+          <div class="comp-icon">▶</div>
+          <div>
+            <div class="comp-name">3 most recent sermon cards</div>
+            <div class="comp-desc">Thumbnail, preacher name, title, date. "View all sermons" link at end. Pulls from Sermons database / YouTube API. Each card links directly to the sermon video.</div>
+            <span class="comp-tag required">Required</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">Give / Partner CTA Band</div>
+      <div class="comp-list">
+        <div class="comp-item">
+          <div class="comp-icon">🙏</div>
+          <div>
+            <div class="comp-name">Full-width giving banner</div>
+            <div class="comp-desc">Dark purple background. Short giving call to action. Mobile Money options listed visually (MTN, Telecel, AirtelTigo). "Give now" CTA button.</div>
+            <span class="comp-tag required">Required</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-label">Social &amp; YouTube Follow</div>
+      <div class="comp-list">
+        <div class="comp-item">
+          <div class="comp-icon">📡</div>
+          <div>
+            <div class="comp-name">Channel &amp; social links</div>
+            <div class="comp-desc">YouTube subscribe button for @prophetclottey. Facebook, Instagram, WhatsApp icons with follower counts (if public). Embedded latest YouTube video or live stream player.</div>
+            <span class="comp-tag optional">Optional — phase 2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PAGE 2 — ABOUT -->
+<div class="page-section" id="p2">
+  <div class="page-header">
+    <div class="page-num">02</div>
+    <div class="page-header-text">
+      <h2>About Us</h2>
+      <p>The full story of HPC Global — who they are, what they believe, and what drives the ministry. This is where trust is built.</p>
+      <span class="page-url">hpcglobal.org /about</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Page Hero</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🖼</div>
+          <div><div class="comp-name">Full-width hero banner</div>
+          <div class="comp-desc">Church name, tagline, and background photo of the congregation or sanctuary. Breadcrumb: Home → About.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Ministry Overview</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📖</div>
+          <div><div class="comp-name">Who we are — narrative text</div>
+          <div class="comp-desc">2–4 paragraphs telling the story of HPC Global: its founding, the heart behind the ministry, and what makes it distinctive. Written in warm, accessible language — not overly formal. Include the Apostolic Prophetic identity clearly.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Vision &amp; Mission — Dedicated Display</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Vision block</h4>
+          <ul>
+            <li>Large display heading: "Our Vision"</li>
+            <li>Full vision statement in Cormorant serif, italic</li>
+            <li>Key phrase highlighted in gold</li>
+            <li>Supporting scripture reference</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Mission block</h4>
+          <ul>
+            <li>Large display heading: "Our Mission"</li>
+            <li>Full mission statement</li>
+            <li>3 mission pillars pulled out as icons: Accept → Raise → Birth</li>
+            <li>Supporting scripture reference</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Core Values</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">✦</div>
+          <div><div class="comp-name">Values grid (4–6 values)</div>
+          <div class="comp-desc">Suggested values to confirm with leadership: The Word, Prayer &amp; Intercession, Prophetic Ministry, Community &amp; Belonging, Kingdom Influence, Signs &amp; Wonders. Each with an icon, name, and 1-sentence description.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Statement of Faith / Beliefs</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📜</div>
+          <div><div class="comp-name">Doctrinal statement</div>
+          <div class="comp-desc">What HPC Global believes: the Bible, the Trinity, salvation, the Holy Spirit, baptism, healing, the second coming, tithing. Accordion-style expandable sections so the page doesn't get too long. This builds credibility and helps serious seekers.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Our History</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🕐</div>
+          <div><div class="comp-name">Ministry timeline</div>
+          <div class="comp-desc">Key milestones in the church's history presented as a vertical timeline: founding year, first service, growth milestones, launch of online services, etc. Photos where available.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">CTA — Join the family</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">👋</div>
+          <div><div class="comp-name">Bottom CTA block</div>
+          <div class="comp-desc">Two buttons: "Plan your first visit" → New Here page, and "Watch a sermon" → Sermons page.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3 — LEADERSHIP -->
+<div class="page-section" id="p3">
+  <div class="page-header">
+    <div class="page-num">03</div>
+    <div class="page-header-text">
+      <h2>Leadership</h2>
+      <p>Introduces the pastoral team and key leaders. People connect with people — this page humanises the church.</p>
+      <span class="page-url">hpcglobal.org /leadership</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Senior Pastors — Feature Cards</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">👤</div>
+          <div><div class="comp-name">Prophet George Clottey — Full profile</div>
+          <div class="comp-desc">Professional photo (portrait). Full name + title. Bio: calling, background, ministry history, ministry focus. Signature quote or scripture. Social media links (YouTube @prophetclottey). Any published books or resources.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+        <div class="comp-item"><div class="comp-icon">👤</div>
+          <div><div class="comp-name">Lady Apostle Adelaide Clottey — Full profile</div>
+          <div class="comp-desc">Professional photo (portrait). Full name + title. Bio: calling, ministry focus, areas of teaching. Signature quote or scripture. Ministry links if applicable.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Ministry Team</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">👥</div>
+          <div><div class="comp-name">Team member cards</div>
+          <div class="comp-desc">Photo, name, role/title, and a short (2–3 sentence) bio for each ministry leader: worship leader, youth pastor, head of women's ministry, head of men's fellowship, prayer coordinator, etc. Confirm team member names with church.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Connect with Leadership</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">✉</div>
+          <div><div class="comp-name">Pastoral contact CTA</div>
+          <div class="comp-desc">A gentle invitation: "Would you like prayer or a word from our pastors?" — link to prayer request form or WhatsApp contact. Not an email the leaders read directly (to protect their time), but routed through the church office.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4 — SERVICES -->
+<div class="page-section" id="p4">
+  <div class="page-header">
+    <div class="page-num">04</div>
+    <div class="page-header-text">
+      <h2>Our Services</h2>
+      <p>A full breakdown of every weekly gathering — what to expect, when to come, and how to join online. This is a high-traffic page for first-timers.</p>
+      <span class="page-url">hpcglobal.org /services</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Per-service detail blocks (×3)</div>
+      <div class="cols-3">
+        <div class="content-box">
+          <h4>Dominion Encounter</h4>
+          <ul>
+            <li>Day &amp; time (with timezone)</li>
+            <li>Duration</li>
+            <li>What to expect (worship, Word, altar call)</li>
+            <li>Dress code guidance</li>
+            <li>Children's church availability</li>
+            <li>YouTube Live link</li>
+            <li>"Add to calendar" button</li>
+            <li>Location map embed</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Prophetic &amp; Miracle</h4>
+          <ul>
+            <li>Day &amp; time (with timezone)</li>
+            <li>Duration</li>
+            <li>What to expect (healing, prophecy, miracles)</li>
+            <li>Testimonies of what God has done</li>
+            <li>YouTube Live link</li>
+            <li>"Add to calendar" button</li>
+            <li>Location map embed</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Global Prophetic Highway</h4>
+          <ul>
+            <li>Day &amp; all timezones (GMT/EST/BST)</li>
+            <li>Zoom link (or "Get the link" form)</li>
+            <li>What to expect</li>
+            <li>How to join guide (step-by-step for non-tech users)</li>
+            <li>"Add to calendar" button</li>
+            <li>WhatsApp reminder opt-in</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">First-Time Visitor Guidance</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🗺</div>
+          <div><div class="comp-name">What to expect at HPC Global</div>
+          <div class="comp-desc">Short friendly guide: "When you arrive...", "What we wear...", "Our worship style...", "At the end of service...". Removes intimidation for first-timers. Link to full New Here page.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5 — SERMONS -->
+<div class="page-section" id="p5">
+  <div class="page-header">
+    <div class="page-num">05</div>
+    <div class="page-header-text">
+      <h2>Sermons &amp; Media</h2>
+      <p>The church's content library. One of the highest-traffic pages — members return weekly, and seekers binge. Extends the ministry far beyond Sunday.</p>
+      <span class="page-url">hpcglobal.org /sermons</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Featured / Latest Sermon</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">▶</div>
+          <div><div class="comp-name">Hero sermon embed</div>
+          <div class="comp-desc">Large YouTube embed for the most recent message. Sermon title, preacher, date, and series name. Pull quote from the message. Share buttons (WhatsApp, Facebook, copy link).</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Sermon Library</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Filter &amp; search options</h4>
+          <ul>
+            <li>Search by title or scripture</li>
+            <li>Filter by preacher</li>
+            <li>Filter by sermon series</li>
+            <li>Filter by service type (Dominion / Prophetic &amp; Miracle)</li>
+            <li>Filter by year/month</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Sermon card contents</h4>
+          <ul>
+            <li>YouTube thumbnail</li>
+            <li>Sermon title</li>
+            <li>Preacher name + role</li>
+            <li>Date preached</li>
+            <li>Series name (if applicable)</li>
+            <li>Scripture reference</li>
+            <li>Watch / Listen buttons</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Sermon Series</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📚</div>
+          <div><div class="comp-name">Series groupings</div>
+          <div class="comp-desc">Group sermons into named series (e.g. "Dominion Series", "The Word of Hope", "Prophetic Foundations"). Each series has a cover graphic, description, and episode count. Clicking opens a playlist view.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Live Stream Section</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🔴</div>
+          <div><div class="comp-name">Live stream embed + schedule</div>
+          <div class="comp-desc">YouTube embed that auto-shows live stream when active, or "Next live service" countdown when not. YouTube subscribe button. @prophetclottey channel link. Reminder signup (email or WhatsApp).</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Podcast / Audio</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🎙</div>
+          <div><div class="comp-name">Audio archive (Phase 2)</div>
+          <div class="comp-desc">If sermons are also distributed as audio, embed a podcast player or link to Spotify/Apple Podcasts. Many members prefer listening while commuting.</div>
+          <span class="comp-tag optional">Phase 2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 6 — EVENTS -->
+<div class="section-group"><h3>Engagement Pages</h3></div>
+
+<div class="page-section" id="p6">
+  <div class="page-header">
+    <div class="page-num">06</div>
+    <div class="page-header-text">
+      <h2>Events &amp; Calendar</h2>
+      <p>The church's programme board. Covers upcoming events, past event archives, and special programmes. Also feeds the homepage carousel and ticker.</p>
+      <span class="page-url">hpcglobal.org /events</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Upcoming Events</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🗓</div>
+          <div><div class="comp-name">Featured event hero card</div>
+          <div class="comp-desc">The single next major event displayed large at the top. Event graphic (branded image), name, date/time/timezone, location or online link, description, and a prominent Register / RSVP button.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+        <div class="comp-item"><div class="comp-icon">📋</div>
+          <div><div class="comp-name">Upcoming events list</div>
+          <div class="comp-desc">All future events as cards. Each card: event image, name, date, time, venue, short description, and RSVP/register button. Filter by type: Conference, Special Service, Youth, Women's, Online.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Monthly Calendar View</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📅</div>
+          <div><div class="comp-name">Interactive calendar</div>
+          <div class="comp-desc">Monthly grid view with all services and events marked. Click a date to see what's on. Colour-coded: purple = regular services, gold = special events, blue = online-only. "Add to my calendar" (Google / Apple / Outlook) on each event.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Past Events Archive</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🗂</div>
+          <div><div class="comp-name">Past events with media</div>
+          <div class="comp-desc">Previous events listed with photos or video recap links. Builds credibility — shows a history of active ministry. Links to Gallery page for full photo albums.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Event Detail Page (per event)</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Every event page should have</h4>
+          <ul>
+            <li>Full event title + banner image</li>
+            <li>Date, time, and all relevant timezones</li>
+            <li>Physical address or Zoom link</li>
+            <li>Full event description</li>
+            <li>Speaker / minister profile(s)</li>
+            <li>Registration / RSVP form</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Optional additions</h4>
+          <ul>
+            <li>Countdown timer to event</li>
+            <li>Share buttons (WhatsApp, Facebook)</li>
+            <li>YouTube live link (if streamed)</li>
+            <li>Post-event: sermon recording link</li>
+            <li>Post-event: photo gallery link</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 7 — GIVE -->
+<div class="page-section" id="p7">
+  <div class="page-header">
+    <div class="page-num">07</div>
+    <div class="page-header-text">
+      <h2>Give / Donate</h2>
+      <p>The online offering plate. Must be simple, trustworthy, and mobile-optimised. Mobile Money is the primary payment method for most Ghanaian givers.</p>
+      <span class="page-url">hpcglobal.org /give</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Page Introduction</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🙏</div>
+          <div><div class="comp-name">Giving call to action — spiritual framing</div>
+          <div class="comp-desc">Short statement: why giving matters, grounded in scripture (Malachi 3:10, 2 Cor 9:7, etc.). Not transactional — it should feel like an act of worship. Quote from Prophet Clottey on giving if available.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Giving Form</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Form fields</h4>
+          <ul>
+            <li>Amount (quick-select: GH₵20 / 50 / 100 / 200 / 500 + custom)</li>
+            <li>Giving category: Tithes / Offering / First Fruits / Building Fund / Missions / Pastoral Support</li>
+            <li>Payment method selector</li>
+            <li>Full name</li>
+            <li>Phone number (for MoMo prompt)</li>
+            <li>Email (optional, for receipt)</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Payment methods</h4>
+          <ul>
+            <li>MTN Mobile Money (MoMo API or manual number)</li>
+            <li>Telecel Cash</li>
+            <li>AirtelTigo Money</li>
+            <li>Bank transfer (account details shown)</li>
+            <li>Card payment (Paystack / Flutterwave — Phase 2)</li>
+            <li>International: PayPal / Wise (Phase 2, for diaspora)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note"><strong>Diaspora giving:</strong> Since HPC Global has an international following (EST / BST timezones), consider adding PayPal or Wise for overseas members in Phase 2.</div>
+    </div>
+    <div class="block">
+      <div class="block-label">Giving Categories Explained</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📖</div>
+          <div><div class="comp-name">Category descriptions</div>
+          <div class="comp-desc">Short 1-sentence explanation of each giving category so members understand what their money supports. Builds trust and encourages larger or more specific giving.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Recurring Giving</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🔁</div>
+          <div><div class="comp-name">Monthly giving option</div>
+          <div class="comp-desc">Allow members to set up a monthly standing amount — especially useful for tithers. Can be managed manually (via MoMo standing instructions) or via Paystack subscription in Phase 2.</div>
+          <span class="comp-tag optional">Phase 2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 8 — MINISTRIES -->
+<div class="page-section" id="p8">
+  <div class="page-header">
+    <div class="page-num">08</div>
+    <div class="page-header-text">
+      <h2>Ministries</h2>
+      <p>Every ministry arm of the church, each with its own identity, activities, and contact. Helps members find their place and serves as a directory of the church's work.</p>
+      <span class="page-url">hpcglobal.org /ministries</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Ministry Cards (one per arm)</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Suggested ministries to list</h4>
+          <ul>
+            <li>Youth Ministry</li>
+            <li>Women's Fellowship</li>
+            <li>Men's Fellowship</li>
+            <li>Children's Church</li>
+            <li>Worship &amp; Arts</li>
+            <li>Intercessory Prayer Team</li>
+            <li>Evangelism &amp; Outreach</li>
+            <li>Ushering &amp; Protocol</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Each ministry card should include</h4>
+          <ul>
+            <li>Ministry name + icon/logo</li>
+            <li>Leader name &amp; photo</li>
+            <li>Meeting day/time</li>
+            <li>Short description (vision + activities)</li>
+            <li>"Join this ministry" CTA</li>
+            <li>Contact (WhatsApp or email)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Individual Ministry Pages (Phase 2)</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📄</div>
+          <div><div class="comp-name">Per-ministry sub-page</div>
+          <div class="comp-desc">Deeper page for each ministry: full description, upcoming events, photo gallery, testimonies from members, and a join/contact form. Can be added progressively as each ministry grows its content.</div>
+          <span class="comp-tag optional">Phase 2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 9 — NEW HERE -->
+<div class="page-section" id="p9">
+  <div class="page-header">
+    <div class="page-num">09</div>
+    <div class="page-header-text">
+      <h2>New Here?</h2>
+      <p>The most important conversion page. A first-time visitor who lands here should leave feeling warmly welcomed, confident about visiting, and clear on their next step.</p>
+      <span class="page-url">hpcglobal.org /new-here</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Welcome Message</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">👋</div>
+          <div><div class="comp-name">Personal welcome from Prophet &amp; Lady Apostle Clottey</div>
+          <div class="comp-desc">A short, warm, personal video or written welcome message from the senior pastors. This humanises the church instantly. Even a 60-second video is transformative for first-time visitors. If video isn't available, a signed letter-style message with their photo.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">What to Expect</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>In-person visit</h4>
+          <ul>
+            <li>Arrival: what happens when you walk in</li>
+            <li>Worship style: expectant, Spirit-led</li>
+            <li>The Word: prophetic, practical preaching</li>
+            <li>Altar call / ministry time</li>
+            <li>Dress: smart casual, come as you are</li>
+            <li>Duration: ~2.5 hours (Dominion Encounter)</li>
+            <li>Parking / getting there</li>
+            <li>Children: where they go</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Online / first visit</h4>
+          <ul>
+            <li>How to join YouTube live stream</li>
+            <li>How to join Prophetic Highway on Zoom</li>
+            <li>How to participate in the chat</li>
+            <li>How to receive prayer online</li>
+            <li>How to give online</li>
+            <li>How to connect after the service</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">New Visitor Form</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📝</div>
+          <div><div class="comp-name">Connect card (digital)</div>
+          <div class="comp-desc">Name, phone, email, location (country/city for international), how they found HPC Global, and "What are you hoping to find?" (optional). On submission: automated WhatsApp or SMS welcome from the church, and a follow-up call from the welcome team within 48 hours.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Next Steps Guide</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">→</div>
+          <div><div class="comp-name">Journey steps (3-step visual)</div>
+          <div class="comp-desc">Step 1: Visit a service. Step 2: Connect with a ministry. Step 3: Get planted — join a cell group and become a member. Simple, clear, and aspirational.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 10 — PRAYER -->
+<div class="page-section" id="p10">
+  <div class="page-header">
+    <div class="page-num">10</div>
+    <div class="page-header-text">
+      <h2>Prayer Requests</h2>
+      <p>A ministry in itself. Allows members and visitors to submit requests, builds a culture of intercession, and shows the church genuinely cares.</p>
+      <span class="page-url">hpcglobal.org /prayer</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Prayer Request Form</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🙏</div>
+          <div><div class="comp-name">Submission form</div>
+          <div class="comp-desc">Fields: Name (optional — allow anonymous), contact (optional), prayer category (Health / Family / Finance / Work / Spiritual / Relationship / Other), request details (text area), and checkbox: "I'd like someone to call me." On submit: confirmation message + automated response saying the team will pray.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Testimony Wall (Phase 2)</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">✦</div>
+          <div><div class="comp-name">Public testimonies</div>
+          <div class="comp-desc">Members who've had prayers answered can submit a testimony. Displayed publicly (with permission) as a testament to God's faithfulness. Hugely encouraging for seekers and new members.</div>
+          <span class="comp-tag optional">Phase 2</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Prayer Resources</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📖</div>
+          <div><div class="comp-name">Guided prayer content</div>
+          <div class="comp-desc">A daily or weekly prayer guide PDF download. Scripture declarations for common needs. Prayer points from Prophet Clottey. These keep members engaged during the week.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 11 — BLOG -->
+<div class="section-group"><h3>Content &amp; Media Pages</h3></div>
+
+<div class="page-section" id="p11">
+  <div class="page-header">
+    <div class="page-num">11</div>
+    <div class="page-header-text">
+      <h2>Blog / Devotionals</h2>
+      <p>The church's written voice. Extends ministry beyond Sunday, helps with Google search visibility (SEO), and gives members something to share through the week.</p>
+      <span class="page-url">hpcglobal.org /blog</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Content Types</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Regular content categories</h4>
+          <ul>
+            <li>Daily / weekly devotionals</li>
+            <li>Prophetic words &amp; declarations</li>
+            <li>Sermon notes &amp; summaries</li>
+            <li>Teaching articles (faith, prayer, giving)</li>
+            <li>Testimonies from members</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Seasonal / event content</h4>
+          <ul>
+            <li>Event recaps with photos</li>
+            <li>Pastor's messages (written)</li>
+            <li>Seasonal devotionals (fasting, Christmas, Easter)</li>
+            <li>Announcements &amp; updates</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Blog Listing Page</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📰</div>
+          <div><div class="comp-name">Post grid with filters</div>
+          <div class="comp-desc">Card grid of all posts. Each card: featured image, category tag, title, excerpt (2 lines), author, date, and read time. Filter by category. Search bar. Pagination or infinite scroll.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Individual Post Page</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📄</div>
+          <div><div class="comp-name">Article layout</div>
+          <div class="comp-desc">Full article with featured image, author bio at bottom, related posts, and share buttons (WhatsApp essential — it is the primary sharing channel in Ghana). Comments optional.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 12 — GALLERY -->
+<div class="page-section" id="p12">
+  <div class="page-header">
+    <div class="page-num">12</div>
+    <div class="page-header-text">
+      <h2>Gallery</h2>
+      <p>Visual evidence of a living, active community. Photos and videos say more than words — they show joy, warmth, and the presence of God in the congregation.</p>
+      <span class="page-url">hpcglobal.org /gallery</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Photo Albums</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📷</div>
+          <div><div class="comp-name">Event-based albums</div>
+          <div class="comp-desc">Albums organised by event or service: "Dominion Encounter — Nov 2025", "Prophetic Conference 2024", etc. Cover image, event name, date, photo count. Click to open lightbox gallery. WhatsApp share button on each album.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Video Highlights</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🎬</div>
+          <div><div class="comp-name">Short video clips grid</div>
+          <div class="comp-desc">Worship moments, testimony clips, miracle testimonies, event highlights. Embedded from YouTube or uploaded directly. Grid layout with thumbnail and title.</div>
+          <span class="comp-tag high">High value</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Submit a Photo</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">📤</div>
+          <div><div class="comp-name">Member photo submission</div>
+          <div class="comp-desc">Simple form for members to submit photos from services. Name, event, photo upload. Reviewed before publishing. Builds community ownership of the gallery.</div>
+          <span class="comp-tag optional">Phase 2</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 13 — CONTACT -->
+<div class="page-section" id="p13">
+  <div class="page-header">
+    <div class="page-num">13</div>
+    <div class="page-header-text">
+      <h2>Contact &amp; Location</h2>
+      <p>The practical page. Clear address, map, phone, WhatsApp, and a contact form. Critical for first-time visitors and those reaching out for pastoral support.</p>
+      <span class="page-url">hpcglobal.org /contact</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="block">
+      <div class="block-label">Contact Details</div>
+      <div class="cols-2">
+        <div class="content-box">
+          <h4>Physical contact</h4>
+          <ul>
+            <li>Address: Klagon Junction, Behind K. Ofori Enterprise, Accra</li>
+            <li>Google Maps embed (coordinates: 5.6656744, -0.0471646)</li>
+            <li>"Get directions" button (opens Google Maps)</li>
+            <li>Nearest landmarks for wayfinding</li>
+            <li>Trotro / transport directions</li>
+          </ul>
+        </div>
+        <div class="content-box">
+          <h4>Digital contact</h4>
+          <ul>
+            <li>WhatsApp (primary — one click to chat)</li>
+            <li>Phone number</li>
+            <li>Email address</li>
+            <li>Facebook page link</li>
+            <li>YouTube: @prophetclottey</li>
+            <li>Instagram link</li>
+            <li>Zoom link (for Prophetic Highway)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Contact Form</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">✉</div>
+          <div><div class="comp-name">General enquiry form</div>
+          <div class="comp-desc">Fields: Name, email, phone, enquiry type (General / Pastoral / Event / Media / Partnership / Other), message. On submit: auto-response to sender + notification to church office email. 24-hour response commitment stated clearly on page.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <div class="block-label">Service Times Summary</div>
+      <div class="comp-list">
+        <div class="comp-item"><div class="comp-icon">🕐</div>
+          <div><div class="comp-name">All services listed with times</div>
+          <div class="comp-desc">All three services repeated here with full timezone info. Many users land on the Contact page looking for service times — having them here removes a click.</div>
+          <span class="comp-tag required">Required</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER NOTE -->
+<div style="background:var(--purple-deep);border-radius:10px;padding:32px;margin-bottom:48px;text-align:center;">
+  <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;">Next step</div>
+  <div style="font-family:var(--font-d);font-size:1.6rem;color:#fff;font-weight:400;margin-bottom:10px;">Ready to build?</div>
+  <p style="font-size:13px;color:rgba(255,255,255,.5);max-width:500px;margin:0 auto;">This plan covers all 13 pages. Start with Phase 1 (Homepage, About, Services, Sermons, Give, Contact) and roll out the remaining pages progressively.</p>
+</div>
+
+</div><!-- /container -->
+</body>
+</html>
