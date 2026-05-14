@@ -204,10 +204,10 @@ router.post('/events', async (req, res) => {
 
 router.put('/events/:id', async (req, res) => {
   try {
-    const event = await prisma.event.update({
-      where: { id: req.params.id },
-      data:  req.body,
-    });
+    const data = { ...req.body };
+    if (data.startDate) data.startDate = new Date(data.startDate);
+    if (data.endDate)   data.endDate   = new Date(data.endDate);
+    const event = await prisma.event.update({ where: { id: req.params.id }, data });
     res.json(event);
   } catch (err) {
     console.error(err);
