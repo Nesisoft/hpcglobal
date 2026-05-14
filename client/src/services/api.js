@@ -70,10 +70,11 @@ export const adminApi = {
 
   updateHero: (data) => api.put('/admin/hero', data),
 
-  getSermons:    (params) => api.get('/admin/sermons', { params }),
-  createSermon:  (data)   => api.post('/admin/sermons', data),
-  updateSermon:  (id, d)  => api.put(`/admin/sermons/${id}`, d),
-  deleteSermon:  (id)     => api.delete(`/admin/sermons/${id}`),
+  getSermons:       (params) => api.get('/admin/sermons', { params }),
+  getYoutubeMeta:   (url)    => api.get('/admin/sermons/youtube-meta', { params: { url } }),
+  createSermon:     (data)   => api.post('/admin/sermons', data),
+  updateSermon:     (id, d)  => api.put(`/admin/sermons/${id}`, d),
+  deleteSermon:     (id)     => api.delete(`/admin/sermons/${id}`),
 
   getEvents:      (p)    => api.get('/admin/events', { params: p }),
   createEvent:    (d)    => api.post('/admin/events', d),

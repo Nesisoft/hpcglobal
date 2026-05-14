@@ -61,16 +61,116 @@ router.get('/dashboard', async (_req, res) => {
 // ─── Admin: Sermons ───────────────────────────────────────────────────────────
 router.get('/sermons', async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, series } = req.query;
+    const where = {
+      ...(search && {
+        OR: [
+          { title:    { contains: search, mode: 'insensitive' } },
+          { preacher: { contains: search, mode: 'insensitive' } },
+          { series:   { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+      ...(series && { series: { contains: series, mode: 'insensitive' } }),
+    };
     const [sermons, total] = await Promise.all([
       prisma.sermon.findMany({
+        where,
         orderBy: { datePracticed: 'desc' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
       }),
-      prisma.sermon.count(),
+      prisma.sermon.count({ where }),
     ]);
     res.json({ sermons, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Fetch YouTube video metadata by URL or ID
+router.get('/sermons/youtube-meta', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ message: 'url required' });
+
+    // Extract video ID from various YouTube URL formats
+    const match = url.match(
+      /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+    );
+    const videoId = match?.[1] ?? (url.length === 11 ? url : null);
+    if (!videoId) return res.status(400).json({ message: 'Could not extract YouTube video ID' });
+
+    if (!process.env.YOUTUBE_API_KEY) {
+      // Return minimal info without API key
+      return res.json({
+        youtubeId:    videoId,
+        youtubeUrl:   `https://www.youtube.com/watch?v=${videoId}`,
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        title:        '',
+        preacher:     '',
+        duration:     '',
+      });
+    }
+
+    const ytRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${process.env.YOUTUBE_API_KEY}`
+    );
+    const ytData = await ytRes.json();
+    const item = ytData.items?.[0];
+    if (!item) return res.status(404).json({ message: 'Video not found on YouTube' });
+
+    // Convert ISO 8601 duration to readable string
+    const iso = item.contentDetails?.duration ?? '';
+    const durMatch = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    const h = durMatch?.[1], m = durMatch?.[2], s = durMatch?.[3];
+    const duration = [h && `${h}h`, m && `${m}m`, s && `${s}s`].filter(Boolean).join(' ');
+
+    res.json({
+      youtubeId:    videoId,
+      youtubeUrl:   `https://www.youtube.com/watch?v=${videoId}`,
+      thumbnailUrl: item.snippet.thumbnails?.high?.url ?? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      title:        item.snippet.title ?? '',
+      preacher:     '',
+      duration,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/sermons', async (req, res) => {
+  try {
+    const sermon = await prisma.sermon.create({
+      data: {
+        ...req.body,
+        datePracticed: new Date(req.body.datePracticed),
+      },
+    });
+    res.status(201).json(sermon);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/sermons/:id', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (data.datePracticed) data.datePracticed = new Date(data.datePracticed);
+    const sermon = await prisma.sermon.update({ where: { id: req.params.id }, data });
+    res.json(sermon);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/sermons/:id', async (req, res) => {
+  try {
+    await prisma.sermon.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
