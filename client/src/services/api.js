@@ -1,0 +1,134 @@
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Attach JWT on every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('hpc_access_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Attempt token refresh on 401
+api.interceptors.response.use(
+  (res) => res,
+  async (err) => {
+    const original = err.config;
+    if (err.response?.status === 401 && !original._retry) {
+      original._retry = true;
+      try {
+        const refreshToken = localStorage.getItem('hpc_refresh_token');
+        const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+        localStorage.setItem('hpc_access_token', data.accessToken);
+        original.headers.Authorization = `Bearer ${data.accessToken}`;
+        return api(original);
+      } catch {
+        localStorage.removeItem('hpc_access_token');
+        localStorage.removeItem('hpc_refresh_token');
+        window.location.href = '/admin/login';
+      }
+    }
+    return Promise.reject(err);
+  }
+);
+
+// ─── Public endpoints ───────────────────────────────────────────────────────
+export const publicApi = {
+  getHero:         () => api.get('/hero'),
+  getServiceTimes: () => api.get('/service-times'),
+  getSermons:      (params) => api.get('/sermons', { params }),
+  getSermon:       (id) => api.get(`/sermons/${id}`),
+  getEvents:       (params) => api.get('/events', { params }),
+  getEvent:        (slug) => api.get(`/events/${slug}`),
+  rsvpEvent:       (id, data) => api.post(`/events/${id}/rsvp`, data),
+  getYouTube:      (params) => api.get('/youtube/latest', { params }),
+  getBlog:         (params) => api.get('/blog', { params }),
+  getBlogPost:     (slug) => api.get(`/blog/${slug}`),
+  getGallery:      () => api.get('/gallery'),
+  getAlbum:        (id) => api.get(`/gallery/${id}`),
+  getMinistries:   () => api.get('/ministries'),
+  getLeadership:   () => api.get('/leadership'),
+  getAbout:        () => api.get('/about'),
+  getSettings:     () => api.get('/settings'),
+  submitPrayer:    (data) => api.post('/prayer', data),
+  submitVisitor:   (data) => api.post('/visitors', data),
+  submitContact:   (data) => api.post('/contact/message', data),
+  initiateGiving:  (data) => api.post('/give', data),
+  verifyPayment:   (ref) => api.get(`/give/verify/${ref}`),
+};
+
+// ─── Admin endpoints ─────────────────────────────────────────────────────────
+export const adminApi = {
+  login:   (data) => api.post('/auth/login', data),
+  refresh: (data) => api.post('/auth/refresh', data),
+  logout:  () => api.post('/auth/logout'),
+
+  getDashboard: () => api.get('/admin/dashboard'),
+
+  updateHero: (data) => api.put('/admin/hero', data),
+
+  getSermons:    (params) => api.get('/admin/sermons', { params }),
+  createSermon:  (data)   => api.post('/admin/sermons', data),
+  updateSermon:  (id, d)  => api.put(`/admin/sermons/${id}`, d),
+  deleteSermon:  (id)     => api.delete(`/admin/sermons/${id}`),
+
+  getEvents:      (p)    => api.get('/admin/events', { params: p }),
+  createEvent:    (d)    => api.post('/admin/events', d),
+  updateEvent:    (id,d) => api.put(`/admin/events/${id}`, d),
+  deleteEvent:    (id)   => api.delete(`/admin/events/${id}`),
+  getEventRsvps:  (id)   => api.get(`/admin/events/${id}/rsvps`),
+
+  getGiving:    (p)    => api.get('/admin/giving', { params: p }),
+  givingSummary: ()    => api.get('/admin/giving/summary'),
+  exportGiving:  (p)   => api.get('/admin/giving/export', { params: p }),
+
+  getPrayer:    (p)    => api.get('/admin/prayer', { params: p }),
+  updatePrayer: (id,d) => api.put(`/admin/prayer/${id}`, d),
+
+  getVisitors:    (p)    => api.get('/admin/visitors', { params: p }),
+  updateVisitor:  (id,d) => api.put(`/admin/visitors/${id}`, d),
+
+  getBlog:       (p)    => api.get('/admin/blog', { params: p }),
+  createPost:    (d)    => api.post('/admin/blog', d),
+  updatePost:    (id,d) => api.put(`/admin/blog/${id}`, d),
+  deletePost:    (id)   => api.delete(`/admin/blog/${id}`),
+
+  getAlbums:     ()      => api.get('/admin/gallery/albums'),
+  createAlbum:   (d)     => api.post('/admin/gallery/albums', d),
+  updateAlbum:   (id,d)  => api.put(`/admin/gallery/albums/${id}`, d),
+  deleteAlbum:   (id)    => api.delete(`/admin/gallery/albums/${id}`),
+  uploadPhotos:  (id,fd) => api.post(`/admin/gallery/albums/${id}/photos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deletePhoto:   (id)    => api.delete(`/admin/gallery/photos/${id}`),
+
+  getMinistries:    ()      => api.get('/admin/ministries'),
+  createMinistry:   (d)     => api.post('/admin/ministries', d),
+  updateMinistry:   (id,d)  => api.put(`/admin/ministries/${id}`, d),
+  deleteMinistry:   (id)    => api.delete(`/admin/ministries/${id}`),
+
+  getLeadership:    ()      => api.get('/admin/leadership'),
+  createProfile:    (d)     => api.post('/admin/leadership', d),
+  updateProfile:    (id,d)  => api.put(`/admin/leadership/${id}`, d),
+  deleteProfile:    (id)    => api.delete(`/admin/leadership/${id}`),
+
+  getAbout:   ()  => api.get('/admin/about'),
+  updateAbout: (d) => api.put('/admin/about', d),
+
+  getServiceTimes:    ()      => api.get('/admin/service-times'),
+  updateServiceTime:  (id,d)  => api.put(`/admin/service-times/${id}`, d),
+
+  getSettings:    ()  => api.get('/admin/settings'),
+  updateSettings: (d) => api.put('/admin/settings', d),
+
+  getMessages:  (p)    => api.get('/admin/contact/messages', { params: p }),
+  readMessage:  (id)   => api.put(`/admin/contact/messages/${id}`),
+
+  getUsers:     ()      => api.get('/admin/users'),
+  createUser:   (d)     => api.post('/admin/users', d),
+  updateUser:   (id,d)  => api.put(`/admin/users/${id}`, d),
+  deleteUser:   (id)    => api.delete(`/admin/users/${id}`),
+};
+
+export default api;

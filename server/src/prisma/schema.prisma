@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum AdminRole {
+  SUPER_ADMIN
+  CONTENT_EDITOR
+  MEDIA_MANAGER
+}
+
+enum SlideType {
+  IDENTITY
+  EVENT
+  YOUTUBE
+}
+
+enum EventCategory {
+  SERVICE
+  CONFERENCE
+  YOUTH
+  WOMENS
+  MENS
+  ONLINE
+  OTHER
+}
+
+enum BlogCategory {
+  DEVOTIONAL
+  PROPHETIC_WORD
+  SERMON_NOTES
+  TEACHING
+  TESTIMONY
+  EVENT_RECAP
+  ANNOUNCEMENT
+}
+
+enum PrayerCategory {
+  HEALTH
+  FAMILY
+  FINANCE
+  CAREER
+  SPIRITUAL
+  RELATIONSHIPS
+  OTHER
+}
+
+enum PrayerStatus {
+  NEW
+  PRAYING
+  ANSWERED
+  CLOSED
+}
+
+enum VisitorStatus {
+  NEW
+  CONTACTED
+  ATTENDING
+  MEMBER
+}
+
+enum GivingCategory {
+  TITHE
+  OFFERING
+  FIRST_FRUITS
+  BUILDING_FUND
+  MISSIONS
+  PASTORAL
+  OTHER
+}
+
+enum PaymentMethod {
+  MTN_MOMO
+  TELECEL
+  AIRTELTIGO
+  BANK_TRANSFER
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         AdminRole
+  createdAt    DateTime  @default(now())
+  lastLogin    DateTime?
+  posts        BlogPost[]
+}
+
+model SiteSettings {
+  id              String   @id @default("singleton")
+  churchName      String   @default("HPC Global")
+  tagline         String   @default("Where Hope Meets Destiny")
+  phone           String   @default("")
+  email           String   @default("")
+  whatsapp        String   @default("")
+  address         String   @default("Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana")
+  mapsLat         Float    @default(5.6656744)
+  mapsLng         Float    @default(-0.0471646)
+  zoomLink        String   @default("")
+  youtubeHandle   String   @default("@prophetclottey")
+  facebookUrl     String   @default("")
+  instagramUrl    String   @default("")
+  mtnMomoNumber   String   @default("")
+  telecelNumber   String   @default("")
+  airteltigo      String   @default("")
+  bankName        String   @default("")
+  bankAccount     String   @default("")
+  bankBranch      String   @default("")
+  paystackPublicKey String @default("")
+  tickerMessages  String   @default("[]")
+  updatedAt       DateTime @updatedAt
+}
+
+model HeroSlide {
+  id               String    @id @default(uuid())
+  type             SlideType
+  isActive         Boolean   @default(true)
+  order            Int
+  headline         String    @default("")
+  subheadline      String?
+  body             String?
+  ctaPrimary       String?
+  ctaPrimaryUrl    String?
+  ctaSecondary     String?
+  ctaSecondaryUrl  String?
+  imageUrl         String?
+  eventId          String?
+  youtubeMode      String?   // "auto" | "manual"
+  manualYoutubeId  String?
+  updatedAt        DateTime  @updatedAt
+}
+
+model ServiceTime {
+  id          String  @id @default(uuid())
+  name        String
+  day         String
+  timeGmt     String
+  timeEst     String?
+  timeBst     String?
+  duration    String?
+  isOnline    Boolean @default(false)
+  platform    String?
+  joinLink    String?
+  isStreamed  Boolean @default(false)
+  youtubeUrl  String?
+  order       Int
+  isActive    Boolean @default(true)
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  description String
+  startDate   DateTime
+  endDate     DateTime?
+  timeGmt     String
+  timeEst     String?
+  timeBst     String?
+  venue       String?
+  isOnline    Boolean       @default(false)
+  joinLink    String?
+  imageUrl    String?
+  category    EventCategory
+  isFeatured  Boolean       @default(false)
+  isPublished Boolean       @default(false)
+  speakers    String?       // JSON array: [{name, role}]
+  rsvps       EventRsvp[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model EventRsvp {
+  id         String   @id @default(uuid())
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId    String
+  name       String
+  email      String?
+  phone      String
+  attendance String
+  createdAt  DateTime @default(now())
+}
+
+model Sermon {
+  id            String   @id @default(uuid())
+  title         String
+  preacher      String
+  youtubeId     String   @unique
+  youtubeUrl    String
+  thumbnailUrl  String
+  duration      String?
+  series        String?
+  scripture     String?
+  serviceType   String?
+  datePracticed DateTime
+  isPublished   Boolean  @default(true)
+  isFeatured    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model BlogPost {
+  id            String       @id @default(uuid())
+  title         String
+  slug          String       @unique
+  excerpt       String
+  content       String
+  category      BlogCategory
+  authorId      String
+  author        AdminUser    @relation(fields: [authorId], references: [id])
+  featuredImage String?
+  isPublished   Boolean      @default(false)
+  publishedAt   DateTime?
+  readTime      Int?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model GalleryAlbum {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  eventDate   DateTime?
+  coverImage  String?
+  isPublished Boolean        @default(false)
+  photos      GalleryPhoto[]
+  createdAt   DateTime       @default(now())
+}
+
+model GalleryPhoto {
+  id       String       @id @default(uuid())
+  album    GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  albumId  String
+  url      String
+  caption  String?
+  order    Int          @default(0)
+}
+
+model Ministry {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String
+  vision      String?
+  leader      String
+  leaderPhoto String?
+  meetingDay  String?
+  meetingTime String?
+  icon        String  @default("Users")
+  whatsapp    String?
+  email       String?
+  order       Int     @default(0)
+  isActive    Boolean @default(true)
+}
+
+model LeadershipProfile {
+  id           String  @id @default(uuid())
+  name         String
+  title        String
+  role         String
+  bio          String
+  photo        String?
+  quote        String?
+  scripture    String?
+  youtubeUrl   String?
+  facebookUrl  String?
+  instagramUrl String?
+  isSenior     Boolean @default(false)
+  order        Int     @default(0)
+  isActive     Boolean @default(true)
+}
+
+model AboutContent {
+  id          String   @id @default("singleton")
+  vision      String   @default("")
+  mission     String   @default("")
+  story       String   @default("")
+  foundedYear Int?
+  coreValues  String   @default("[]")   // JSON
+  beliefs     String   @default("[]")   // JSON
+  milestones  String   @default("[]")   // JSON
+  updatedAt   DateTime @updatedAt
+}
+
+model PrayerRequest {
+  id         String         @id @default(uuid())
+  name       String?
+  phone      String?
+  email      String?
+  category   PrayerCategory
+  request    String
+  wantsCall  Boolean        @default(false)
+  isPrivate  Boolean        @default(true)
+  status     PrayerStatus   @default(NEW)
+  adminNotes String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+model Visitor {
+  id           String        @id @default(uuid())
+  name         String
+  phone        String
+  email        String?
+  country      String?
+  city         String?
+  source       String?
+  message      String?
+  preferredSvc String?
+  status       VisitorStatus @default(NEW)
+  adminNotes   String?
+  followedUpAt DateTime?
+  createdAt    DateTime      @default(now())
+}
+
+model GivingRecord {
+  id        String         @id @default(uuid())
+  name      String
+  phone     String
+  email     String?
+  amount    Float
+  currency  String         @default("GHS")
+  category  GivingCategory
+  method    PaymentMethod
+  reference String?
+  status    PaymentStatus  @default(PENDING)
+  createdAt DateTime       @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  type      String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  body {
+    background-color: #FBF7EE;
+    color: #1A0E30;
+    line-height: 1.8;
+    font-size: 15px;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 bg-gold text-purple-deep font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-gold-light hover:shadow-lg active:scale-95;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center gap-2 border border-gold text-gold font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-gold hover:text-purple-deep;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 text-gold font-body font-medium text-sm tracking-wide transition-colors duration-200 hover:text-gold-light;
+  }
+
+  .section-label {
+    @apply text-xs font-body font-semibold tracking-[0.2em] uppercase text-gold;
+  }
+
+  .section-heading {
+    @apply font-display text-h2 text-purple-deep font-normal leading-tight;
+  }
+
+  .section-heading-light {
+    @apply font-display text-h2 text-white font-normal leading-tight;
+  }
+
+  .card {
+    @apply bg-white border border-purple-brand/10 rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  .input {
+    @apply w-full bg-white border border-purple-brand/20 rounded-sm px-4 py-3 text-sm text-ink placeholder-ink/40 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/30 transition-colors duration-200;
+  }
+
+  .container-page {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-pad {
+    @apply py-16 lg:py-24;
+  }
+}
+
+/* Ticker animation */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker 30s linear infinite;
+  white-space: nowrap;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* Carousel dot */
+.carousel-dot {
+  @apply w-2 h-2 rounded-full bg-white/30 transition-all duration-300 cursor-pointer;
+}
+.carousel-dot.active {
+  @apply bg-gold w-6;
+}

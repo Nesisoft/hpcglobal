@@ -1,0 +1,164 @@
+import { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { Menu, X, ChevronDown } from 'lucide-react';
+
+const NAV_LINKS = [
+  { label: 'About',    to: '/about' },
+  { label: 'Services', to: '/services' },
+  { label: 'Sermons',  to: '/sermons' },
+  {
+    label: 'Connect',
+    children: [
+      { label: 'New Here?',  to: '/new-here'   },
+      { label: 'Ministries', to: '/ministries' },
+      { label: 'Prayer',     to: '/prayer'     },
+      { label: 'Leadership', to: '/leadership' },
+    ],
+  },
+  { label: 'Events', to: '/events' },
+  { label: 'Blog',   to: '/blog'   },
+  { label: 'Give',   to: '/give'   },
+];
+
+export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen]         = useState(false);
+  const [dropdown, setDropdown] = useState(null);
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
+  return (
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled ? 'bg-purple-deep/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
+    }`}>
+      <nav className="container-page flex items-center justify-between h-16 lg:h-20">
+
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3 group" onClick={() => setOpen(false)}>
+          <div className="w-9 h-9 rounded-full bg-gold flex items-center justify-center text-purple-deep font-display font-semibold text-sm">
+            H
+          </div>
+          <div className="leading-tight">
+            <div className="font-display text-white text-base font-semibold tracking-wide group-hover:text-gold-light transition-colors">
+              HPC Global
+            </div>
+            <div className="text-white/50 text-[10px] tracking-widest uppercase font-body">
+              Hopepress Chapel
+            </div>
+          </div>
+        </Link>
+
+        {/* Desktop nav */}
+        <div className="hidden lg:flex items-center gap-1">
+          {NAV_LINKS.map((link) =>
+            link.children ? (
+              <div
+                key={link.label}
+                className="relative"
+                onMouseEnter={() => setDropdown(link.label)}
+                onMouseLeave={() => setDropdown(null)}
+              >
+                <button className="flex items-center gap-1 px-4 py-2 text-sm text-white/80 hover:text-gold font-body font-medium transition-colors">
+                  {link.label} <ChevronDown size={14} />
+                </button>
+                {dropdown === link.label && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-purple-deep border border-white/10 rounded-md shadow-xl overflow-hidden">
+                    {link.children.map((child) => (
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={({ isActive }) =>
+                          `block px-4 py-3 text-sm font-body transition-colors ${
+                            isActive ? 'text-gold bg-white/5' : 'text-white/70 hover:text-gold hover:bg-white/5'
+                          }`
+                        }
+                        onClick={() => setDropdown(null)}
+                      >
+                        {child.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `px-4 py-2 text-sm font-body font-medium transition-colors ${
+                    isActive ? 'text-gold' : 'text-white/80 hover:text-gold'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            )
+          )}
+        </div>
+
+        {/* CTA + Mobile toggle */}
+        <div className="flex items-center gap-3">
+          <Link to="/new-here" className="hidden sm:inline-flex btn-primary text-xs px-5 py-2.5">
+            Plan a Visit
+          </Link>
+          <button
+            className="lg:hidden text-white p-2"
+            onClick={() => setOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile drawer */}
+      <div className={`lg:hidden transition-all duration-300 overflow-hidden ${open ? 'max-h-screen' : 'max-h-0'}`}>
+        <div className="bg-purple-deep border-t border-white/10 px-4 py-4 flex flex-col gap-1">
+          {NAV_LINKS.map((link) =>
+            link.children ? (
+              <div key={link.label}>
+                <div className="px-3 py-1 text-xs text-white/40 uppercase tracking-widest font-body">
+                  {link.label}
+                </div>
+                {link.children.map((child) => (
+                  <NavLink
+                    key={child.to}
+                    to={child.to}
+                    className={({ isActive }) =>
+                      `block px-5 py-2.5 text-sm font-body transition-colors rounded ${
+                        isActive ? 'text-gold' : 'text-white/70 hover:text-gold'
+                      }`
+                    }
+                    onClick={() => setOpen(false)}
+                  >
+                    {child.label}
+                  </NavLink>
+                ))}
+              </div>
+            ) : (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `block px-3 py-2.5 text-sm font-body transition-colors rounded ${
+                    isActive ? 'text-gold' : 'text-white/70 hover:text-gold'
+                  }`
+                }
+                onClick={() => setOpen(false)}
+              >
+                {link.label}
+              </NavLink>
+            )
+          )}
+          <Link to="/new-here" className="btn-primary mt-3 justify-center" onClick={() => setOpen(false)}>
+            Plan a Visit
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
