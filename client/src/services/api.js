@@ -68,7 +68,10 @@ export const adminApi = {
 
   getDashboard: () => api.get('/admin/dashboard'),
 
-  updateHero: (data) => api.put('/admin/hero', data),
+  getHeroSlides:   ()      => api.get('/admin/hero'),
+  createHeroSlide: (d)     => api.post('/admin/hero', d),
+  updateHeroSlide: (id, d) => api.put(`/admin/hero/${id}`, d),
+  deleteHeroSlide: (id)    => api.delete(`/admin/hero/${id}`),
 
   getSermons:       (params) => api.get('/admin/sermons', { params }),
   getYoutubeMeta:   (url)    => api.get('/admin/sermons/youtube-meta', { params: { url } }),

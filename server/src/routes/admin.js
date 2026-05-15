@@ -703,6 +703,51 @@ router.delete('/leadership/:id', async (req, res) => {
   }
 });
 
+// ─── Admin: Hero Slides ───────────────────────────────────────────────────────
+router.get('/hero', async (_req, res) => {
+  try {
+    const slides = await prisma.heroSlide.findMany({ orderBy: { order: 'asc' } });
+    res.json(slides);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/hero', async (req, res) => {
+  try {
+    const slide = await prisma.heroSlide.create({ data: req.body });
+    res.status(201).json(slide);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/hero/:id', async (req, res) => {
+  try {
+    const { id: _ignore, updatedAt: _u, ...data } = req.body;
+    const slide = await prisma.heroSlide.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json(slide);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/hero/:id', async (req, res) => {
+  try {
+    await prisma.heroSlide.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ─── Admin: About ─────────────────────────────────────────────────────────────
 router.get('/about', async (_req, res) => {
   try {
