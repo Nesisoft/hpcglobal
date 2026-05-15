@@ -615,6 +615,45 @@ router.get('/ministries', async (_req, res) => {
   }
 });
 
+router.post('/ministries', async (req, res) => {
+  try {
+    let slug = slugify(req.body.name);
+    const existing = await prisma.ministry.findUnique({ where: { slug } });
+    if (existing) slug = `${slug}-${Date.now().toString(36)}`;
+    const count = await prisma.ministry.count();
+    const ministry = await prisma.ministry.create({
+      data: { ...req.body, slug, order: req.body.order ?? count + 1 },
+    });
+    res.status(201).json(ministry);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/ministries/:id', async (req, res) => {
+  try {
+    const ministry = await prisma.ministry.update({
+      where: { id: req.params.id },
+      data:  req.body,
+    });
+    res.json(ministry);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/ministries/:id', async (req, res) => {
+  try {
+    await prisma.ministry.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ─── Admin: Leadership ────────────────────────────────────────────────────────
 router.get('/leadership', async (_req, res) => {
   try {
@@ -622,6 +661,42 @@ router.get('/leadership', async (_req, res) => {
       orderBy: [{ isSenior: 'desc' }, { order: 'asc' }],
     });
     res.json(profiles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/leadership', async (req, res) => {
+  try {
+    const count = await prisma.leadershipProfile.count();
+    const profile = await prisma.leadershipProfile.create({
+      data: { ...req.body, order: req.body.order ?? count + 1 },
+    });
+    res.status(201).json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/leadership/:id', async (req, res) => {
+  try {
+    const profile = await prisma.leadershipProfile.update({
+      where: { id: req.params.id },
+      data:  req.body,
+    });
+    res.json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/leadership/:id', async (req, res) => {
+  try {
+    await prisma.leadershipProfile.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
