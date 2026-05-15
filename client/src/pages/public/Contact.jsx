@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { MapPin, Phone, Mail, Clock, Video, CheckCircle } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { MapPin, Phone, Mail, Clock, CheckCircle } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { publicApi } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
 import SectionHero from '../../components/ui/SectionHero';
+import SEO from '../../components/ui/SEO';
 
 const schema = z.object({
   name:    z.string().min(1, 'Name is required'),
@@ -17,15 +19,21 @@ const schema = z.object({
 
 const ENQUIRY_TYPES = ['General', 'Pastoral', 'Event', 'Media / Press', 'Partnership', 'Other'];
 
-const SERVICES = [
-  { name: 'Dominion Encounter',       time: 'Sundays 9:00 AM – 11:30 AM GMT' },
-  { name: 'Prophetic & Miracle',      time: 'Fridays 6:30 PM – 9:00 PM GMT'  },
-  { name: 'Global Prophetic Highway', time: 'Sundays 9pm GMT · 4pm EST · 10pm BST' },
-];
-
 export default function Contact() {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const fetchFn = useCallback(() => publicApi.getSettings(), []);
+  const { data: settings } = useApi(fetchFn);
+
+  const fetchTimes = useCallback(() => publicApi.getServiceTimes(), []);
+  const { data: rawTimes } = useApi(fetchTimes);
+  const serviceTimes = Array.isArray(rawTimes) && rawTimes.length > 0 ? rawTimes : [
+    { id: 's1', name: 'Dominion Encounter',       timeGmt: 'Sundays 9:00 AM – 11:30 AM GMT' },
+    { id: 's2', name: 'Prophetic & Miracle',      timeGmt: 'Fridays 6:30 PM – 9:00 PM GMT' },
+    { id: 's3', name: 'Global Prophetic Highway', timeGmt: 'Sundays 9pm GMT · 4pm EST · 10pm BST' },
+  ];
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -34,18 +42,38 @@ export default function Contact() {
 
   async function onSubmit(data) {
     setSubmitting(true);
+    setSubmitError('');
     try {
       await publicApi.submitContact(data);
       setSubmitted(true);
-    } catch {
-      alert('Something went wrong. Please try again.');
+    } catch (err) {
+      setSubmitError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
+  const phone   = settings?.phone   || null;
+  const email   = settings?.email   || null;
+  const address = settings?.address || 'Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana';
+  const waNum   = settings?.whatsapp || null;
+  const waUrl   = waNum ? `https://wa.me/${waNum.replace(/\D/g, '')}` : null;
+
+  const ytHandle = settings?.youtubeHandle || '@prophetclottey';
+  const ytUrl    = `https://youtube.com/${ytHandle.startsWith('@') ? ytHandle : '@' + ytHandle}`;
+  const fbUrl    = settings?.facebookUrl  || null;
+  const igUrl    = settings?.instagramUrl || null;
+
+  const mapsLat = settings?.mapsLat || 5.6656744;
+  const mapsLng = settings?.mapsLng || -0.0471646;
+  const mapsQ   = `${mapsLat},${mapsLng}`;
+
   return (
     <>
+      <SEO
+        title="Contact Us"
+        description="Get in touch with HPC Global. We respond within 24 hours. Find us in Accra, Ghana or join us online."
+      />
       <SectionHero
         title="Contact Us"
         subtitle="We would love to hear from you. Our team responds within 24 hours."
@@ -65,9 +93,9 @@ export default function Contact() {
                     <MapPin size={18} className="text-gold mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-body font-semibold text-ink text-sm">Physical Address</p>
-                      <p className="text-ink/60 font-body text-sm">Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana</p>
+                      <p className="text-ink/60 font-body text-sm">{address}</p>
                       <a
-                        href="https://maps.google.com/?q=5.6656744,-0.0471646"
+                        href={`https://maps.google.com/?q=${mapsQ}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gold font-body text-xs hover:text-gold-light transition-colors mt-1 inline-block"
@@ -77,44 +105,52 @@ export default function Contact() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <FaWhatsapp size={18} className="text-gold flex-shrink-0" />
-                    <div>
-                      <p className="font-body font-semibold text-ink text-sm">WhatsApp (Primary)</p>
-                      <a href="https://wa.me/233000000000" target="_blank" rel="noopener noreferrer"
-                        className="text-ink/60 font-body text-sm hover:text-gold transition-colors">
-                        +233 000 000 000
-                      </a>
+                  {waUrl && (
+                    <div className="flex items-center gap-3">
+                      <FaWhatsapp size={18} className="text-gold flex-shrink-0" />
+                      <div>
+                        <p className="font-body font-semibold text-ink text-sm">WhatsApp</p>
+                        <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-ink/60 font-body text-sm hover:text-gold transition-colors">
+                          {waNum}
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex items-center gap-3">
-                    <Phone size={18} className="text-gold flex-shrink-0" />
-                    <div>
-                      <p className="font-body font-semibold text-ink text-sm">Phone</p>
-                      <p className="text-ink/60 font-body text-sm">+233 000 000 000</p>
+                  {phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone size={18} className="text-gold flex-shrink-0" />
+                      <div>
+                        <p className="font-body font-semibold text-ink text-sm">Phone</p>
+                        <a href={`tel:${phone}`} className="text-ink/60 font-body text-sm hover:text-gold transition-colors">
+                          {phone}
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex items-center gap-3">
-                    <Mail size={18} className="text-gold flex-shrink-0" />
-                    <div>
-                      <p className="font-body font-semibold text-ink text-sm">Email</p>
-                      <a href="mailto:info@hpcglobal.org" className="text-ink/60 font-body text-sm hover:text-gold transition-colors">
-                        info@hpcglobal.org
-                      </a>
+                  {email && (
+                    <div className="flex items-center gap-3">
+                      <Mail size={18} className="text-gold flex-shrink-0" />
+                      <div>
+                        <p className="font-body font-semibold text-ink text-sm">Email</p>
+                        <a href={`mailto:${email}`} className="text-ink/60 font-body text-sm hover:text-gold transition-colors">
+                          {email}
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
               {/* Map embed */}
               <div className="rounded-xl overflow-hidden border border-purple-brand/10 h-56">
                 <iframe
-                  src="https://maps.google.com/maps?q=5.6656744,-0.0471646&z=16&output=embed"
+                  src={`https://maps.google.com/maps?q=${mapsQ}&z=16&output=embed`}
                   width="100%"
                   height="100%"
-                  title="HPC Global — Klagon Junction, Accra"
+                  title="HPC Global location"
                   loading="lazy"
                   className="border-0"
                 />
@@ -123,30 +159,44 @@ export default function Contact() {
               {/* Social links */}
               <div>
                 <p className="section-label mb-4">Follow Us</p>
-                <div className="flex items-center gap-3">
-                  <a href="https://youtube.com/@prophetclottey" target="_blank" rel="noopener noreferrer"
+                <div className="flex items-center gap-4 flex-wrap">
+                  <a href={ytUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm font-body text-ink/60 hover:text-red-600 transition-colors">
                     <FaYoutube size={18} className="text-red-600" /> YouTube
                   </a>
-                  <a href="#" className="flex items-center gap-2 text-sm font-body text-ink/60 hover:text-blue-600 transition-colors">
-                    <FaFacebook size={18} className="text-blue-600" /> Facebook
-                  </a>
-                  <a href="#" className="flex items-center gap-2 text-sm font-body text-ink/60 hover:text-pink-500 transition-colors">
-                    <FaInstagram size={18} className="text-pink-500" /> Instagram
-                  </a>
+                  {fbUrl && (
+                    <a href={fbUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm font-body text-ink/60 hover:text-blue-600 transition-colors">
+                      <FaFacebook size={18} className="text-blue-600" /> Facebook
+                    </a>
+                  )}
+                  {igUrl && (
+                    <a href={igUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm font-body text-ink/60 hover:text-pink-500 transition-colors">
+                      <FaInstagram size={18} className="text-pink-500" /> Instagram
+                    </a>
+                  )}
+                  {waUrl && (
+                    <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm font-body text-ink/60 hover:text-green-600 transition-colors">
+                      <FaWhatsapp size={18} className="text-green-600" /> WhatsApp
+                    </a>
+                  )}
                 </div>
               </div>
 
-              {/* Service times summary */}
+              {/* Service times */}
               <div>
                 <p className="section-label mb-4">Service Times</p>
                 <div className="space-y-3">
-                  {SERVICES.map((s) => (
-                    <div key={s.name} className="flex items-start gap-2">
+                  {serviceTimes.map((s) => (
+                    <div key={s.id} className="flex items-start gap-2">
                       <Clock size={13} className="text-gold mt-0.5 flex-shrink-0" />
                       <div>
                         <span className="font-body font-semibold text-ink text-sm">{s.name}: </span>
-                        <span className="text-ink/60 font-body text-sm">{s.time}</span>
+                        <span className="text-ink/60 font-body text-sm">
+                          {[s.timeGmt, s.timeEst, s.timeBst].filter(Boolean).join(' · ')}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -195,8 +245,11 @@ export default function Contact() {
                     <textarea rows={5} className="input resize-none" {...register('message')} placeholder="How can we help?" />
                     {errors.message && <p className="text-red-500 text-xs mt-1">{errors.message.message}</p>}
                   </div>
+                  {submitError && (
+                    <p className="text-red-500 text-xs font-body bg-red-50 border border-red-200 rounded px-3 py-2">{submitError}</p>
+                  )}
                   <p className="text-xs text-ink/40 font-body">We aim to respond within 24 hours.</p>
-                  <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4">
+                  <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4 disabled:opacity-50">
                     {submitting ? 'Sending…' : 'Send Message'}
                   </button>
                 </form>

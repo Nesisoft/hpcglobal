@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Play, Filter, Search, Radio } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import SEO from '../../components/ui/SEO';
+import { Play, Search } from 'lucide-react';
 import { FaYoutube } from 'react-icons/fa';
 import { useApi } from '../../hooks/useApi';
 import { publicApi } from '../../services/api';
@@ -8,12 +9,10 @@ import SectionHero from '../../components/ui/SectionHero';
 import Spinner from '../../components/ui/Spinner';
 import Badge from '../../components/ui/Badge';
 
-const SERIES = ['All', 'Dominion Series', 'The Word of Hope', 'Prophetic Foundations', 'Kingdom Leaders'];
-
 function SermonCard({ video }) {
   return (
     <a
-      href={video.url || `https://youtube.com/watch?v=${video.id}`}
+      href={video.url || `https://youtube.com/watch?v=${video.youtubeId || video.id}`}
       target="_blank"
       rel="noopener noreferrer"
       className="card group overflow-hidden"
@@ -46,7 +45,7 @@ function SermonCard({ video }) {
           <p className="text-gold font-body text-xs mb-2">{video.scripture}</p>
         )}
         <p className="text-ink/40 font-body text-xs">
-          {formatDate(video.publishedAt || video.datePracticed)}
+          {formatDate(video.datePracticed || video.publishedAt)}
         </p>
       </div>
     </a>
@@ -54,48 +53,85 @@ function SermonCard({ video }) {
 }
 
 export default function Sermons() {
-  const [search, setSearch]       = useState('');
-  const [activeSeries, setSeries] = useState('All');
+  const [search, setSearch]         = useState('');
+  const [activeSeries, setSeries]   = useState('');
 
+  const fetchDb = useCallback(
+    () => publicApi.getSermons({ limit: 24, series: activeSeries || undefined }),
+    [activeSeries],
+  );
+  const { data: dbData, loading: dbLoading } = useApi(fetchDb);
   const { data: ytVideos, loading: ytLoading } = useApi(() => publicApi.getYouTube({ count: 12 }));
-  const { data: dbSermons, loading: dbLoading } = useApi(publicApi.getSermons);
 
-  const videos = ytVideos || [];
-  const loading = ytLoading || dbLoading;
+  const dbSermons = dbData?.sermons ?? [];
+  const useDb = dbSermons.length > 0;
 
-  const filtered = videos.filter((v) => {
-    const matchSearch = !search || v.title.toLowerCase().includes(search.toLowerCase());
-    const matchSeries = activeSeries === 'All' || (v.series === activeSeries);
-    return matchSearch && matchSeries;
+  // Source: DB sermons if available, else YouTube videos normalised to same shape
+  const rawList = useDb
+    ? dbSermons
+    : (Array.isArray(ytVideos) ? ytVideos : []).map((v) => ({
+        id:          v.id,
+        title:       v.title,
+        thumbnail:   v.thumbnail,
+        thumbnailUrl:v.thumbnail,
+        youtubeId:   v.id,
+        url:         v.url,
+        datePracticed: v.publishedAt,
+      }));
+
+  // Derive series list from DB data
+  const seriesOptions = useDb
+    ? ['', ...new Set(dbSermons.map((s) => s.series).filter(Boolean))]
+    : [];
+
+  // Client-side search filter
+  const filtered = rawList.filter((v) => {
+    const q = search.toLowerCase();
+    return !q
+      || v.title?.toLowerCase().includes(q)
+      || v.preacher?.toLowerCase().includes(q)
+      || v.scripture?.toLowerCase().includes(q);
   });
+
+  const loading = dbLoading || ytLoading;
+  const featuredVideo = filtered[0] ?? null;
 
   return (
     <>
+      <SEO title="Sermons & Media" description="Watch and listen to sermons from HPC Global. Prophetic, Word-based messages from Prophet George Clottey and guest speakers." />
       <SectionHero
         title="Sermons & Media"
         subtitle="Access our library of messages — transformative, prophetic, and Word-based."
         breadcrumb="Home / Sermons"
       />
 
-      {/* Featured sermon */}
+      {/* Featured */}
       <section className="section-pad bg-purple-deep">
         <div className="container-page">
           <p className="section-label text-gold mb-4">Latest Message</p>
-          {loading ? <Spinner /> : videos[0] && (
+          {loading ? <Spinner /> : featuredVideo && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               <div className="rounded-xl overflow-hidden aspect-video">
                 <iframe
-                  src={`https://www.youtube.com/embed/${videos[0].id}?rel=0`}
-                  title={videos[0].title}
+                  src={`https://www.youtube.com/embed/${featuredVideo.youtubeId || featuredVideo.id}?rel=0`}
+                  title={featuredVideo.title}
                   className="w-full h-full"
                   allowFullScreen
                 />
               </div>
               <div>
-                <h2 className="section-heading-light mb-3">{videos[0].title}</h2>
-                <p className="text-white/50 font-body text-sm mb-6">{formatDate(videos[0].publishedAt)}</p>
+                <h2 className="section-heading-light mb-2">{featuredVideo.title}</h2>
+                {featuredVideo.preacher && (
+                  <p className="text-gold font-body text-sm mb-1">{featuredVideo.preacher}</p>
+                )}
+                {featuredVideo.scripture && (
+                  <p className="text-white/50 font-body text-xs mb-3">{featuredVideo.scripture}</p>
+                )}
+                <p className="text-white/40 font-body text-sm mb-6">
+                  {formatDate(featuredVideo.datePracticed || featuredVideo.publishedAt)}
+                </p>
                 <a
-                  href={videos[0].url}
+                  href={featuredVideo.url || `https://youtube.com/watch?v=${featuredVideo.youtubeId || featuredVideo.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary"
@@ -108,14 +144,12 @@ export default function Sermons() {
         </div>
       </section>
 
-      {/* Live stream */}
+      {/* Live stream banner */}
       <section className="bg-purple-brand py-8">
         <div className="container-page flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-white font-body text-sm font-medium">Live Sunday 9 AM & Friday 6:30 PM GMT</span>
-            </div>
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-white font-body text-sm font-medium">Live Sunday 9 AM & Friday 6:30 PM GMT</span>
           </div>
           <div className="flex items-center gap-3">
             <a
@@ -131,7 +165,7 @@ export default function Sermons() {
         </div>
       </section>
 
-      {/* Sermon library */}
+      {/* Library */}
       <section className="section-pad bg-cream">
         <div className="container-page">
           {/* Filters */}
@@ -146,22 +180,23 @@ export default function Sermons() {
                 className="input pl-9"
               />
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Filter size={14} className="text-ink/40" />
-              {SERIES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSeries(s)}
-                  className={`px-3 py-1.5 text-xs font-body font-medium rounded transition-colors ${
-                    activeSeries === s
-                      ? 'bg-gold text-purple-deep'
-                      : 'bg-white border border-purple-brand/10 text-ink/60 hover:border-gold/40'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            {seriesOptions.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {seriesOptions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSeries(s)}
+                    className={`px-3 py-1.5 text-xs font-body font-medium rounded transition-colors ${
+                      activeSeries === s
+                        ? 'bg-gold text-purple-deep'
+                        : 'bg-white border border-purple-brand/10 text-ink/60 hover:border-gold/40'
+                    }`}
+                  >
+                    {s || 'All'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {loading ? (
