@@ -369,19 +369,95 @@ router.put('/visitors/:id', async (req, res) => {
 });
 
 // ─── Admin: Blog ──────────────────────────────────────────────────────────────
+function slugify(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function estimateReadTime(content) {
+  const words = String(content).trim().split(/\s+/).length;
+  return Math.max(1, Math.round(words / 200)); // 200 wpm
+}
+
 router.get('/blog', async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, category } = req.query;
+    const where = {
+      ...(search && {
+        OR: [
+          { title:   { contains: search, mode: 'insensitive' } },
+          { excerpt: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+      ...(category && { category }),
+    };
     const [posts, total] = await Promise.all([
       prisma.blogPost.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
         include: { author: { select: { name: true } } },
       }),
-      prisma.blogPost.count(),
+      prisma.blogPost.count({ where }),
     ]);
     res.json({ posts, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/blog', async (req, res) => {
+  try {
+    const { title, content, isPublished } = req.body;
+    let slug = slugify(title);
+
+    // Ensure slug uniqueness by appending suffix if needed
+    const existing = await prisma.blogPost.findUnique({ where: { slug } });
+    if (existing) slug = `${slug}-${Date.now().toString(36)}`;
+
+    const post = await prisma.blogPost.create({
+      data: {
+        ...req.body,
+        slug,
+        authorId:    req.user.id,
+        readTime:    estimateReadTime(content),
+        publishedAt: isPublished ? new Date() : null,
+      },
+    });
+    res.status(201).json(post);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/blog/:id', async (req, res) => {
+  try {
+    const existing = await prisma.blogPost.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ message: 'Post not found' });
+
+    const data = { ...req.body };
+    if (data.content) data.readTime = estimateReadTime(data.content);
+    // Set publishedAt when transitioning to published
+    if (data.isPublished && !existing.isPublished) data.publishedAt = new Date();
+    if (data.isPublished === false) data.publishedAt = null;
+
+    const post = await prisma.blogPost.update({ where: { id: req.params.id }, data });
+    res.json(post);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/blog/:id', async (req, res) => {
+  try {
+    await prisma.blogPost.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
