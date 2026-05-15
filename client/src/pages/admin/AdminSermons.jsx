@@ -26,21 +26,42 @@ const EMPTY_FORM = {
   isFeatured:    false,
 };
 
-function SermonForm({ form, setForm, onYoutubeLookup, lookingUp }) {
+// Extract YouTube video ID from any URL format or bare ID
+function extractYoutubeId(value) {
+  const match = value.match(
+    /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+  );
+  if (match) return match[1];
+  if (/^[A-Za-z0-9_-]{11}$/.test(value.trim())) return value.trim();
+  return null;
+}
+
+function SermonForm({ form, setForm, onYoutubeLookup, lookingUp, serviceTimes }) {
+  function handleUrlChange(e) {
+    const url = e.target.value;
+    const id  = extractYoutubeId(url);
+    setForm((f) => ({
+      ...f,
+      youtubeUrl:   url,
+      youtubeId:    id ?? f.youtubeId,
+      thumbnailUrl: id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : f.thumbnailUrl,
+    }));
+  }
+
   return (
     <div className="space-y-4">
-      <FormField label="YouTube URL or Video ID" required>
+      <FormField label="YouTube URL or Video ID" required hint="Paste the URL then click Autofill to fetch title & duration">
         <div className="flex gap-2">
           <input
             className="input flex-1"
             placeholder="https://youtube.com/watch?v=..."
             value={form.youtubeUrl}
-            onChange={(e) => setForm((f) => ({ ...f, youtubeUrl: e.target.value }))}
+            onChange={handleUrlChange}
           />
           <button
             type="button"
             onClick={onYoutubeLookup}
-            disabled={!form.youtubeUrl || lookingUp}
+            disabled={!form.youtubeId || lookingUp}
             className="btn-primary text-xs px-3 py-2 whitespace-nowrap flex items-center gap-1.5 disabled:opacity-50"
           >
             <FaYoutube size={13} />
@@ -88,15 +109,19 @@ function SermonForm({ form, setForm, onYoutubeLookup, lookingUp }) {
             onChange={(e) => setForm((f) => ({ ...f, scripture: e.target.value }))}
           />
         </FormField>
-        <FormField label="Service Type">
-          <input
+        <FormField label="Service">
+          <select
             className="input"
-            placeholder="e.g. Dominion Encounter"
             value={form.serviceType}
             onChange={(e) => setForm((f) => ({ ...f, serviceType: e.target.value }))}
-          />
+          >
+            <option value="">— Select service —</option>
+            {serviceTimes.map((s) => (
+              <option key={s.id} value={s.name}>{s.name}</option>
+            ))}
+          </select>
         </FormField>
-        <FormField label="Duration">
+        <FormField label="Duration" hint="Auto-filled by Autofill">
           <input
             className="input"
             placeholder="e.g. 1h 24m"
@@ -151,6 +176,11 @@ const COLUMNS = [
   },
   { key: 'preacher', label: 'Preacher' },
   {
+    key: 'serviceType',
+    label: 'Service',
+    render: (row) => row.serviceType || <span className="text-ink/30">—</span>,
+  },
+  {
     key: 'datePracticed',
     label: 'Date',
     render: (row) =>
@@ -196,6 +226,9 @@ export default function AdminSermons() {
   const sermons    = data?.sermons ?? [];
   const total      = data?.total   ?? 0;
   const totalPages = Math.ceil(total / 20);
+
+  const { data: serviceTimesData = [] } = useApi(adminApi.getServiceTimes);
+  const serviceTimes = Array.isArray(serviceTimesData) ? serviceTimesData : [];
 
   function openCreate() {
     setEditTarget(null);
@@ -246,7 +279,7 @@ export default function AdminSermons() {
 
   async function handleSave() {
     if (!form.title || !form.preacher || !form.youtubeId || !form.datePracticed) {
-      setError('Title, preacher, YouTube URL (use Autofill), and date are required.');
+      setError('Title, preacher, YouTube URL, and date are required.');
       return;
     }
     setSaving(true);
@@ -373,6 +406,7 @@ export default function AdminSermons() {
           setForm={setForm}
           onYoutubeLookup={handleYoutubeLookup}
           lookingUp={lookingUp}
+          serviceTimes={serviceTimes}
         />
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">

@@ -495,6 +495,20 @@ router.get('/service-times', async (_req, res) => {
   }
 });
 
+router.post('/service-times', async (req, res) => {
+  try {
+    // Place new service at the end
+    const count = await prisma.serviceTime.count();
+    const time  = await prisma.serviceTime.create({
+      data: { ...req.body, order: req.body.order ?? count + 1 },
+    });
+    res.status(201).json(time);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.put('/service-times/:id', async (req, res) => {
   try {
     const time = await prisma.serviceTime.update({
@@ -502,6 +516,16 @@ router.put('/service-times/:id', async (req, res) => {
       data:  req.body,
     });
     res.json(time);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/service-times/:id', async (req, res) => {
+  try {
+    await prisma.serviceTime.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
