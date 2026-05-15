@@ -201,7 +201,8 @@ export default function AdminEvents() {
   const [error, setError]               = useState('');
 
   const fetchFn = useCallback(() => adminApi.getEvents(), []);
-  const { data: events = [], loading, refetch } = useApi(fetchFn);
+  const { data: rawEvents, loading, refetch } = useApi(fetchFn);
+  const events = Array.isArray(rawEvents) ? rawEvents : (rawEvents?.events ?? []);
 
   const fetchRsvpsFn = useCallback(
     () => (rsvpEvent ? adminApi.getEventRsvps(rsvpEvent.id) : Promise.resolve({ data: [] })),
