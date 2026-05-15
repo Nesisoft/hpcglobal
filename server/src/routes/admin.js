@@ -188,12 +188,35 @@ router.get('/events', async (req, res) => {
   }
 });
 
+function sanitizeEvent(body) {
+  const {
+    title, description, startDate, endDate, timeGmt, timeEst, timeBst,
+    venue, isOnline, joinLink, imageUrl, category, isFeatured, isPublished,
+  } = body;
+  return {
+    title,
+    description,
+    startDate:   new Date(startDate),
+    endDate:     endDate ? new Date(endDate) : null,
+    timeGmt,
+    timeEst:     timeEst     || null,
+    timeBst:     timeBst     || null,
+    venue:       venue       || null,
+    isOnline:    Boolean(isOnline),
+    joinLink:    joinLink    || null,
+    imageUrl:    imageUrl    || null,
+    category,
+    isFeatured:  Boolean(isFeatured),
+    isPublished: Boolean(isPublished),
+  };
+}
+
 router.post('/events', async (req, res) => {
   try {
     const slug = req.body.title
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const event = await prisma.event.create({
-      data: { ...req.body, slug, startDate: new Date(req.body.startDate) },
+      data: { ...sanitizeEvent(req.body), slug },
     });
     res.status(201).json(event);
   } catch (err) {
@@ -204,10 +227,10 @@ router.post('/events', async (req, res) => {
 
 router.put('/events/:id', async (req, res) => {
   try {
-    const data = { ...req.body };
-    if (data.startDate) data.startDate = new Date(data.startDate);
-    if (data.endDate)   data.endDate   = new Date(data.endDate);
-    const event = await prisma.event.update({ where: { id: req.params.id }, data });
+    const event = await prisma.event.update({
+      where: { id: req.params.id },
+      data:  sanitizeEvent(req.body),
+    });
     res.json(event);
   } catch (err) {
     console.error(err);

@@ -132,25 +132,8 @@ function EventForm({ form, setForm }) {
         </FormField>
       </div>
 
-      <div className="flex items-center gap-3 pt-1">
-        <Toggle
-          checked={form.isOnline}
-          onChange={(v) => setForm((f) => ({ ...f, isOnline: v }))}
-          label="Online event"
-        />
-      </div>
-
-      {form.isOnline ? (
-        <FormField label="Zoom / Join Link">
-          <input
-            className="input"
-            placeholder="https://zoom.us/j/..."
-            value={form.joinLink}
-            onChange={(e) => setForm((f) => ({ ...f, joinLink: e.target.value }))}
-          />
-        </FormField>
-      ) : (
-        <FormField label="Venue">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField label="Venue" hint="Physical location (if any)">
           <input
             className="input"
             placeholder="Klagon Junction, Accra"
@@ -158,7 +141,23 @@ function EventForm({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))}
           />
         </FormField>
-      )}
+        <FormField label="Stream / Join Link" hint="Zoom, YouTube, or online link">
+          <input
+            className="input"
+            placeholder="https://zoom.us/j/..."
+            value={form.joinLink}
+            onChange={(e) => setForm((f) => ({ ...f, joinLink: e.target.value }))}
+          />
+        </FormField>
+      </div>
+
+      <div className="flex items-center gap-3 pt-1">
+        <Toggle
+          checked={form.isOnline}
+          onChange={(v) => setForm((f) => ({ ...f, isOnline: v }))}
+          label="Online / virtual event (no physical venue)"
+        />
+      </div>
 
       <div className="flex items-center gap-6 pt-1">
         <Toggle
@@ -287,11 +286,20 @@ export default function AdminEvents() {
       render: (row) => (
         <div>
           <p className="font-medium text-ink/90 text-sm leading-tight">{row.title}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {row.isOnline
-              ? <Video size={10} className="text-ink/30" />
-              : <MapPin size={10} className="text-ink/30" />}
-            <p className="text-ink/40 text-[11px]">{row.isOnline ? 'Online' : (row.venue ?? '—')}</p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            {row.venue && (
+              <span className="flex items-center gap-1 text-ink/40 text-[11px]">
+                <MapPin size={10} /> {row.venue}
+              </span>
+            )}
+            {row.joinLink && (
+              <span className="flex items-center gap-1 text-ink/40 text-[11px]">
+                <Video size={10} /> Online
+              </span>
+            )}
+            {!row.venue && !row.joinLink && (
+              <span className="text-ink/30 text-[11px]">—</span>
+            )}
           </div>
         </div>
       ),
