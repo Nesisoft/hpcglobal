@@ -6,10 +6,19 @@ const { verifyToken }  = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
+const optionalString = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.string().optional(),
+);
+const optionalEmail = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.string().email().optional(),
+);
+
 const prayerSchema = z.object({
-  name:      z.string().optional(),
-  phone:     z.string().optional(),
-  email:     z.string().email().optional(),
+  name:      optionalString,
+  phone:     optionalString,
+  email:     optionalEmail,
   category:  z.enum(['HEALTH','FAMILY','FINANCE','CAREER','SPIRITUAL','RELATIONSHIPS','OTHER']),
   request:   z.string().min(10).max(1000),
   wantsCall: z.boolean().default(false),

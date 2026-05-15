@@ -6,15 +6,24 @@ const { verifyToken } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
+const optionalString = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.string().optional(),
+);
+const optionalEmail = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.string().email().optional(),
+);
+
 const visitorSchema = z.object({
   name:         z.string().min(1),
   phone:        z.string().min(1),
-  email:        z.string().email().optional(),
-  country:      z.string().optional(),
-  city:         z.string().optional(),
-  source:       z.string().optional(),
-  message:      z.string().optional(),
-  preferredSvc: z.string().optional(),
+  email:        optionalEmail,
+  country:      optionalString,
+  city:         optionalString,
+  source:       optionalString,
+  message:      optionalString,
+  preferredSvc: optionalString,
 });
 
 // POST /api/visitors — public (new here form)
