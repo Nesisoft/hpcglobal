@@ -465,6 +465,8 @@ router.delete('/blog/:id', async (req, res) => {
 });
 
 // ─── Admin: Gallery ───────────────────────────────────────────────────────────
+const { upload, uploadToCloudinary } = require('../middleware/upload');
+
 router.get('/gallery/albums', async (_req, res) => {
   try {
     const albums = await prisma.galleryAlbum.findMany({
@@ -478,9 +480,25 @@ router.get('/gallery/albums', async (_req, res) => {
   }
 });
 
+router.get('/gallery/albums/:id', async (req, res) => {
+  try {
+    const album = await prisma.galleryAlbum.findUnique({
+      where:   { id: req.params.id },
+      include: { photos: { orderBy: { order: 'asc' } } },
+    });
+    if (!album) return res.status(404).json({ message: 'Album not found' });
+    res.json(album);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.post('/gallery/albums', async (req, res) => {
   try {
-    const album = await prisma.galleryAlbum.create({ data: req.body });
+    const data = { ...req.body };
+    if (data.eventDate) data.eventDate = new Date(data.eventDate);
+    const album = await prisma.galleryAlbum.create({ data });
     res.status(201).json(album);
   } catch (err) {
     console.error(err);
@@ -490,9 +508,11 @@ router.post('/gallery/albums', async (req, res) => {
 
 router.put('/gallery/albums/:id', async (req, res) => {
   try {
+    const data = { ...req.body };
+    if (data.eventDate) data.eventDate = new Date(data.eventDate);
     const album = await prisma.galleryAlbum.update({
       where: { id: req.params.id },
-      data:  req.body,
+      data,
     });
     res.json(album);
   } catch (err) {
@@ -504,6 +524,79 @@ router.put('/gallery/albums/:id', async (req, res) => {
 router.delete('/gallery/albums/:id', async (req, res) => {
   try {
     await prisma.galleryAlbum.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Upload photos to an album (multipart)
+router.post('/gallery/albums/:id/photos', upload.array('photos', 30), async (req, res) => {
+  try {
+    if (!req.files?.length) return res.status(400).json({ message: 'No files uploaded' });
+    const album = await prisma.galleryAlbum.findUnique({ where: { id: req.params.id } });
+    if (!album) return res.status(404).json({ message: 'Album not found' });
+
+    const existingCount = await prisma.galleryPhoto.count({ where: { albumId: req.params.id } });
+    const results = await Promise.all(
+      req.files.map((f, i) =>
+        uploadToCloudinary(f.buffer, 'hpcglobal/gallery').then((r) =>
+          prisma.galleryPhoto.create({
+            data: {
+              albumId: req.params.id,
+              url:     r.secure_url,
+              order:   existingCount + i,
+            },
+          })
+        )
+      )
+    );
+
+    // If album has no cover yet, set the first uploaded photo as cover
+    if (!album.coverImage && results[0]) {
+      await prisma.galleryAlbum.update({
+        where: { id: req.params.id },
+        data:  { coverImage: results[0].url },
+      });
+    }
+
+    res.status(201).json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message ?? 'Server error' });
+  }
+});
+
+router.get('/gallery/albums/:id/photos', async (req, res) => {
+  try {
+    const photos = await prisma.galleryPhoto.findMany({
+      where:   { albumId: req.params.id },
+      orderBy: { order: 'asc' },
+    });
+    res.json(photos);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/gallery/photos/:id', async (req, res) => {
+  try {
+    const photo = await prisma.galleryPhoto.update({
+      where: { id: req.params.id },
+      data:  req.body,
+    });
+    res.json(photo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/gallery/photos/:id', async (req, res) => {
+  try {
+    await prisma.galleryPhoto.delete({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
   } catch (err) {
     console.error(err);
