@@ -10,7 +10,8 @@ const About      = lazy(() => import('./pages/public/About'));
 const Leadership = lazy(() => import('./pages/public/Leadership'));
 const Services   = lazy(() => import('./pages/public/Services'));
 const Sermons    = lazy(() => import('./pages/public/Sermons'));
-const Events     = lazy(() => import('./pages/public/Events'));
+const Events      = lazy(() => import('./pages/public/Events'));
+const EventDetail = lazy(() => import('./pages/public/EventDetail'));
 const Give       = lazy(() => import('./pages/public/Give'));
 const Ministries = lazy(() => import('./pages/public/Ministries'));
 const NewHere    = lazy(() => import('./pages/public/NewHere'));
@@ -62,7 +63,7 @@ export default function App() {
             <Route path="/services"   element={<PublicLayout><Services /></PublicLayout>} />
             <Route path="/sermons"    element={<PublicLayout><Sermons /></PublicLayout>} />
             <Route path="/events"     element={<PublicLayout><Events /></PublicLayout>} />
-            <Route path="/events/:slug" element={<PublicLayout><Events /></PublicLayout>} />
+            <Route path="/events/:slug" element={<PublicLayout><EventDetail /></PublicLayout>} />
             <Route path="/give"       element={<PublicLayout><Give /></PublicLayout>} />
             <Route path="/ministries" element={<PublicLayout><Ministries /></PublicLayout>} />
             <Route path="/new-here"   element={<PublicLayout><NewHere /></PublicLayout>} />
