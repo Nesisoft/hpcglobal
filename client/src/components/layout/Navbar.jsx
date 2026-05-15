@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X, ChevronDown } from 'lucide-react';
 
@@ -24,12 +24,28 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen]         = useState(false);
   const [dropdown, setDropdown] = useState(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
   }, []);
+
+  // Close dropdown on Escape or click outside
+  useEffect(() => {
+    if (!dropdown) return;
+    const onKey = (e) => { if (e.key === 'Escape') setDropdown(null); };
+    const onClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdown(null);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onClick);
+    };
+  }, [dropdown]);
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -58,12 +74,20 @@ export default function Navbar() {
             link.children ? (
               <div
                 key={link.label}
+                ref={dropdown === link.label ? dropdownRef : null}
                 className="relative"
                 onMouseEnter={() => setDropdown(link.label)}
                 onMouseLeave={() => setDropdown(null)}
               >
-                <button className="flex items-center gap-1 px-4 py-2 text-sm text-white/80 hover:text-gold font-body font-medium transition-colors">
-                  {link.label} <ChevronDown size={14} />
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-4 py-2 text-sm text-white/80 hover:text-gold font-body font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+                  onClick={() => setDropdown((d) => (d === link.label ? null : link.label))}
+                  aria-expanded={dropdown === link.label}
+                  aria-haspopup="true"
+                >
+                  {link.label}
+                  <ChevronDown size={14} className={`transition-transform ${dropdown === link.label ? 'rotate-180' : ''}`} />
                 </button>
                 {dropdown === link.label && (
                   <div className="absolute top-full left-0 mt-1 w-48 bg-purple-deep border border-white/10 rounded-md shadow-xl overflow-hidden">
@@ -72,7 +96,7 @@ export default function Navbar() {
                         key={child.to}
                         to={child.to}
                         className={({ isActive }) =>
-                          `block px-4 py-3 text-sm font-body transition-colors ${
+                          `block px-4 py-3 text-sm font-body transition-colors focus:outline-none focus-visible:bg-white/10 ${
                             isActive ? 'text-gold bg-white/5' : 'text-white/70 hover:text-gold hover:bg-white/5'
                           }`
                         }
@@ -106,9 +130,11 @@ export default function Navbar() {
             Plan a Visit
           </Link>
           <button
-            className="lg:hidden text-white p-2"
+            type="button"
+            className="lg:hidden text-white p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
             onClick={() => setOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            aria-expanded={open}
           >
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>

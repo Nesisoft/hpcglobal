@@ -9,6 +9,7 @@ import { FaYoutube, FaWhatsapp, FaFacebook, FaInstagram } from 'react-icons/fa';
 import { useApi } from '../../hooks/useApi';
 import { publicApi } from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
+import Reveal from '../../components/ui/Reveal';
 
 const STATIC_SLIDES = [
   {
@@ -494,11 +495,11 @@ export default function Home() {
       <HeroCarousel slides={slides} />
       <EventTicker messages={tickerMessages} />
       <ServiceTimesBar services={services} />
-      <AboutSnapshot />
-      <FeatureCards />
-      <SermonsStrip />
-      <GiveBand />
-      <SocialFollow settings={settings} />
+      <Reveal><AboutSnapshot /></Reveal>
+      <Reveal><FeatureCards /></Reveal>
+      <Reveal><SermonsStrip /></Reveal>
+      <Reveal><GiveBand /></Reveal>
+      <Reveal><SocialFollow settings={settings} /></Reveal>
     </>
   );
 }

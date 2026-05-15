@@ -15,17 +15,21 @@ function CoreValueIcon({ name }) {
 
 function AccordionItem({ title, content }) {
   const [open, setOpen] = useState(false);
+  const panelId = `accordion-panel-${title.replace(/\s+/g, '-').toLowerCase()}`;
   return (
     <div className="border border-purple-brand/10 rounded-lg overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-6 py-4 text-left bg-white hover:bg-cream transition-colors"
+        type="button"
+        className="w-full flex items-center justify-between px-6 py-4 text-left bg-white hover:bg-cream transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
       >
         <span className="font-body font-semibold text-ink">{title}</span>
         {open ? <ChevronUp size={16} className="text-gold" /> : <ChevronDown size={16} className="text-gold" />}
       </button>
       {open && (
-        <div className="px-6 pb-5 pt-2 bg-white">
+        <div id={panelId} role="region" className="px-6 pb-5 pt-2 bg-white">
           <p className="font-body text-ink/70 leading-relaxed text-sm">{content}</p>
         </div>
       )}
