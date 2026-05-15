@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Images, Calendar, X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
@@ -155,6 +156,7 @@ export default function Gallery() {
 
   return (
     <>
+      <SEO title="Gallery" description="Photo albums from HPC Global events, services, and community gatherings." />
       <SectionHero
         title="Gallery"
         subtitle="Moments of worship, community, and celebration captured in time."

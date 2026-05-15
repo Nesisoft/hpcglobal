@@ -1,32 +1,64 @@
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, Phone, Mail } from 'lucide-react';
+import { MapPin, Clock, Mail, Phone } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
+import { publicApi } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
 
 const COL_SERVICES = [
-  { label: 'Dominion Encounter',      sub: 'Sundays 9 AM GMT' },
-  { label: 'Prophetic & Miracle',     sub: 'Fridays 6:30 PM GMT' },
+  { label: 'Dominion Encounter',       sub: 'Sundays 9 AM GMT' },
+  { label: 'Prophetic & Miracle',      sub: 'Fridays 6:30 PM GMT' },
   { label: 'Global Prophetic Highway', sub: 'Sundays 9 PM GMT / 4 PM EST' },
 ];
 
 const COL_MINISTRY = [
-  { label: 'About Us',   to: '/about'       },
-  { label: 'Leadership', to: '/leadership'  },
-  { label: 'Ministries', to: '/ministries'  },
-  { label: 'Prayer',     to: '/prayer'      },
-  { label: 'Gallery',    to: '/gallery'     },
-  { label: 'Blog',       to: '/blog'        },
+  { label: 'About Us',   to: '/about'      },
+  { label: 'Leadership', to: '/leadership' },
+  { label: 'Ministries', to: '/ministries' },
+  { label: 'Prayer',     to: '/prayer'     },
+  { label: 'Gallery',    to: '/gallery'    },
+  { label: 'Blog',       to: '/blog'       },
 ];
 
 const COL_CONNECT = [
-  { label: "I'm New Here",  to: '/new-here'  },
-  { label: 'Events',        to: '/events'    },
-  { label: 'Give Online',   to: '/give'      },
-  { label: 'Contact Us',    to: '/contact'   },
-  { label: 'Sermons',       to: '/sermons'   },
+  { label: "I'm New Here", to: '/new-here' },
+  { label: 'Events',       to: '/events'   },
+  { label: 'Give Online',  to: '/give'     },
+  { label: 'Contact Us',   to: '/contact'  },
+  { label: 'Sermons',      to: '/sermons'  },
 ];
 
+function SocialIcon({ href, children, title }) {
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={title}
+      className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-gold hover:text-purple-deep transition-all"
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function Footer() {
+  const fetchFn = useCallback(() => publicApi.getSettings(), []);
+  const { data: settings } = useApi(fetchFn);
+
   const year = new Date().getFullYear();
+
+  const ytHandle = settings?.youtubeHandle || '@prophetclottey';
+  const ytUrl    = `https://youtube.com/${ytHandle.startsWith('@') ? ytHandle : '@' + ytHandle}`;
+  const fbUrl    = settings?.facebookUrl   || null;
+  const igUrl    = settings?.instagramUrl  || null;
+  const waNum    = settings?.whatsapp      || null;
+  const waUrl    = waNum ? `https://wa.me/${waNum.replace(/\D/g, '')}` : null;
+
+  const phone   = settings?.phone   || null;
+  const email   = settings?.email   || null;
+  const address = settings?.address || 'Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana';
 
   return (
     <footer className="bg-purple-deep border-t border-white/10">
@@ -46,20 +78,18 @@ export default function Footer() {
               An Apostolic Prophetic Word-based ministry bringing hope to the hopeless and raising Kingdom leaders worldwide.
             </p>
             <div className="flex items-center gap-3">
-              <a href="https://youtube.com/@prophetclottey" target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-gold hover:text-purple-deep transition-all">
+              <SocialIcon href={ytUrl} title="YouTube">
                 <FaYoutube size={14} />
-              </a>
-              <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-gold hover:text-purple-deep transition-all">
+              </SocialIcon>
+              <SocialIcon href={fbUrl} title="Facebook">
                 <FaFacebook size={14} />
-              </a>
-              <a href="#" className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-gold hover:text-purple-deep transition-all">
+              </SocialIcon>
+              <SocialIcon href={igUrl} title="Instagram">
                 <FaInstagram size={14} />
-              </a>
-              <a href="https://wa.me/233000000000" target="_blank" rel="noopener noreferrer"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-gold hover:text-purple-deep transition-all">
+              </SocialIcon>
+              <SocialIcon href={waUrl} title="WhatsApp">
                 <FaWhatsapp size={14} />
-              </a>
+              </SocialIcon>
             </div>
           </div>
 
@@ -108,12 +138,20 @@ export default function Footer() {
             <div className="space-y-2 border-t border-white/10 pt-4">
               <div className="flex items-start gap-2 text-white/50 text-xs font-body">
                 <MapPin size={12} className="mt-0.5 flex-shrink-0 text-gold" />
-                <span>Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana</span>
+                <span>{address}</span>
               </div>
-              <div className="flex items-center gap-2 text-white/50 text-xs font-body">
-                <Mail size={12} className="text-gold flex-shrink-0" />
-                <span>info@hpcglobal.org</span>
-              </div>
+              {email && (
+                <div className="flex items-center gap-2 text-white/50 text-xs font-body">
+                  <Mail size={12} className="text-gold flex-shrink-0" />
+                  <a href={`mailto:${email}`} className="hover:text-gold transition-colors">{email}</a>
+                </div>
+              )}
+              {phone && (
+                <div className="flex items-center gap-2 text-white/50 text-xs font-body">
+                  <Phone size={12} className="text-gold flex-shrink-0" />
+                  <a href={`tel:${phone}`} className="hover:text-gold transition-colors">{phone}</a>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Link } from 'react-router-dom';
 import { BookOpen, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
 import { publicApi } from '../../services/api';
@@ -122,6 +123,7 @@ export default function Blog() {
 
   return (
     <>
+      <SEO title="Blog" description="Devotionals, prophetic words, sermon notes and testimonies from HPC Global. Daily spiritual nourishment for Kingdom living." />
       <SectionHero
         title="Blog"
         subtitle="Devotionals, prophetic words, teaching notes, and testimonies from our community."

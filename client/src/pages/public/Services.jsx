@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Link } from 'react-router-dom';
 import { Clock, MapPin, Video, CalendarPlus, HelpCircle } from 'lucide-react';
 import { FaYoutube } from 'react-icons/fa';
@@ -88,6 +89,7 @@ export default function Services() {
 
   return (
     <>
+      <SEO title="Our Services" description="Join HPC Global three times a week — Dominion Encounter (Sundays), Prophetic & Miracle (Fridays), and Global Prophetic Highway online (Sundays)." />
       <SectionHero
         title="Our Services"
         subtitle="Three gatherings every week — in person and online. All are welcome."

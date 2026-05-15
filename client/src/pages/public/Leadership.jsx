@@ -1,6 +1,8 @@
+import { useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { publicApi } from '../../services/api';
 import SectionHero from '../../components/ui/SectionHero';
+import SEO from '../../components/ui/SEO';
 import Spinner from '../../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import { FaYoutube, FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
@@ -40,13 +42,20 @@ function ProfileCard({ profile, featured }) {
 }
 
 export default function Leadership() {
-  const { data, loading } = useApi(publicApi.getLeadership);
+  const fetchLeaders = useCallback(() => publicApi.getLeadership(), []);
+  const fetchSettings = useCallback(() => publicApi.getSettings(), []);
+  const { data, loading } = useApi(fetchLeaders);
+  const { data: settings } = useApi(fetchSettings);
   const profiles = data || [];
+
+  const waNum = settings?.whatsapp || null;
+  const waUrl = waNum ? `https://wa.me/${waNum.replace(/\D/g, '')}` : null;
   const seniors  = profiles.filter((p) => p.isSenior);
   const team     = profiles.filter((p) => !p.isSenior);
 
   return (
     <>
+      <SEO title="Leadership" description="Meet the pastoral team and leadership of HPC Global — Hopepress Chapel, Accra, Ghana." />
       <SectionHero title="Leadership" subtitle="People who are passionate about seeing you flourish." breadcrumb="Home / Leadership" />
       <section className="section-pad bg-cream">
         <div className="container-page">
@@ -74,9 +83,11 @@ export default function Leadership() {
                 <p className="text-white/60 font-body text-sm mb-6">Our pastoral team is here for you.</p>
                 <div className="flex justify-center gap-4 flex-wrap">
                   <Link to="/prayer" className="btn-primary">Submit a Prayer Request</Link>
-                  <a href="https://wa.me/233000000000" target="_blank" rel="noopener noreferrer" className="btn-outline border-white/30 text-white hover:bg-white/10">
-                    <FaWhatsapp size={14} /> WhatsApp Us
-                  </a>
+                  {waUrl && (
+                    <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn-outline border-white/30 text-white hover:bg-white/10">
+                      <FaWhatsapp size={14} /> WhatsApp Us
+                    </a>
+                  )}
                 </div>
               </div>
             </>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Wifi, ChevronRight, Clock } from 'lucide-react';
 import { publicApi } from '../../services/api';
@@ -136,6 +137,7 @@ export default function Events() {
 
   return (
     <>
+      <SEO title="Events" description="Browse upcoming events at HPC Global — conferences, services, youth gatherings and more. Join us in person or online." />
       <SectionHero
         title="Events"
         subtitle="Join us for worship, teaching, and community. In person or online — all are welcome."

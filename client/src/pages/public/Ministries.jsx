@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Link } from 'react-router-dom';
 import {
   Users, Music, BookOpen, Heart, Globe, Star, Mic2, Baby,
@@ -78,6 +79,7 @@ export default function Ministries() {
 
   return (
     <>
+      <SEO title="Ministries" description="Get involved at HPC Global. Find your ministry — worship, youth, women, men, prayer, media and more." />
       <SectionHero
         title="Our Ministries"
         subtitle="Find your place to belong, serve, and grow in community."

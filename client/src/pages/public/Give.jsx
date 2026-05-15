@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Heart, Smartphone, Building2, CreditCard, CheckCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -121,6 +122,7 @@ export default function Give() {
 
   return (
     <>
+      <SEO title="Give" description="Support the mission of HPC Global. Give online via mobile money, bank transfer, or Paystack. Every seed sown advances the Kingdom." />
       <SectionHero title="Give to HPC Global" subtitle="Your generosity fuels the mission." breadcrumb="Home / Give" />
 
       {/* Intro */}

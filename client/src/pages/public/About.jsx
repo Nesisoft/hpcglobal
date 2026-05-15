@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SEO from '../../components/ui/SEO';
 import { UserCheck, TrendingUp, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
@@ -47,6 +48,10 @@ export default function About() {
 
   return (
     <>
+      <SEO
+        title="About Us"
+        description="HPC Global — Hopepress Chapel is an Apostolic Prophetic Word-based ministry founded by Prophet George and Lady Apostle Adelaide Clottey in Accra, Ghana."
+      />
       <SectionHero
         title="About HPC Global"
         subtitle="Bringing hope to the hopeless, raising Kingdom leaders."

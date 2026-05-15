@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import SEO from '../../components/ui/SEO';
 import { Play, Search } from 'lucide-react';
 import { FaYoutube } from 'react-icons/fa';
 import { useApi } from '../../hooks/useApi';
@@ -97,6 +98,7 @@ export default function Sermons() {
 
   return (
     <>
+      <SEO title="Sermons & Media" description="Watch and listen to sermons from HPC Global. Prophetic, Word-based messages from Prophet George Clottey and guest speakers." />
       <SectionHero
         title="Sermons & Media"
         subtitle="Access our library of messages — transformative, prophetic, and Word-based."

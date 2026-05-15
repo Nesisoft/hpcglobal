@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Heart, Lock, Phone, CheckCircle } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { publicApi } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
 import SectionHero from '../../components/ui/SectionHero';
+import SEO from '../../components/ui/SEO';
 
 const schema = z.object({
   name:      z.string().optional(),
@@ -31,6 +33,11 @@ export default function Prayer() {
   const [submitted, setSubmitted]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const fetchFn = useCallback(() => publicApi.getSettings(), []);
+  const { data: settings } = useApi(fetchFn);
+  const waNum = settings?.whatsapp || null;
+  const waUrl = waNum ? `https://wa.me/${waNum.replace(/\D/g, '')}` : 'https://wa.me/233000000000';
+
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: { category: 'SPIRITUAL', isPrivate: true, wantsCall: false },
@@ -52,6 +59,10 @@ export default function Prayer() {
 
   return (
     <>
+      <SEO
+        title="Prayer Request"
+        description="Submit a prayer request to HPC Global. Our pastoral team prays over every request in confidence."
+      />
       <SectionHero
         title="Prayer Request"
         subtitle="Bring your burden to the throne of grace. Our pastoral team prays over every request."
@@ -177,7 +188,7 @@ export default function Prayer() {
             If your need is urgent, reach out to our prayer line directly on WhatsApp.
           </p>
           <a
-            href="https://wa.me/233000000000"
+            href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded font-body font-semibold text-sm hover:bg-green-600 transition-colors"

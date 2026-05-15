@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Video, Church, Users, Home as HomeIcon, CheckCircle } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
@@ -6,7 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { publicApi } from '../../services/api';
+import { useApi } from '../../hooks/useApi';
 import SectionHero from '../../components/ui/SectionHero';
+import SEO from '../../components/ui/SEO';
 
 const schema = z.object({
   name:         z.string().min(1, 'Name is required'),
@@ -23,8 +25,15 @@ const SOURCES = ['YouTube', 'Facebook', 'Instagram', 'Friend', 'Google', 'Other'
 const SERVICES = ['Dominion Encounter (Sunday)', 'Prophetic & Miracle (Friday)', 'Global Prophetic Highway (Online)'];
 
 export default function NewHere() {
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted]     = useState(false);
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const fetchFn = useCallback(() => publicApi.getSettings(), []);
+  const { data: settings } = useApi(fetchFn);
+
+  const waNum = settings?.whatsapp || null;
+  const waUrl = waNum ? `https://wa.me/${waNum.replace(/\D/g, '')}` : 'https://wa.me/233000000000';
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -32,11 +41,12 @@ export default function NewHere() {
 
   async function onSubmit(data) {
     setSubmitting(true);
+    setSubmitError('');
     try {
       await publicApi.submitVisitor(data);
       setSubmitted(true);
-    } catch {
-      alert('Something went wrong. Please try again.');
+    } catch (err) {
+      setSubmitError(err.response?.data?.message ?? 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -44,6 +54,10 @@ export default function NewHere() {
 
   return (
     <>
+      <SEO
+        title="New Here?"
+        description="Visiting HPC Global for the first time? We've been expecting you. Find out what to expect and fill in your connect card."
+      />
       <SectionHero
         title="New Here?"
         subtitle="We've been expecting you. Let us help you feel right at home."
@@ -68,7 +82,7 @@ export default function NewHere() {
           </div>
 
           <a
-            href="https://wa.me/233000000000"
+            href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded font-body font-semibold text-sm hover:bg-green-600 transition-colors"
@@ -196,7 +210,10 @@ export default function NewHere() {
                 <label className="section-label block mb-2">What are you hoping to find? (optional)</label>
                 <textarea rows={3} className="input resize-none" placeholder="Feel free to share…" {...register('message')} />
               </div>
-              <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4">
+              {submitError && (
+                <p className="text-red-500 text-xs font-body bg-red-50 border border-red-200 rounded px-3 py-2">{submitError}</p>
+              )}
+              <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4 disabled:opacity-50">
                 {submitting ? 'Sending…' : 'Submit Connect Card'}
               </button>
             </form>

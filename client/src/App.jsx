@@ -20,6 +20,7 @@ const Blog       = lazy(() => import('./pages/public/Blog'));
 const BlogPost   = lazy(() => import('./pages/public/BlogPost'));
 const Gallery    = lazy(() => import('./pages/public/Gallery'));
 const Contact    = lazy(() => import('./pages/public/Contact'));
+const NotFound   = lazy(() => import('./pages/public/NotFound'));
 
 // ─── Admin pages (lazy) ───────────────────────────────────────────────────────
 const AdminLogin     = lazy(() => import('./pages/admin/AdminLogin'));
@@ -92,8 +93,8 @@ export default function App() {
             <Route path="/admin/contact"    element={<ProtectedRoute><AdminContact /></ProtectedRoute>} />
             <Route path="/admin/users"      element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
 
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
