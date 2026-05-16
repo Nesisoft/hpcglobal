@@ -7,7 +7,7 @@
         "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
         "dev:server": "nodemon server/src/server.js",
         "dev:client": "cd client && vite",
-        "build": "cd client && vite build",
+        "build": "cd client && npx vite build",
         "start": "node server/src/server.js",
         "db:generate": "prisma generate --schema=server/src/prisma/schema.prisma",
         "db:migrate": "prisma migrate dev --schema=server/src/prisma/schema.prisma",
