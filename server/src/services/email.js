@@ -1,14 +1,17 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 587;
+
 const transporter = nodemailer.createTransport({
   host:   process.env.SMTP_HOST,
-  port:   Number(process.env.SMTP_PORT) || 587,
-  secure: false,
+  port:   SMTP_PORT,
+  secure: SMTP_PORT === 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: { rejectUnauthorized: false },
 });
 
 const FROM = process.env.SMTP_FROM || 'noreply@hpcglobal.org';
@@ -29,7 +32,6 @@ async function sendAutoReply(toEmail, toName) {
 }
 
 async function notifyOffice(msg) {
-  const settings = await require('../prisma/schema')?.churchEmail?.catch?.(() => null);
   const to = process.env.OFFICE_EMAIL || FROM;
   await transporter.sendMail({
     from:    `HPC Website <${FROM}>`,
