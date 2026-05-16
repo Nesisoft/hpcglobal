@@ -1,11 +1,11 @@
 const router = require('express').Router();
 const { z }   = require('zod');
-const { PrismaClient } = require('@prisma/client');
+
 const { validate }    = require('../middleware/validate');
 const { verifyToken } = require('../middleware/auth');
 const email = require('../services/email');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const messageSchema = z.object({
   name:    z.string().min(1),

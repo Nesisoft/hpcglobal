@@ -1,8 +1,8 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+
 const { verifyToken }  = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // Safe fields returned to the public
 const PUBLIC_FIELDS = {
