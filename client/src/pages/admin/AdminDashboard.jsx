@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         <StatCard
           icon={Mic2}
           label="Latest Sermon"
-          value={loading ? undefined : (data?.latestSermon?.title?.slice(0, 22) + (data?.latestSermon?.title?.length > 22 ? '…' : '') ?? '—')}
+          value={loading ? undefined : (data?.latestSermon?.title ? data.latestSermon.title.slice(0, 22) + (data.latestSermon.title.length > 22 ? '…' : '') : '—')}
           to="/admin/sermons"
           color="gold"
           loading={loading}
