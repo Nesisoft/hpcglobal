@@ -1,9 +1,8 @@
 const router = require('express').Router();
-const { PrismaClient }    = require('@prisma/client');
 const { verifyToken }     = require('../middleware/auth');
 const { upload, uploadToCloudinary } = require('../middleware/upload');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/gallery — public albums
 router.get('/', async (_req, res) => {

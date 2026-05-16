@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
+
 const { verifyToken }  = require('../middleware/auth');
 const { requireRole }  = require('../middleware/adminOnly');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // All admin routes require auth
 router.use(verifyToken);

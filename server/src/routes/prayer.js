@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const { z }   = require('zod');
-const { PrismaClient } = require('@prisma/client');
+
 const { validate }     = require('../middleware/validate');
 const { verifyToken }  = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const optionalString = z.preprocess(
   (v) => (v === '' || v === null ? undefined : v),

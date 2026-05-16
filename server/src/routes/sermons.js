@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const { z }   = require('zod');
-const { PrismaClient } = require('@prisma/client');
+
 const { verifyToken }  = require('../middleware/auth');
 const { validate }     = require('../middleware/validate');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const sermonSchema = z.object({
   title:         z.string().min(1),
