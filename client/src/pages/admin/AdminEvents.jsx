@@ -9,6 +9,7 @@ import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
+import RichTextEditor from '../../components/admin/RichTextEditor';
 import Toggle from '../../components/admin/Toggle';
 import { downloadBlob } from '../../utils/download';
 
@@ -75,13 +76,12 @@ function EventForm({ form, setForm }) {
         </FormField>
       </div>
 
-      <FormField label="Description" required>
-        <textarea
-          className="input min-h-[90px] resize-y"
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-        />
-      </FormField>
+      <RichTextEditor
+        label="Description"
+        required
+        value={form.description}
+        onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="Start Date & Time" required>

@@ -92,7 +92,7 @@ function EventCard({ event, featured }) {
           {event.title}
         </h3>
         <p className={`text-ink/55 font-body leading-relaxed mb-4 ${featured ? 'text-base line-clamp-3' : 'text-sm line-clamp-2'}`}>
-          {event.description}
+          {event.description?.replace(/<[^>]*>/g, ' ').trim()}
         </p>
 
         <div className="space-y-1.5 mb-4">
