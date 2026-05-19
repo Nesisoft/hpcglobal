@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -10,6 +10,7 @@ import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
 import Toggle from '../../components/admin/Toggle';
+import { downloadBlob } from '../../utils/download';
 
 const CATEGORIES = ['SERVICE', 'CONFERENCE', 'YOUTH', 'WOMENS', 'MENS', 'ONLINE', 'OTHER'];
 
@@ -208,6 +209,15 @@ export default function AdminEvents() {
   );
   const { data: rsvpData, loading: rsvpsLoading } = useApi(fetchRsvpsFn, [rsvpEvent]);
   const rsvps = Array.isArray(rsvpData) ? rsvpData : (rsvpData?.data ?? []);
+
+  async function handleExportRsvps() {
+    try {
+      const { data } = await adminApi.exportEventRsvps(rsvpEvent.id);
+      downloadBlob(data, `rsvps-${rsvpEvent.slug ?? rsvpEvent.id}.csv`);
+    } catch {
+      alert('Export failed. Please try again.');
+    }
+  }
 
   const filtered = events.filter((e) => {
     const q = search.toLowerCase();
@@ -441,7 +451,12 @@ export default function AdminEvents() {
           loading={rsvpsLoading}
           empty="No RSVPs for this event yet."
         />
-        <div className="flex justify-end mt-4 pt-4 border-t border-purple-brand/8">
+        <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-purple-brand/8">
+          {rsvps.length > 0 && (
+            <button onClick={handleExportRsvps} className="btn-outline text-sm px-5 py-2">
+              <Download size={14} /> Export CSV
+            </button>
+          )}
           <button onClick={() => setRsvpEvent(null)} className="btn-outline text-sm px-5 py-2">
             <X size={14} /> Close
           </button>

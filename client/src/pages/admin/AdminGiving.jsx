@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTable from '../../components/admin/AdminTable';
+import { downloadBlob } from '../../utils/download';
 
 // ─── Enum maps ────────────────────────────────────────────────────────────────
 const CATEGORIES = ['TITHE', 'OFFERING', 'FIRST_FRUITS', 'BUILDING_FUND', 'MISSIONS', 'PASTORAL', 'OTHER'];
@@ -103,34 +104,18 @@ export default function AdminGiving() {
 
   const allCatTotal = (summary?.byCategory ?? []).reduce((s, r) => s + (r._sum?.amount ?? 0), 0);
 
-  // Export
-  function handleExport() {
-    const params = new URLSearchParams({
-      ...(filterStatus   && { status:   filterStatus   }),
-      ...(filterCategory && { category: filterCategory }),
-      ...(filterMethod   && { method:   filterMethod   }),
-    });
-    // Build CSV from current records (client-side for simplicity)
-    const header = ['Name', 'Phone', 'Email', 'Amount', 'Category', 'Method', 'Status', 'Reference', 'Date'].join(',');
-    const rows   = records.map((r) => [
-      `"${r.name}"`,
-      r.phone,
-      r.email || '',
-      r.amount,
-      CAT_LABELS[r.category] ?? r.category,
-      METHOD_LABELS[r.method] ?? r.method,
-      r.status,
-      r.reference || '',
-      fmtDate(r.createdAt),
-    ].join(','));
-    const csv  = [header, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `giving-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // Export — server-side CSV (all matching records, not just the current page)
+  async function handleExport() {
+    try {
+      const { data } = await adminApi.exportGiving({
+        status:   filterStatus   || undefined,
+        category: filterCategory || undefined,
+        method:   filterMethod   || undefined,
+      });
+      downloadBlob(data, `giving-${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch {
+      alert('Export failed. Please try again.');
+    }
   }
 
   const columns = [

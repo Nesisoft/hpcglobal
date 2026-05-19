@@ -89,10 +89,12 @@ export const adminApi = {
   updateEvent:    (id,d) => api.put(`/admin/events/${id}`, d),
   deleteEvent:    (id)   => api.delete(`/admin/events/${id}`),
   getEventRsvps:  (id)   => api.get(`/admin/events/${id}/rsvps`),
+  exportEventRsvps: (id) => api.get(`/admin/events/${id}/rsvps/export`, { responseType: 'blob' }),
 
   getGiving:    (p)    => api.get('/admin/giving', { params: p }),
   givingSummary: ()    => api.get('/admin/giving/summary'),
-  exportGiving:  (p)   => api.get('/admin/giving/export', { params: p }),
+  exportGiving:  (p)   => api.get('/admin/giving/export', { params: p, responseType: 'blob' }),
+  exportVisitors: (p)  => api.get('/admin/visitors/export', { params: p, responseType: 'blob' }),
 
   getPrayer:    (p)    => api.get('/admin/prayer', { params: p }),
   updatePrayer: (id,d) => api.put(`/admin/prayer/${id}`, d),
