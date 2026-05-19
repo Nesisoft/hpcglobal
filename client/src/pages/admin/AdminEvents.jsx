@@ -10,7 +10,9 @@ import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
 import RichTextEditor from '../../components/admin/RichTextEditor';
+import EventCalendar from '../../components/admin/EventCalendar';
 import Toggle from '../../components/admin/Toggle';
+import { List, CalendarDays } from 'lucide-react';
 import { downloadBlob } from '../../utils/download';
 
 const CATEGORIES = ['SERVICE', 'CONFERENCE', 'YOUTH', 'WOMENS', 'MENS', 'ONLINE', 'OTHER'];
@@ -197,6 +199,7 @@ export default function AdminEvents() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]         = useState(false);
   const [rsvpEvent, setRsvpEvent]       = useState(null);
+  const [viewMode, setViewMode]         = useState('list');
   const [error, setError]               = useState('');
 
   const fetchFn = useCallback(() => adminApi.getEvents(), []);
@@ -409,15 +412,35 @@ export default function AdminEvents() {
               <option key={c} value={c}>{CAT_LABELS[c]}</option>
             ))}
           </select>
+          <div className="flex items-center bg-white border border-purple-brand/15 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-purple-brand text-white' : 'text-ink/40 hover:text-ink'}`}
+              title="List view"
+            >
+              <List size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'calendar' ? 'bg-purple-brand text-white' : 'text-ink/40 hover:text-ink'}`}
+              title="Calendar view"
+            >
+              <CalendarDays size={15} />
+            </button>
+          </div>
         </div>
       </AdminPageHeader>
 
-      <AdminTable
-        columns={columns}
-        rows={filtered}
-        loading={loading}
-        empty="No events yet. Click 'Add Event' to create one."
-      />
+      {viewMode === 'calendar' ? (
+        <EventCalendar events={filtered} onSelect={openEdit} />
+      ) : (
+        <AdminTable
+          columns={columns}
+          rows={filtered}
+          loading={loading}
+          empty="No events yet. Click 'Add Event' to create one."
+        />
+      )}
 
       {/* Add / Edit modal */}
       <AdminModal
