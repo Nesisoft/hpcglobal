@@ -80,7 +80,7 @@ export default function AdminGiving() {
 
   // Summary stats
   const summaryFn = useCallback(() => adminApi.givingSummary(), []);
-  const { data: summary } = useApi(summaryFn);
+  const { data: summary, error: summaryError } = useApi(summaryFn);
 
   // Records list
   const recordsFn = useCallback(
@@ -202,6 +202,13 @@ export default function AdminGiving() {
         subtitle={`${total} record${total !== 1 ? 's' : ''} · SUPER_ADMIN access only`}
         action={{ label: 'Export CSV', icon: Download, onClick: handleExport }}
       />
+
+      {/* Summary error */}
+      {summaryError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-red-600 text-sm font-body">
+          Summary failed to load: {summaryError}
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
