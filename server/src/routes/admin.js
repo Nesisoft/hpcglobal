@@ -551,6 +551,18 @@ router.get('/visitors', async (req, res) => {
   }
 });
 
+router.put('/visitors/bulk', async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ message: 'ids required' });
+    await prisma.visitor.updateMany({ where: { id: { in: ids } }, data: { status } });
+    res.json({ updated: ids.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.put('/visitors/:id', async (req, res) => {
   try {
     const visitor = await prisma.visitor.update({
@@ -666,7 +678,7 @@ const { upload, uploadToCloudinary } = require('../middleware/upload');
 router.get('/gallery/albums', async (_req, res) => {
   try {
     const albums = await prisma.galleryAlbum.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
       include: { _count: { select: { photos: true } } },
     });
     res.json(albums);
@@ -696,6 +708,20 @@ router.post('/gallery/albums', async (req, res) => {
     if (data.eventDate) data.eventDate = new Date(data.eventDate);
     const album = await prisma.galleryAlbum.create({ data });
     res.status(201).json(album);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/gallery/albums/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids required' });
+    await prisma.$transaction(ids.map((id, i) =>
+      prisma.galleryAlbum.update({ where: { id }, data: { order: i } })
+    ));
+    res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

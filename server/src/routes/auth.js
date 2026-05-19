@@ -1,10 +1,12 @@
 const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
+const crypto  = require('crypto');
 const { z }   = require('zod');
 
 const { validate }     = require('../middleware/validate');
 const { verifyToken }  = require('../middleware/auth');
+const emailService     = require('../services/email');
 
 const prisma = require('../lib/prisma');
 
@@ -73,6 +75,54 @@ router.post('/logout', verifyToken, (_req, res) => {
   // With stateless JWT, logout is handled client-side.
   // Extend here with a token blocklist if needed.
   res.json({ message: 'Logged out' });
+});
+
+// POST /api/auth/forgot-password — public, rate-limit in production
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  // Always return 200 to avoid user enumeration
+  res.json({ message: 'If that email exists, a reset link has been sent.' });
+  try {
+    const user = await prisma.adminUser.findUnique({ where: { email } });
+    if (!user) return;
+    const token  = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await prisma.adminUser.update({
+      where: { id: user.id },
+      data:  { passwordResetToken: token, passwordResetExpiry: expiry },
+    });
+    const appUrl  = process.env.APP_URL || 'https://www.hpcglobal.org';
+    const resetUrl = `${appUrl}/admin/reset-password?token=${token}`;
+    await emailService.sendPasswordReset(user.email, resetUrl);
+  } catch (err) {
+    console.error('Password reset error (non-fatal):', err.message);
+  }
+});
+
+// POST /api/auth/reset-password — public
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password || password.length < 8) {
+    return res.status(400).json({ message: 'Token and password (min 8 chars) are required.' });
+  }
+  try {
+    const user = await prisma.adminUser.findFirst({
+      where: {
+        passwordResetToken:  token,
+        passwordResetExpiry: { gt: new Date() },
+      },
+    });
+    if (!user) return res.status(400).json({ message: 'Token is invalid or has expired.' });
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.adminUser.update({
+      where: { id: user.id },
+      data:  { passwordHash, passwordResetToken: null, passwordResetExpiry: null },
+    });
+    res.json({ message: 'Password updated. You can now log in.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 module.exports = router;

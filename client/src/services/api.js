@@ -105,8 +105,9 @@ export const adminApi = {
   getPrayer:    (p)    => api.get('/admin/prayer', { params: p }),
   updatePrayer: (id,d) => api.put(`/admin/prayer/${id}`, d),
 
-  getVisitors:    (p)    => api.get('/admin/visitors', { params: p }),
-  updateVisitor:  (id,d) => api.put(`/admin/visitors/${id}`, d),
+  getVisitors:      (p)    => api.get('/admin/visitors', { params: p }),
+  updateVisitor:    (id,d) => api.put(`/admin/visitors/${id}`, d),
+  bulkUpdateVisitors: (d)  => api.put('/admin/visitors/bulk', d),
 
   getBlog:       (p)    => api.get('/admin/blog', { params: p }),
   createPost:    (d)    => api.post('/admin/blog', d),
@@ -118,6 +119,7 @@ export const adminApi = {
   createAlbum:   (d)      => api.post('/admin/gallery/albums', d),
   updateAlbum:   (id, d)  => api.put(`/admin/gallery/albums/${id}`, d),
   deleteAlbum:   (id)     => api.delete(`/admin/gallery/albums/${id}`),
+  reorderAlbums: (ids)    => api.put('/admin/gallery/albums/reorder', { ids }),
   getPhotos:     (id)     => api.get(`/admin/gallery/albums/${id}/photos`),
   uploadPhotos:  (id, fd) => api.post(`/admin/gallery/albums/${id}/photos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updatePhoto:   (id, d)  => api.put(`/admin/gallery/photos/${id}`, d),

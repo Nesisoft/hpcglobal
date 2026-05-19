@@ -98,10 +98,12 @@ model AdminUser {
   name         String
   email        String    @unique
   passwordHash String
-  role         AdminRole
-  createdAt    DateTime  @default(now())
-  lastLogin    DateTime?
-  posts        BlogPost[]
+  role              AdminRole
+  createdAt         DateTime  @default(now())
+  lastLogin         DateTime?
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
+  posts             BlogPost[]
 }
 
 model SiteSettings {

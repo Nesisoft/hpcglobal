@@ -1,5 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Download, TrendingUp, DollarSign, Calendar, BarChart2 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie, Legend,
+} from 'recharts';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -34,6 +38,9 @@ const STATUS_COLORS = {
   COMPLETED: 'bg-green-50 text-green-700',
   FAILED:    'bg-red-50 text-red-600',
 };
+
+const BAR_COLOR  = '#7E5BAC';
+const PIE_COLORS = ['#7E5BAC', '#C49A3C', '#5B8AC4', '#4CAF8A', '#E07D4F', '#9B59B6', '#95A5A6'];
 
 const fmtAmt   = (n) => `GHS ${Number(n ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`;
 const fmtDate  = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -226,41 +233,73 @@ export default function AdminGiving() {
         />
       </div>
 
-      {/* Category breakdown */}
-      {summary?.byCategory?.length > 0 && (
-        <div className="bg-white rounded-xl border border-purple-brand/8 p-5 mb-6">
-          <h3 className="font-display text-base text-ink font-light mb-4">By Category (all time)</h3>
-          <div className="space-y-3">
-            {[...(summary.byCategory)]
-              .sort((a, b) => (b._sum?.amount ?? 0) - (a._sum?.amount ?? 0))
-              .map((row) => (
-                <BreakdownBar
-                  key={row.category}
-                  label={CAT_LABELS[row.category] ?? row.category}
-                  amount={row._sum?.amount ?? 0}
-                  total={allCatTotal}
-                />
-              ))}
-          </div>
-        </div>
-      )}
+      {/* Charts row */}
+      {(summary?.byCategory?.length > 0 || summary?.byMethod?.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* Category bar chart */}
+          {summary?.byCategory?.length > 0 && (
+            <div className="bg-white rounded-xl border border-purple-brand/8 p-5">
+              <h3 className="font-display text-base text-ink font-light mb-4">By Category (all time)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  layout="vertical"
+                  data={[...(summary.byCategory)]
+                    .sort((a, b) => (b._sum?.amount ?? 0) - (a._sum?.amount ?? 0))
+                    .map((r) => ({ name: CAT_LABELS[r.category] ?? r.category, amount: r._sum?.amount ?? 0 }))}
+                  margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+                >
+                  <XAxis
+                    type="number"
+                    tickFormatter={(v) => `GHS ${(v / 1000).toFixed(0)}k`}
+                    tick={{ fontSize: 10, fill: '#6B6B8A' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={90}
+                    tick={{ fontSize: 11, fill: '#6B6B8A' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(v) => [fmtAmt(v), 'Total']}
+                    contentStyle={{ borderRadius: 8, border: '1px solid #E8E4F3', fontSize: 12 }}
+                  />
+                  <Bar dataKey="amount" fill={BAR_COLOR} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-      {/* Method breakdown */}
-      {summary?.byMethod?.length > 0 && (
-        <div className="bg-white rounded-xl border border-purple-brand/8 p-5 mb-6">
-          <h3 className="font-display text-base text-ink font-light mb-4">By Payment Method (all time)</h3>
-          <div className="space-y-3">
-            {[...(summary.byMethod)]
-              .sort((a, b) => (b._sum?.amount ?? 0) - (a._sum?.amount ?? 0))
-              .map((row) => (
-                <BreakdownBar
-                  key={row.method}
-                  label={METHOD_LABELS[row.method] ?? row.method}
-                  amount={row._sum?.amount ?? 0}
-                  total={allCatTotal}
-                />
-              ))}
-          </div>
+          {/* Method pie chart */}
+          {summary?.byMethod?.length > 0 && (
+            <div className="bg-white rounded-xl border border-purple-brand/8 p-5">
+              <h3 className="font-display text-base text-ink font-light mb-4">By Payment Method (all time)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={[...(summary.byMethod)]
+                      .sort((a, b) => (b._sum?.amount ?? 0) - (a._sum?.amount ?? 0))
+                      .map((r) => ({ name: METHOD_LABELS[r.method] ?? r.method, value: r._sum?.amount ?? 0 }))}
+                    cx="50%"
+                    cy="45%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {summary.byMethod.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => [fmtAmt(v), 'Total']} contentStyle={{ borderRadius: 8, border: '1px solid #E8E4F3', fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
 
