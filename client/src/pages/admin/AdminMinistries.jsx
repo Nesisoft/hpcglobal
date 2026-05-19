@@ -8,6 +8,7 @@ import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
+import SortableGrid from '../../components/admin/SortableGrid';
 import Toggle from '../../components/admin/Toggle';
 
 const ICON_OPTIONS = [
@@ -197,6 +198,15 @@ export default function AdminMinistries() {
     }
   }
 
+  async function handleReorder(ids) {
+    try {
+      await adminApi.reorderMinistries(ids);
+      refetch();
+    } catch {
+      refetch();
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -228,9 +238,12 @@ export default function AdminMinistries() {
           <p className="text-ink/35 font-body text-sm">No ministries yet. Create the first one.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ministries.map((m) => (
-            <div key={m.id} className={`bg-white rounded-xl border border-purple-brand/8 p-5 flex flex-col ${!m.isActive ? 'opacity-60' : ''}`}>
+        <SortableGrid
+          items={ministries}
+          onReorder={handleReorder}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          renderItem={(m) => (
+            <div className={`bg-white rounded-xl border border-purple-brand/8 p-5 flex flex-col ${!m.isActive ? 'opacity-60' : ''}`}>
               {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -307,8 +320,8 @@ export default function AdminMinistries() {
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        />
       )}
 
       <AdminModal

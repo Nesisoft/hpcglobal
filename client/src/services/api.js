@@ -121,11 +121,13 @@ export const adminApi = {
   createMinistry:   (d)     => api.post('/admin/ministries', d),
   updateMinistry:   (id,d)  => api.put(`/admin/ministries/${id}`, d),
   deleteMinistry:   (id)    => api.delete(`/admin/ministries/${id}`),
+  reorderMinistries: (ids)  => api.put('/admin/ministries/reorder', { ids }),
 
   getLeadership:    ()      => api.get('/admin/leadership'),
   createProfile:    (d)     => api.post('/admin/leadership', d),
   updateProfile:    (id,d)  => api.put(`/admin/leadership/${id}`, d),
   deleteProfile:    (id)    => api.delete(`/admin/leadership/${id}`),
+  reorderProfiles:  (ids)   => api.put('/admin/leadership/reorder', { ids }),
 
   getAbout:   ()  => api.get('/admin/about'),
   updateAbout: (d) => api.put('/admin/about', d),

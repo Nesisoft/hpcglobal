@@ -764,6 +764,22 @@ router.post('/ministries', async (req, res) => {
   }
 });
 
+router.put('/ministries/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids array required' });
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.ministry.update({ where: { id }, data: { order: i + 1 } })
+      )
+    );
+    res.json({ message: 'Reordered' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.put('/ministries/:id', async (req, res) => {
   try {
     const ministry = await prisma.ministry.update({
@@ -807,6 +823,22 @@ router.post('/leadership', async (req, res) => {
       data: { ...req.body, order: req.body.order ?? count + 1 },
     });
     res.status(201).json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/leadership/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids array required' });
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.leadershipProfile.update({ where: { id }, data: { order: i + 1 } })
+      )
+    );
+    res.json({ message: 'Reordered' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
