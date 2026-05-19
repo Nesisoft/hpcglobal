@@ -84,6 +84,12 @@ export const adminApi = {
   updateSermon:     (id, d)  => api.put(`/admin/sermons/${id}`, d),
   deleteSermon:     (id)     => api.delete(`/admin/sermons/${id}`),
 
+  getSermonSeries:    ()      => api.get('/admin/sermon-series'),
+  createSermonSeries: (d)     => api.post('/admin/sermon-series', d),
+  updateSermonSeries: (id, d) => api.put(`/admin/sermon-series/${id}`, d),
+  deleteSermonSeries: (id)    => api.delete(`/admin/sermon-series/${id}`),
+  reorderSermonSeries: (ids)  => api.put('/admin/sermon-series/reorder', { ids }),
+
   getEvents:      (p)    => api.get('/admin/events', { params: p }),
   createEvent:    (d)    => api.post('/admin/events', d),
   updateEvent:    (id,d) => api.put(`/admin/events/${id}`, d),

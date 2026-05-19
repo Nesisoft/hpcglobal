@@ -194,6 +194,69 @@ router.delete('/sermons/:id', async (req, res) => {
   }
 });
 
+// ─── Admin: Sermon Series ─────────────────────────────────────────────────────
+router.get('/sermon-series', async (_req, res) => {
+  try {
+    const series = await prisma.sermonSeries.findMany({ orderBy: { order: 'asc' } });
+    res.json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/sermon-series', async (req, res) => {
+  try {
+    const count = await prisma.sermonSeries.count();
+    const series = await prisma.sermonSeries.create({
+      data: { ...req.body, order: req.body.order ?? count + 1 },
+    });
+    res.status(201).json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/sermon-series/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids array required' });
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.sermonSeries.update({ where: { id }, data: { order: i + 1 } })
+      )
+    );
+    res.json({ message: 'Reordered' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/sermon-series/:id', async (req, res) => {
+  try {
+    const series = await prisma.sermonSeries.update({
+      where: { id: req.params.id },
+      data:  req.body,
+    });
+    res.json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/sermon-series/:id', async (req, res) => {
+  try {
+    await prisma.sermonSeries.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ─── Admin: Events ────────────────────────────────────────────────────────────
 router.get('/events', async (req, res) => {
   try {
