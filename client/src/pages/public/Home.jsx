@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Play, Calendar, Heart, HandHeart, UserPlus, Users,
   BookOpen, MessageCircle, Clock, ChevronLeft, ChevronRight,
-  Radio, ArrowRight, Smartphone, Building2,
+  Radio, ArrowRight, Smartphone, Building2, CreditCard,
 } from 'lucide-react';
 import { FaYoutube, FaWhatsapp, FaFacebook, FaInstagram } from 'react-icons/fa';
 import { useApi } from '../../hooks/useApi';
@@ -413,9 +413,8 @@ function GiveBand() {
         <p className="text-white/40 text-sm font-body mb-10">— Malachi 3:10</p>
         <div className="flex flex-wrap justify-center gap-3 mb-8">
           {[
-            { icon: Smartphone, label: 'MTN MoMo' },
-            { icon: Smartphone, label: 'Telecel Cash' },
-            { icon: Smartphone, label: 'AirtelTigo' },
+            { icon: Smartphone, label: 'Mobile Money' },
+            { icon: CreditCard, label: 'Card' },
             { icon: Building2,  label: 'Bank Transfer' },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4 py-2">
