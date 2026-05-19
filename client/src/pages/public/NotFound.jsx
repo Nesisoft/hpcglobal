@@ -38,7 +38,7 @@ export default function NotFound() {
           </div>
 
           <Link to="/" className="btn-primary justify-center">
-            Return Home
+            <Home size={14} /> Return Home
           </Link>
         </div>
       </div>

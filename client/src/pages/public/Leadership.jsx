@@ -6,7 +6,7 @@ import SEO from '../../components/ui/SEO';
 import Spinner from '../../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import { FaYoutube, FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Send } from 'lucide-react';
 
 function ProfileCard({ profile, featured }) {
   return (
@@ -82,7 +82,7 @@ export default function Leadership() {
                 <h3 className="font-display text-white text-2xl mb-3">Would you like prayer or a pastoral word?</h3>
                 <p className="text-white/60 font-body text-sm mb-6">Our pastoral team is here for you.</p>
                 <div className="flex justify-center gap-4 flex-wrap">
-                  <Link to="/prayer" className="btn-primary">Submit a Prayer Request</Link>
+                  <Link to="/prayer" className="btn-primary"><Send size={14} /> Submit a Prayer Request</Link>
                   {waUrl && (
                     <a href={waUrl} target="_blank" rel="noopener noreferrer" className="btn-outline border-white/30 text-white hover:bg-white/10">
                       <FaWhatsapp size={14} /> WhatsApp Us

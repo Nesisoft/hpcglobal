@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import SEO from '../../components/ui/SEO';
-import { Heart, Smartphone, Building2, CreditCard, CheckCircle } from 'lucide-react';
+import { Heart, Smartphone, Building2, CreditCard, CheckCircle, Home } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -93,7 +93,7 @@ export default function Give() {
                 <p><span className="text-ink/50">Branch:</span> <strong>{bankDetails.bankBranch}</strong></p>
                 <p className="pt-2 border-t border-purple-brand/10"><span className="text-ink/50">Reference:</span> <strong className="text-gold">{success}</strong></p>
               </div>
-              <a href="/" className="btn-primary">Back to Home</a>
+              <a href="/" className="btn-primary"><Home size={14} /> Back to Home</a>
             </div>
           </div>
         </section>
@@ -112,7 +112,7 @@ export default function Give() {
               <h2 className="font-display text-2xl text-ink mb-3">Thank you for your generosity!</h2>
               <p className="text-ink/60 font-body mb-2">Your gift is an act of worship and a seed for the Kingdom.</p>
               <p className="text-xs text-ink/40 font-body mb-6">Reference: {success}</p>
-              <a href="/" className="btn-primary">Back to Home</a>
+              <a href="/" className="btn-primary"><Home size={14} /> Back to Home</a>
             </div>
           </div>
         </section>

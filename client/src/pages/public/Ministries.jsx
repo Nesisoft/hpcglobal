@@ -129,8 +129,8 @@ export default function Ministries() {
             Our ministries are not just programs — they are families. Each one is a kingdom assignment,
             a place where your gifts are needed and your growth is intentional.
           </p>
-          <Link to="/contact" className="btn-secondary">
-            Connect With Us
+          <Link to="/contact" className="btn-primary">
+            <Users size={14} /> Connect With Us
           </Link>
         </div>
       </section>

@@ -290,31 +290,49 @@ router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
 
 router.get('/giving/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
   try {
-    const now   = new Date();
+    const now          = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear  = new Date(now.getFullYear(), 0, 1);
 
     const whereMonth = { status: 'COMPLETED', createdAt: { gte: startOfMonth } };
     const whereYear  = { status: 'COMPLETED', createdAt: { gte: startOfYear  } };
 
-    const [monthSum, monthCount, yearSum, yearCount, byCategory, byMethod] = await Promise.all([
-      prisma.givingRecord.aggregate({ where: whereMonth, _sum: { amount: true } }),
-      prisma.givingRecord.count({ where: whereMonth }),
-      prisma.givingRecord.aggregate({ where: whereYear,  _sum: { amount: true } }),
-      prisma.givingRecord.count({ where: whereYear }),
-      prisma.givingRecord.groupBy({ by: ['category'], where: { status: 'COMPLETED' }, _sum: { amount: true } }),
-      prisma.givingRecord.groupBy({ by: ['method'],   where: { status: 'COMPLETED' }, _sum: { amount: true } }),
-    ]);
+    // Run sequentially so a failure tells us exactly which query broke
+    const monthSum   = await prisma.givingRecord.aggregate({ where: whereMonth, _sum: { amount: true } });
+    const monthCount = await prisma.givingRecord.count({ where: whereMonth });
+    const yearSum    = await prisma.givingRecord.aggregate({ where: whereYear,  _sum: { amount: true } });
+    const yearCount  = await prisma.givingRecord.count({ where: whereYear });
+
+    // groupBy — fetch all completed records and group in JS to avoid potential
+    // Prisma/pgbouncer groupBy issues in serverless
+    const completed = await prisma.givingRecord.findMany({
+      where:  { status: 'COMPLETED' },
+      select: { category: true, method: true, amount: true },
+    });
+
+    const byCategory = Object.entries(
+      completed.reduce((acc, r) => {
+        acc[r.category] = (acc[r.category] || 0) + r.amount;
+        return acc;
+      }, {})
+    ).map(([category, total]) => ({ category, _sum: { amount: total } }));
+
+    const byMethod = Object.entries(
+      completed.reduce((acc, r) => {
+        acc[r.method] = (acc[r.method] || 0) + r.amount;
+        return acc;
+      }, {})
+    ).map(([method, total]) => ({ method, _sum: { amount: total } }));
 
     res.json({
-      month:      { total: monthSum._sum?.amount ?? 0, count: monthCount },
-      year:       { total: yearSum._sum?.amount  ?? 0, count: yearCount  },
+      month: { total: monthSum._sum?.amount ?? 0, count: monthCount },
+      year:  { total: yearSum._sum?.amount  ?? 0, count: yearCount  },
       byCategory,
       byMethod,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Giving summary error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
   }
 });
 

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, Pencil, Church, MessageCircle, Mail, Calendar } from 'lucide-react';
+import { Plus, Trash2, Pencil, Church, MessageCircle, Mail, Calendar, X, Check } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -322,10 +322,10 @@ export default function AdminMinistries() {
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setModalOpen(false)} className="btn-outline text-sm px-5 py-2">
-            Cancel
+            <X size={14} /> Cancel
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
-            {saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Ministry'}
+            {saving ? 'Saving…' : <><Check size={14} /> {editTarget ? 'Save Changes' : 'Add Ministry'}</>}
           </button>
         </div>
       </AdminModal>

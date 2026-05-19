@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import SEO from '../../components/ui/SEO';
-import { UserCheck, TrendingUp, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { UserCheck, TrendingUp, Star, ChevronDown, ChevronUp, Calendar, Play } from 'lucide-react';
 import { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { publicApi } from '../../services/api';
@@ -172,8 +172,8 @@ export default function About() {
               <p className="section-label text-gold mb-3">You are welcome here</p>
               <h2 className="section-heading-light mb-8">Ready to Experience HPC Global?</h2>
               <div className="flex items-center justify-center gap-4 flex-wrap">
-                <Link to="/new-here" className="btn-primary">Plan your first visit</Link>
-                <Link to="/sermons" className="btn-outline">Watch a sermon</Link>
+                <Link to="/new-here" className="btn-primary"><Calendar size={14} /> Plan your first visit</Link>
+                <Link to="/sermons" className="btn-outline"><Play size={14} /> Watch a sermon</Link>
               </div>
             </div>
           </section>

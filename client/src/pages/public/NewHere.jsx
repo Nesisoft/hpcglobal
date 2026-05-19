@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Video, Church, Users, Home as HomeIcon, CheckCircle } from 'lucide-react';
+import { Video, Church, Users, Home as HomeIcon, CheckCircle, Clock, Send } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -164,7 +164,7 @@ export default function NewHere() {
               <CheckCircle size={48} className="text-gold mx-auto mb-4" />
               <h3 className="font-display text-2xl text-ink mb-2">Welcome to the family!</h3>
               <p className="text-ink/60 font-body">Our welcome team will be in touch shortly. In the meantime, check out our services.</p>
-              <Link to="/services" className="btn-primary mt-6 inline-flex">View Services</Link>
+              <Link to="/services" className="btn-primary mt-6 inline-flex"><Clock size={14} /> View Services</Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl p-8 border border-purple-brand/10 space-y-5">
@@ -214,7 +214,7 @@ export default function NewHere() {
                 <p className="text-red-500 text-xs font-body bg-red-50 border border-red-200 rounded px-3 py-2">{submitError}</p>
               )}
               <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4 disabled:opacity-50">
-                {submitting ? 'Sending…' : 'Submit Connect Card'}
+                {submitting ? 'Sending…' : <><Send size={14} /> Submit Connect Card</>}
               </button>
             </form>
           )}

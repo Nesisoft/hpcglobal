@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Mail, MailOpen, Phone } from 'lucide-react';
+import { Mail, MailOpen, Phone, X } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -130,10 +130,10 @@ export default function AdminContact() {
                 href={`mailto:${selected.email}?subject=Re: ${selected.type}`}
                 className="btn-primary text-sm px-5 py-2"
               >
-                Reply by email
+                <Mail size={14} /> Reply by email
               </a>
               <button onClick={() => setSelected(null)} className="btn-outline text-sm px-5 py-2">
-                Close
+                <X size={14} /> Close
               </button>
             </div>
           </div>

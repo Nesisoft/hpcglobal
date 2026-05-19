@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, Users, MapPin, Video } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -421,10 +421,10 @@ export default function AdminEvents() {
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setModalOpen(false)} className="btn-outline text-sm px-5 py-2">
-            Cancel
+            <X size={14} /> Cancel
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
-            {saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Event'}
+            {saving ? 'Saving…' : <><Check size={14} /> {editTarget ? 'Save Changes' : 'Add Event'}</>}
           </button>
         </div>
       </AdminModal>
@@ -444,7 +444,7 @@ export default function AdminEvents() {
         />
         <div className="flex justify-end mt-4 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setRsvpEvent(null)} className="btn-outline text-sm px-5 py-2">
-            Close
+            <X size={14} /> Close
           </button>
         </div>
       </AdminModal>

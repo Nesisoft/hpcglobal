@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import SEO from '../../components/ui/SEO';
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, Video, CalendarPlus, HelpCircle } from 'lucide-react';
+import { Clock, MapPin, Video, CalendarPlus, HelpCircle, Calendar, MessageCircle } from 'lucide-react';
 import { FaYoutube } from 'react-icons/fa';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
@@ -143,7 +143,7 @@ export default function Services() {
 
                     <div className="mt-6 flex flex-wrap gap-3">
                       {s.isOnline ? (
-                        <Link to={s.joinLink || '/contact'} className="btn-primary text-xs px-4 py-2">Get Zoom Link</Link>
+                        <Link to={s.joinLink || '/contact'} className="btn-primary text-xs px-4 py-2"><Video size={13} /> Get Zoom Link</Link>
                       ) : (
                         <a
                           href={`https://maps.google.com/?q=${encodeURIComponent(location)}`}
@@ -151,7 +151,7 @@ export default function Services() {
                           rel="noopener noreferrer"
                           className="btn-primary text-xs px-4 py-2"
                         >
-                          Get Directions
+                          <MapPin size={13} /> Get Directions
                         </a>
                       )}
                       <a
@@ -245,8 +245,8 @@ export default function Services() {
         <div className="container-page">
           <h2 className="section-heading-light mb-6">Ready to Join Us?</h2>
           <div className="flex justify-center gap-4 flex-wrap">
-            <Link to="/new-here" className="btn-primary">Plan Your Visit</Link>
-            <Link to="/contact" className="btn-outline">Get in Touch</Link>
+            <Link to="/new-here" className="btn-primary"><Calendar size={14} /> Plan Your Visit</Link>
+            <Link to="/contact" className="btn-outline"><MessageCircle size={14} /> Get in Touch</Link>
           </div>
         </div>
       </section>

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { MapPin, Phone, Mail, Clock, CheckCircle } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, CheckCircle, Send } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -250,7 +250,7 @@ export default function Contact() {
                   )}
                   <p className="text-xs text-ink/40 font-body">We aim to respond within 24 hours.</p>
                   <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4 disabled:opacity-50">
-                    {submitting ? 'Sending…' : 'Send Message'}
+                    {submitting ? 'Sending…' : <><Send size={14} /> Send Message</>}
                   </button>
                 </form>
               )}

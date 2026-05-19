@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Clock, Calendar, BookOpen } from 'lucide-react';
+import { ChevronLeft, Clock, Calendar, BookOpen, ArrowLeft, Send } from 'lucide-react';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 
@@ -50,7 +50,7 @@ export default function BlogPost() {
           <BookOpen size={48} className="text-purple-brand/20 mx-auto mb-4" />
           <h2 className="font-display text-2xl text-ink font-light mb-2">Post not found</h2>
           <p className="text-ink/50 font-body text-sm mb-6">This post may have been removed or the link is incorrect.</p>
-          <Link to="/blog" className="btn-primary">Back to Blog</Link>
+          <Link to="/blog" className="btn-primary"><ArrowLeft size={14} /> Back to Blog</Link>
         </div>
       </div>
     );
@@ -110,10 +110,10 @@ export default function BlogPost() {
         {/* Footer */}
         <div className="border-t border-purple-brand/8 pt-8 pb-16 flex items-center justify-between flex-wrap gap-4">
           <Link to="/blog" className="btn-outline text-sm px-5 py-2">
-            ← More Posts
+            <ArrowLeft size={14} /> More Posts
           </Link>
           <Link to="/prayer" className="btn-primary text-sm px-5 py-2">
-            Submit a Prayer Request
+            <Send size={14} /> Submit a Prayer Request
           </Link>
         </div>
       </div>
