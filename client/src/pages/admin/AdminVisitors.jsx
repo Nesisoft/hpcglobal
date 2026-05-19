@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserPlus, Phone, Mail, MapPin, Globe, X, Check } from 'lucide-react';
+import { UserPlus, Phone, Mail, MapPin, Globe, X, Check, Download } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -8,6 +8,7 @@ import AdminTable from '../../components/admin/AdminTable';
 import AdminModal from '../../components/admin/AdminModal';
 import FormField from '../../components/admin/FormField';
 import Toggle from '../../components/admin/Toggle';
+import { downloadBlob } from '../../utils/download';
 
 const STATUSES = ['NEW', 'CONTACTED', 'ATTENDING', 'MEMBER'];
 
@@ -61,6 +62,15 @@ export default function AdminVisitors() {
       // ignore
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExport() {
+    try {
+      const { data } = await adminApi.exportVisitors({ status: filterStatus || undefined });
+      downloadBlob(data, `visitors-${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch {
+      alert('Export failed. Please try again.');
     }
   }
 
@@ -121,14 +131,19 @@ export default function AdminVisitors() {
         title="Visitors"
         subtitle={`${total} visitor${total !== 1 ? 's' : ''} · click a row to follow up`}
       >
-        <select
-          className="input py-2 text-sm w-36"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            className="input py-2 text-sm w-36"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <button onClick={handleExport} className="btn-outline text-sm px-4 py-2">
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
       </AdminPageHeader>
 
       <AdminTable

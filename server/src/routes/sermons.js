@@ -46,6 +46,20 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/sermons/series — public, active series
+router.get('/series', async (_req, res) => {
+  try {
+    const series = await prisma.sermonSeries.findMany({
+      where:   { isActive: true },
+      orderBy: { order: 'asc' },
+    });
+    res.json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // GET /api/sermons/:id — public
 router.get('/:id', async (req, res) => {
   try {

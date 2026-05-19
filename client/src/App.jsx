@@ -28,6 +28,7 @@ const AdminLogin     = lazy(() => import('./pages/admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminHero      = lazy(() => import('./pages/admin/AdminHero'));
 const AdminSermons   = lazy(() => import('./pages/admin/AdminSermons'));
+const AdminSermonSeries = lazy(() => import('./pages/admin/AdminSermonSeries'));
 const AdminEvents    = lazy(() => import('./pages/admin/AdminEvents'));
 const AdminGiving    = lazy(() => import('./pages/admin/AdminGiving'));
 const AdminPrayer    = lazy(() => import('./pages/admin/AdminPrayer'));
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/hero"       element={<ProtectedRoute><AdminHero /></ProtectedRoute>} />
             <Route path="/admin/sermons"    element={<ProtectedRoute><AdminSermons /></ProtectedRoute>} />
+            <Route path="/admin/sermon-series" element={<ProtectedRoute><AdminSermonSeries /></ProtectedRoute>} />
             <Route path="/admin/events"     element={<ProtectedRoute><AdminEvents /></ProtectedRoute>} />
             <Route path="/admin/giving"     element={<ProtectedRoute><AdminGiving /></ProtectedRoute>} />
             <Route path="/admin/prayer"     element={<ProtectedRoute><AdminPrayer /></ProtectedRoute>} />

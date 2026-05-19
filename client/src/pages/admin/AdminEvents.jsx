@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -8,7 +8,12 @@ import AdminTable from '../../components/admin/AdminTable';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
+import RichTextEditor from '../../components/admin/RichTextEditor';
+import EventCalendar from '../../components/admin/EventCalendar';
 import Toggle from '../../components/admin/Toggle';
+import { List, CalendarDays } from 'lucide-react';
+import { downloadBlob } from '../../utils/download';
 
 const CATEGORIES = ['SERVICE', 'CONFERENCE', 'YOUTH', 'WOMENS', 'MENS', 'ONLINE', 'OTHER'];
 
@@ -73,13 +78,12 @@ function EventForm({ form, setForm }) {
         </FormField>
       </div>
 
-      <FormField label="Description" required>
-        <textarea
-          className="input min-h-[90px] resize-y"
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-        />
-      </FormField>
+      <RichTextEditor
+        label="Description"
+        required
+        value={form.description}
+        onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="Start Date & Time" required>
@@ -122,14 +126,12 @@ function EventForm({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, timeBst: e.target.value }))}
           />
         </FormField>
-        <FormField label="Image URL">
-          <input
-            className="input"
-            placeholder="https://..."
-            value={form.imageUrl}
-            onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-          />
-        </FormField>
+        <ImageUpload
+          label="Event Banner"
+          folder="events"
+          value={form.imageUrl}
+          onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -197,6 +199,7 @@ export default function AdminEvents() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]         = useState(false);
   const [rsvpEvent, setRsvpEvent]       = useState(null);
+  const [viewMode, setViewMode]         = useState('list');
   const [error, setError]               = useState('');
 
   const fetchFn = useCallback(() => adminApi.getEvents(), []);
@@ -209,6 +212,15 @@ export default function AdminEvents() {
   );
   const { data: rsvpData, loading: rsvpsLoading } = useApi(fetchRsvpsFn, [rsvpEvent]);
   const rsvps = Array.isArray(rsvpData) ? rsvpData : (rsvpData?.data ?? []);
+
+  async function handleExportRsvps() {
+    try {
+      const { data } = await adminApi.exportEventRsvps(rsvpEvent.id);
+      downloadBlob(data, `rsvps-${rsvpEvent.slug ?? rsvpEvent.id}.csv`);
+    } catch {
+      alert('Export failed. Please try again.');
+    }
+  }
 
   const filtered = events.filter((e) => {
     const q = search.toLowerCase();
@@ -400,15 +412,35 @@ export default function AdminEvents() {
               <option key={c} value={c}>{CAT_LABELS[c]}</option>
             ))}
           </select>
+          <div className="flex items-center bg-white border border-purple-brand/15 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-purple-brand text-white' : 'text-ink/40 hover:text-ink'}`}
+              title="List view"
+            >
+              <List size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'calendar' ? 'bg-purple-brand text-white' : 'text-ink/40 hover:text-ink'}`}
+              title="Calendar view"
+            >
+              <CalendarDays size={15} />
+            </button>
+          </div>
         </div>
       </AdminPageHeader>
 
-      <AdminTable
-        columns={columns}
-        rows={filtered}
-        loading={loading}
-        empty="No events yet. Click 'Add Event' to create one."
-      />
+      {viewMode === 'calendar' ? (
+        <EventCalendar events={filtered} onSelect={openEdit} />
+      ) : (
+        <AdminTable
+          columns={columns}
+          rows={filtered}
+          loading={loading}
+          empty="No events yet. Click 'Add Event' to create one."
+        />
+      )}
 
       {/* Add / Edit modal */}
       <AdminModal
@@ -442,7 +474,12 @@ export default function AdminEvents() {
           loading={rsvpsLoading}
           empty="No RSVPs for this event yet."
         />
-        <div className="flex justify-end mt-4 pt-4 border-t border-purple-brand/8">
+        <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-purple-brand/8">
+          {rsvps.length > 0 && (
+            <button onClick={handleExportRsvps} className="btn-outline text-sm px-5 py-2">
+              <Download size={14} /> Export CSV
+            </button>
+          )}
           <button onClick={() => setRsvpEvent(null)} className="btn-outline text-sm px-5 py-2">
             <X size={14} /> Close
           </button>

@@ -9,6 +9,21 @@ const prisma = require('../lib/prisma');
 // All admin routes require auth
 router.use(verifyToken);
 
+// ─── CSV helpers ──────────────────────────────────────────────────────────────
+function toCsv(rows, columns) {
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = columns.map((c) => esc(c.label)).join(',');
+  const lines  = rows.map((r) => columns.map((c) => esc(c.value(r))).join(','));
+  return [header, ...lines].join('\n');
+}
+function sendCsv(res, filename, csv) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(csv);
+}
+const fmtCsvDate = (d) =>
+  d ? new Date(d).toISOString().slice(0, 19).replace('T', ' ') : '';
+
 // GET /api/admin/dashboard
 router.get('/dashboard', async (_req, res) => {
   try {
@@ -179,6 +194,69 @@ router.delete('/sermons/:id', async (req, res) => {
   }
 });
 
+// ─── Admin: Sermon Series ─────────────────────────────────────────────────────
+router.get('/sermon-series', async (_req, res) => {
+  try {
+    const series = await prisma.sermonSeries.findMany({ orderBy: { order: 'asc' } });
+    res.json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/sermon-series', async (req, res) => {
+  try {
+    const count = await prisma.sermonSeries.count();
+    const series = await prisma.sermonSeries.create({
+      data: { ...req.body, order: req.body.order ?? count + 1 },
+    });
+    res.status(201).json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/sermon-series/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids array required' });
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.sermonSeries.update({ where: { id }, data: { order: i + 1 } })
+      )
+    );
+    res.json({ message: 'Reordered' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/sermon-series/:id', async (req, res) => {
+  try {
+    const series = await prisma.sermonSeries.update({
+      where: { id: req.params.id },
+      data:  req.body,
+    });
+    res.json(series);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/sermon-series/:id', async (req, res) => {
+  try {
+    await prisma.sermonSeries.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ─── Admin: Events ────────────────────────────────────────────────────────────
 router.get('/events', async (req, res) => {
   try {
@@ -263,6 +341,26 @@ router.get('/events/:id/rsvps', async (req, res) => {
   }
 });
 
+router.get('/events/:id/rsvps/export', async (req, res) => {
+  try {
+    const rsvps = await prisma.eventRsvp.findMany({
+      where:   { eventId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    const csv = toCsv(rsvps, [
+      { label: 'Name',       value: (r) => r.name },
+      { label: 'Phone',      value: (r) => r.phone },
+      { label: 'Email',      value: (r) => r.email },
+      { label: 'Attendance', value: (r) => r.attendance },
+      { label: 'Registered', value: (r) => fmtCsvDate(r.createdAt) },
+    ]);
+    sendCsv(res, `rsvps-${req.params.id}.csv`, csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ─── Admin: Giving ────────────────────────────────────────────────────────────
 router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
@@ -282,6 +380,37 @@ router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
       prisma.givingRecord.count({ where }),
     ]);
     res.json({ records, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const { status, category, method } = req.query;
+    const where = {
+      ...(status   && { status }),
+      ...(category && { category }),
+      ...(method   && { method }),
+    };
+    const records = await prisma.givingRecord.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+    const csv = toCsv(records, [
+      { label: 'Date',      value: (r) => fmtCsvDate(r.createdAt) },
+      { label: 'Name',      value: (r) => r.name },
+      { label: 'Phone',     value: (r) => r.phone },
+      { label: 'Email',     value: (r) => r.email },
+      { label: 'Amount',    value: (r) => r.amount },
+      { label: 'Currency',  value: (r) => r.currency },
+      { label: 'Category',  value: (r) => r.category },
+      { label: 'Method',    value: (r) => r.method },
+      { label: 'Status',    value: (r) => r.status },
+      { label: 'Reference', value: (r) => r.reference },
+    ]);
+    sendCsv(res, `giving-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -374,6 +503,34 @@ router.put('/prayer/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
 });
 
 // ─── Admin: Visitors ──────────────────────────────────────────────────────────
+router.get('/visitors/export', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const where = { ...(status && { status }) };
+    const visitors = await prisma.visitor.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+    const csv = toCsv(visitors, [
+      { label: 'Date',              value: (r) => fmtCsvDate(r.createdAt) },
+      { label: 'Name',              value: (r) => r.name },
+      { label: 'Phone',             value: (r) => r.phone },
+      { label: 'Email',             value: (r) => r.email },
+      { label: 'Country',           value: (r) => r.country },
+      { label: 'City',              value: (r) => r.city },
+      { label: 'Source',            value: (r) => r.source },
+      { label: 'Preferred Service', value: (r) => r.preferredSvc },
+      { label: 'Status',            value: (r) => r.status },
+      { label: 'Message',           value: (r) => r.message },
+      { label: 'Followed Up',       value: (r) => fmtCsvDate(r.followedUpAt) },
+    ]);
+    sendCsv(res, `visitors-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/visitors', async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -670,6 +827,22 @@ router.post('/ministries', async (req, res) => {
   }
 });
 
+router.put('/ministries/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids array required' });
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.ministry.update({ where: { id }, data: { order: i + 1 } })
+      )
+    );
+    res.json({ message: 'Reordered' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.put('/ministries/:id', async (req, res) => {
   try {
     const ministry = await prisma.ministry.update({
@@ -713,6 +886,22 @@ router.post('/leadership', async (req, res) => {
       data: { ...req.body, order: req.body.order ?? count + 1 },
     });
     res.status(201).json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/leadership/reorder', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: 'ids array required' });
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.leadershipProfile.update({ where: { id }, data: { order: i + 1 } })
+      )
+    );
+    res.json({ message: 'Reordered' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -869,6 +1058,21 @@ router.post('/service-times/:id/image', upload.single('image'), async (req, res)
       data:  { imageUrl: result.secure_url },
     });
     res.json(time);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/admin/upload — generic image upload, returns Cloudinary URL
+router.post('/upload', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No image file provided' });
+    const folder = typeof req.query.folder === 'string' && /^[\w-]+$/.test(req.query.folder)
+      ? `hpcglobal/${req.query.folder}`
+      : 'hpcglobal/uploads';
+    const result = await uploadToCloudinary(req.file.buffer, folder);
+    res.json({ url: result.secure_url });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

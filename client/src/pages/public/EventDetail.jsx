@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Calendar, MapPin, Wifi, Clock, ChevronLeft, CheckCircle, ExternalLink } from 'lucide-react';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
+import RichContent from '../../components/ui/RichContent';
 
 const CATEGORY_COLORS = {
   SERVICE:    'bg-purple-brand/10 text-purple-brand',
@@ -196,9 +197,10 @@ export default function EventDetail() {
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white rounded-xl border border-purple-brand/8 p-6">
                 <h2 className="font-display text-xl text-ink font-light mb-4">About this Event</h2>
-                <div className="text-ink/70 font-body text-sm leading-relaxed whitespace-pre-wrap">
-                  {event.description}
-                </div>
+                <RichContent
+                  html={event.description}
+                  className="text-ink/70 font-body text-sm leading-relaxed"
+                />
               </div>
 
               {/* Online join link */}

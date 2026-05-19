@@ -36,7 +36,7 @@ function extractYoutubeId(value) {
   return null;
 }
 
-function SermonForm({ form, setForm, onYoutubeLookup, lookingUp, serviceTimes }) {
+function SermonForm({ form, setForm, onYoutubeLookup, lookingUp, serviceTimes, seriesList }) {
   function handleUrlChange(e) {
     const url = e.target.value;
     const id  = extractYoutubeId(url);
@@ -93,13 +93,17 @@ function SermonForm({ form, setForm, onYoutubeLookup, lookingUp, serviceTimes })
             onChange={(e) => setForm((f) => ({ ...f, preacher: e.target.value }))}
           />
         </FormField>
-        <FormField label="Series">
+        <FormField label="Series" hint="Type or pick a managed series">
           <input
             className="input"
+            list="sermon-series-options"
             placeholder="e.g. Dominion Series"
             value={form.series}
             onChange={(e) => setForm((f) => ({ ...f, series: e.target.value }))}
           />
+          <datalist id="sermon-series-options">
+            {seriesList.map((s) => <option key={s.id} value={s.name} />)}
+          </datalist>
         </FormField>
         <FormField label="Scripture">
           <input
@@ -229,6 +233,9 @@ export default function AdminSermons() {
 
   const { data: serviceTimesData = [] } = useApi(adminApi.getServiceTimes);
   const serviceTimes = Array.isArray(serviceTimesData) ? serviceTimesData : [];
+
+  const { data: seriesData = [] } = useApi(adminApi.getSermonSeries);
+  const seriesList = Array.isArray(seriesData) ? seriesData : [];
 
   function openCreate() {
     setEditTarget(null);
@@ -407,6 +414,7 @@ export default function AdminSermons() {
           onYoutubeLookup={handleYoutubeLookup}
           lookingUp={lookingUp}
           serviceTimes={serviceTimes}
+          seriesList={seriesList}
         />
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">

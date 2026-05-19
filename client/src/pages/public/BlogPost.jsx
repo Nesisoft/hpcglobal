@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Clock, Calendar, BookOpen, ArrowLeft, Send } from 'lucide-react';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
+import RichContent from '../../components/ui/RichContent';
 
 const CATEGORY_COLORS = {
   DEVOTIONAL:     'bg-purple-brand/10 text-purple-brand',
@@ -103,9 +104,10 @@ export default function BlogPost() {
         </header>
 
         {/* Content */}
-        <article className="prose-custom font-body text-ink/80 text-base leading-relaxed whitespace-pre-wrap mb-12">
-          {post.content}
-        </article>
+        <RichContent
+          html={post.content}
+          className="prose-custom font-body text-ink/80 text-base leading-relaxed mb-12"
+        />
 
         {/* Footer */}
         <div className="border-t border-purple-brand/8 pt-8 pb-16 flex items-center justify-between flex-wrap gap-4">

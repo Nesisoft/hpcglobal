@@ -68,6 +68,11 @@ export const adminApi = {
 
   getDashboard: () => api.get('/admin/dashboard'),
 
+  uploadImage: (fd, folder) =>
+    api.post(`/admin/upload${folder ? `?folder=${folder}` : ''}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
   getHeroSlides:   ()      => api.get('/admin/hero'),
   createHeroSlide: (d)     => api.post('/admin/hero', d),
   updateHeroSlide: (id, d) => api.put(`/admin/hero/${id}`, d),
@@ -79,15 +84,23 @@ export const adminApi = {
   updateSermon:     (id, d)  => api.put(`/admin/sermons/${id}`, d),
   deleteSermon:     (id)     => api.delete(`/admin/sermons/${id}`),
 
+  getSermonSeries:    ()      => api.get('/admin/sermon-series'),
+  createSermonSeries: (d)     => api.post('/admin/sermon-series', d),
+  updateSermonSeries: (id, d) => api.put(`/admin/sermon-series/${id}`, d),
+  deleteSermonSeries: (id)    => api.delete(`/admin/sermon-series/${id}`),
+  reorderSermonSeries: (ids)  => api.put('/admin/sermon-series/reorder', { ids }),
+
   getEvents:      (p)    => api.get('/admin/events', { params: p }),
   createEvent:    (d)    => api.post('/admin/events', d),
   updateEvent:    (id,d) => api.put(`/admin/events/${id}`, d),
   deleteEvent:    (id)   => api.delete(`/admin/events/${id}`),
   getEventRsvps:  (id)   => api.get(`/admin/events/${id}/rsvps`),
+  exportEventRsvps: (id) => api.get(`/admin/events/${id}/rsvps/export`, { responseType: 'blob' }),
 
   getGiving:    (p)    => api.get('/admin/giving', { params: p }),
   givingSummary: ()    => api.get('/admin/giving/summary'),
-  exportGiving:  (p)   => api.get('/admin/giving/export', { params: p }),
+  exportGiving:  (p)   => api.get('/admin/giving/export', { params: p, responseType: 'blob' }),
+  exportVisitors: (p)  => api.get('/admin/visitors/export', { params: p, responseType: 'blob' }),
 
   getPrayer:    (p)    => api.get('/admin/prayer', { params: p }),
   updatePrayer: (id,d) => api.put(`/admin/prayer/${id}`, d),
@@ -114,11 +127,13 @@ export const adminApi = {
   createMinistry:   (d)     => api.post('/admin/ministries', d),
   updateMinistry:   (id,d)  => api.put(`/admin/ministries/${id}`, d),
   deleteMinistry:   (id)    => api.delete(`/admin/ministries/${id}`),
+  reorderMinistries: (ids)  => api.put('/admin/ministries/reorder', { ids }),
 
   getLeadership:    ()      => api.get('/admin/leadership'),
   createProfile:    (d)     => api.post('/admin/leadership', d),
   updateProfile:    (id,d)  => api.put(`/admin/leadership/${id}`, d),
   deleteProfile:    (id)    => api.delete(`/admin/leadership/${id}`),
+  reorderProfiles:  (ids)   => api.put('/admin/leadership/reorder', { ids }),
 
   getAbout:   ()  => api.get('/admin/about'),
   updateAbout: (d) => api.put('/admin/about', d),

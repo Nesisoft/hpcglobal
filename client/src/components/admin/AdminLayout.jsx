@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Image, Mic2, Calendar, BookOpen, Images,
   Users, Church, FileText, Clock, Settings, Mail, Heart,
-  HandHeart, UserPlus, Menu, X, LogOut, ExternalLink, ChevronDown,
+  HandHeart, UserPlus, Menu, X, LogOut, ExternalLink, ChevronDown, Library,
 } from 'lucide-react';
 
 const NAV = [
@@ -12,6 +12,7 @@ const NAV = [
   { divider: 'Content' },
   { label: 'Hero / Home', to: '/admin/hero',          icon: Image     },
   { label: 'Sermons',     to: '/admin/sermons',       icon: Mic2      },
+  { label: 'Sermon Series', to: '/admin/sermon-series', icon: Library },
   { label: 'Events',      to: '/admin/events',        icon: Calendar  },
   { label: 'Blog',        to: '/admin/blog',          icon: BookOpen  },
   { label: 'Gallery',     to: '/admin/gallery',       icon: Images    },

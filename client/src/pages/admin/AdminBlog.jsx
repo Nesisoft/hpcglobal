@@ -8,6 +8,8 @@ import AdminTable from '../../components/admin/AdminTable';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
+import RichTextEditor from '../../components/admin/RichTextEditor';
 import Toggle from '../../components/admin/Toggle';
 
 const CATEGORIES = [
@@ -45,7 +47,8 @@ const EMPTY_FORM = {
 };
 
 function PostForm({ form, setForm }) {
-  const wordCount = form.content.trim() ? form.content.trim().split(/\s+/).length : 0;
+  const plainContent = form.content.replace(/<[^>]*>/g, ' ').trim();
+  const wordCount = plainContent ? plainContent.split(/\s+/).length : 0;
   const readTime  = Math.max(1, Math.round(wordCount / 200));
 
   return (
@@ -73,22 +76,12 @@ function PostForm({ form, setForm }) {
         </FormField>
       </div>
 
-      <FormField label="Featured Image URL">
-        <input
-          className="input"
-          placeholder="https://..."
-          value={form.featuredImage}
-          onChange={(e) => setForm((f) => ({ ...f, featuredImage: e.target.value }))}
-        />
-      </FormField>
-
-      {form.featuredImage && (
-        <img
-          src={form.featuredImage}
-          alt="featured"
-          className="w-full h-40 object-cover rounded-lg border border-purple-brand/10"
-        />
-      )}
+      <ImageUpload
+        label="Featured Image"
+        folder="blog"
+        value={form.featuredImage}
+        onChange={(url) => setForm((f) => ({ ...f, featuredImage: url }))}
+      />
 
       <FormField label="Excerpt" required hint="Short summary shown in listings (1-2 sentences)">
         <textarea
@@ -99,17 +92,13 @@ function PostForm({ form, setForm }) {
         />
       </FormField>
 
-      <FormField
+      <RichTextEditor
         label="Content"
         required
-        hint={`${wordCount} words · ~${readTime} min read · Markdown supported`}
-      >
-        <textarea
-          className="input min-h-[260px] resize-y font-mono text-[13px]"
-          value={form.content}
-          onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-        />
-      </FormField>
+        hint={`${wordCount} words · ~${readTime} min read`}
+        value={form.content}
+        onChange={(html) => setForm((f) => ({ ...f, content: html }))}
+      />
 
       <div className="flex items-center gap-6 pt-1">
         <Toggle

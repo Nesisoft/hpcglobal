@@ -8,6 +8,8 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
+import SortableGrid from '../../components/admin/SortableGrid';
 import Toggle from '../../components/admin/Toggle';
 
 const EMPTY_FORM = {
@@ -51,23 +53,13 @@ function ProfileForm({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
           />
         </FormField>
-        <FormField label="Photo URL">
-          <input
-            className="input"
-            placeholder="https://..."
-            value={form.photo}
-            onChange={(e) => setForm((f) => ({ ...f, photo: e.target.value }))}
-          />
-        </FormField>
-      </div>
-
-      {form.photo && (
-        <img
-          src={form.photo}
-          alt="profile"
-          className="w-24 h-24 rounded-full object-cover border-2 border-gold/30"
+        <ImageUpload
+          label="Photo"
+          folder="leadership"
+          value={form.photo}
+          onChange={(url) => setForm((f) => ({ ...f, photo: url }))}
         />
-      )}
+      </div>
 
       <FormField label="Biography" required>
         <textarea
@@ -214,6 +206,15 @@ export default function AdminLeadership() {
     }
   }
 
+  async function handleReorder(ids) {
+    try {
+      await adminApi.reorderProfiles(ids);
+      refetch();
+    } catch {
+      refetch();
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -321,9 +322,12 @@ export default function AdminLeadership() {
                   Senior Leadership
                 </h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {senior.map((p) => <ProfileCard key={p.id} p={p} />)}
-              </div>
+              <SortableGrid
+                items={senior}
+                onReorder={(ids) => handleReorder([...ids, ...team.map((t) => t.id)])}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                renderItem={(p) => <ProfileCard p={p} />}
+              />
             </div>
           )}
           {team.length > 0 && (
@@ -331,9 +335,12 @@ export default function AdminLeadership() {
               <h3 className="text-[11px] font-body font-semibold uppercase tracking-[0.18em] text-ink/50 mb-4">
                 Team
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {team.map((p) => <ProfileCard key={p.id} p={p} />)}
-              </div>
+              <SortableGrid
+                items={team}
+                onReorder={(ids) => handleReorder([...senior.map((s) => s.id), ...ids])}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                renderItem={(p) => <ProfileCard p={p} />}
+              />
             </div>
           )}
         </div>
