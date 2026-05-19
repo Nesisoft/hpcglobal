@@ -7,6 +7,7 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
 import Toggle from '../../components/admin/Toggle';
 
 const ICON_OPTIONS = [
@@ -77,14 +78,12 @@ function MinistryForm({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, leader: e.target.value }))}
           />
         </FormField>
-        <FormField label="Leader Photo URL">
-          <input
-            className="input"
-            placeholder="https://..."
-            value={form.leaderPhoto}
-            onChange={(e) => setForm((f) => ({ ...f, leaderPhoto: e.target.value }))}
-          />
-        </FormField>
+        <ImageUpload
+          label="Leader Photo"
+          folder="ministries"
+          value={form.leaderPhoto}
+          onChange={(url) => setForm((f) => ({ ...f, leaderPhoto: url }))}
+        />
         <FormField label="Meeting Day" hint="e.g. Wednesdays">
           <input
             className="input"

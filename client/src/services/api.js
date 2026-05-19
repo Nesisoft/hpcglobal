@@ -68,6 +68,11 @@ export const adminApi = {
 
   getDashboard: () => api.get('/admin/dashboard'),
 
+  uploadImage: (fd, folder) =>
+    api.post(`/admin/upload${folder ? `?folder=${folder}` : ''}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
   getHeroSlides:   ()      => api.get('/admin/hero'),
   createHeroSlide: (d)     => api.post('/admin/hero', d),
   updateHeroSlide: (id, d) => api.put(`/admin/hero/${id}`, d),

@@ -8,6 +8,7 @@ import AdminTable from '../../components/admin/AdminTable';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
 import Toggle from '../../components/admin/Toggle';
 
 const CATEGORIES = [
@@ -73,22 +74,12 @@ function PostForm({ form, setForm }) {
         </FormField>
       </div>
 
-      <FormField label="Featured Image URL">
-        <input
-          className="input"
-          placeholder="https://..."
-          value={form.featuredImage}
-          onChange={(e) => setForm((f) => ({ ...f, featuredImage: e.target.value }))}
-        />
-      </FormField>
-
-      {form.featuredImage && (
-        <img
-          src={form.featuredImage}
-          alt="featured"
-          className="w-full h-40 object-cover rounded-lg border border-purple-brand/10"
-        />
-      )}
+      <ImageUpload
+        label="Featured Image"
+        folder="blog"
+        value={form.featuredImage}
+        onChange={(url) => setForm((f) => ({ ...f, featuredImage: url }))}
+      />
 
       <FormField label="Excerpt" required hint="Short summary shown in listings (1-2 sentences)">
         <textarea

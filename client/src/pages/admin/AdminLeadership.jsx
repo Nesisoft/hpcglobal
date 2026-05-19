@@ -8,6 +8,7 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
 import Toggle from '../../components/admin/Toggle';
 
 const EMPTY_FORM = {
@@ -51,23 +52,13 @@ function ProfileForm({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
           />
         </FormField>
-        <FormField label="Photo URL">
-          <input
-            className="input"
-            placeholder="https://..."
-            value={form.photo}
-            onChange={(e) => setForm((f) => ({ ...f, photo: e.target.value }))}
-          />
-        </FormField>
-      </div>
-
-      {form.photo && (
-        <img
-          src={form.photo}
-          alt="profile"
-          className="w-24 h-24 rounded-full object-cover border-2 border-gold/30"
+        <ImageUpload
+          label="Photo"
+          folder="leadership"
+          value={form.photo}
+          onChange={(url) => setForm((f) => ({ ...f, photo: url }))}
         />
-      )}
+      </div>
 
       <FormField label="Biography" required>
         <textarea

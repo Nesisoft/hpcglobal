@@ -7,6 +7,7 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
 import Toggle from '../../components/admin/Toggle';
 
 const SLIDE_TYPES = [
@@ -74,14 +75,12 @@ function SlideForm({ form, setForm, events }) {
             onChange={(e) => setForm((f) => ({ ...f, subheadline: e.target.value }))}
           />
         </FormField>
-        <FormField label="Background Image URL">
-          <input
-            className="input"
-            placeholder="https://..."
-            value={form.imageUrl}
-            onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-          />
-        </FormField>
+        <ImageUpload
+          label="Background Image"
+          folder="hero"
+          value={form.imageUrl}
+          onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+        />
       </div>
 
       <FormField label="Body Text">

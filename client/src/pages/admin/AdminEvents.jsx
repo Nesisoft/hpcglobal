@@ -8,6 +8,7 @@ import AdminTable from '../../components/admin/AdminTable';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import ImageUpload from '../../components/admin/ImageUpload';
 import Toggle from '../../components/admin/Toggle';
 
 const CATEGORIES = ['SERVICE', 'CONFERENCE', 'YOUTH', 'WOMENS', 'MENS', 'ONLINE', 'OTHER'];
@@ -122,14 +123,12 @@ function EventForm({ form, setForm }) {
             onChange={(e) => setForm((f) => ({ ...f, timeBst: e.target.value }))}
           />
         </FormField>
-        <FormField label="Image URL">
-          <input
-            className="input"
-            placeholder="https://..."
-            value={form.imageUrl}
-            onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-          />
-        </FormField>
+        <ImageUpload
+          label="Event Banner"
+          folder="events"
+          value={form.imageUrl}
+          onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
