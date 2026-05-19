@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, Pencil, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Pencil, ShieldCheck, Eye, EyeOff, X, Check } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
@@ -255,10 +255,10 @@ export default function AdminUsers() {
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setModalOpen(false)} className="btn-outline text-sm px-5 py-2">
-            Cancel
+            <X size={14} /> Cancel
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
-            {saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Create User'}
+            {saving ? 'Saving…' : <><Check size={14} /> {editTarget ? 'Save Changes' : 'Create User'}</>}
           </button>
         </div>
       </AdminModal>

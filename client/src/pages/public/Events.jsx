@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import SEO from '../../components/ui/SEO';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Wifi, ChevronRight, Clock } from 'lucide-react';
+import { Calendar, MapPin, Wifi, ChevronRight, Clock, Bell } from 'lucide-react';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import SectionHero from '../../components/ui/SectionHero';
@@ -212,8 +212,8 @@ export default function Events() {
           <p className="text-white/60 font-body mb-6 text-sm">
             Follow us on social media or subscribe to our WhatsApp broadcast to receive event updates.
           </p>
-          <Link to="/contact" className="btn-secondary">
-            Get Event Updates
+          <Link to="/contact" className="btn-primary">
+            <Bell size={14} /> Get Event Updates
           </Link>
         </div>
       </section>

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserPlus, Phone, Mail, MapPin, Globe } from 'lucide-react';
+import { UserPlus, Phone, Mail, MapPin, Globe, X, Check } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -237,10 +237,10 @@ export default function AdminVisitors() {
 
             <div className="flex justify-end gap-3 pt-4 border-t border-purple-brand/8">
               <button onClick={() => setSelected(null)} className="btn-outline text-sm px-5 py-2">
-                Close
+                <X size={14} /> Close
               </button>
               <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
-                {saving ? 'Saving…' : 'Save Changes'}
+                {saving ? 'Saving…' : <><Check size={14} /> Save Changes</>}
               </button>
             </div>
           </div>

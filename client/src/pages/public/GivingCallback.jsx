@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, RefreshCcw, Heart, ArrowLeft } from 'lucide-react';
 import SEO from '../../components/ui/SEO';
 import { publicApi } from '../../services/api';
 
@@ -55,11 +55,11 @@ export default function GivingCallback() {
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
             {status === 'failed' || status === 'error' ? (
-              <Link to="/give" className="btn-primary">Try Again</Link>
+              <Link to="/give" className="btn-primary"><RefreshCcw size={14} /> Try Again</Link>
             ) : (
-              <Link to="/give" className="btn-primary">Give Again</Link>
+              <Link to="/give" className="btn-primary"><Heart size={14} /> Give Again</Link>
             )}
-            <Link to="/" className="btn-outline">Back to Home</Link>
+            <Link to="/" className="btn-outline"><ArrowLeft size={14} /> Back to Home</Link>
           </div>
         </div>
       </div>

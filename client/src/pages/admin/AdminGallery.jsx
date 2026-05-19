@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Pencil, Images, Upload, X,
+  Plus, Trash2, Pencil, Images, Upload, X, Check,
   ChevronDown, ChevronUp, ImageOff, Star,
 } from 'lucide-react';
 import { adminApi } from '../../services/api';
@@ -239,14 +239,14 @@ function PhotoManager({ album, onClose, onAlbumUpdated }) {
         </FormField>
         <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setEditCaption(null)} className="btn-outline text-sm px-4 py-2">
-            Cancel
+            <X size={14} /> Cancel
           </button>
           <button
             onClick={handleSaveCaption}
             disabled={savingCaption}
             className="btn-primary text-sm px-4 py-2 disabled:opacity-50"
           >
-            {savingCaption ? 'Saving…' : 'Save'}
+            {savingCaption ? 'Saving…' : <><Check size={14} /> Save</>}
           </button>
         </div>
       </AdminModal>
@@ -442,10 +442,10 @@ export default function AdminGallery() {
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setAlbumModal(false)} className="btn-outline text-sm px-5 py-2">
-            Cancel
+            <X size={14} /> Cancel
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
-            {saving ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Album'}
+            {saving ? 'Saving…' : <><Check size={14} /> {editTarget ? 'Save Changes' : 'Create Album'}</>}
           </button>
         </div>
       </AdminModal>

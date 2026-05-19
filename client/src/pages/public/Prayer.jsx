@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Heart, Lock, Phone, CheckCircle } from 'lucide-react';
+import { Heart, Lock, Phone, CheckCircle, RefreshCcw, Send } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -96,7 +96,7 @@ export default function Prayer() {
                 onClick={() => { setSubmitted(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 className="btn-outline mt-6 inline-flex"
               >
-                Submit another request
+                <RefreshCcw size={14} /> Submit another request
               </button>
             </div>
           ) : (
@@ -172,7 +172,7 @@ export default function Prayer() {
               </div>
 
               <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4">
-                {submitting ? 'Sending…' : 'Submit Prayer Request'}
+                {submitting ? 'Sending…' : <><Send size={14} /> Submit Prayer Request</>}
               </button>
             </form>
           )}

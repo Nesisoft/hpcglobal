@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import AdminModal from './AdminModal';
 
 /**
@@ -37,7 +37,7 @@ export default function ConfirmDialog({
             disabled={loading}
             className="btn-outline text-sm px-5 py-2"
           >
-            Cancel
+            <X size={14} /> Cancel
           </button>
           <button
             type="button"

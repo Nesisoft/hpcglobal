@@ -108,7 +108,7 @@ export default function EventDetail() {
           <Calendar size={48} className="text-purple-brand/20 mx-auto mb-4" />
           <h2 className="font-display text-2xl text-ink font-light mb-2">Event not found</h2>
           <p className="text-ink/50 font-body text-sm mb-6">This event may have ended or been removed.</p>
-          <Link to="/events" className="btn-primary">Browse All Events</Link>
+          <Link to="/events" className="btn-primary"><Calendar size={14} /> Browse All Events</Link>
         </div>
       </div>
     );
@@ -263,7 +263,7 @@ export default function EventDetail() {
                       )}
                       {rsvpError && <p className="text-red-500 text-xs font-body">{rsvpError}</p>}
                       <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-3 disabled:opacity-50">
-                        {submitting ? 'Registering…' : 'RSVP Now'}
+                        {submitting ? 'Registering…' : <><CheckCircle size={14} /> RSVP Now</>}
                       </button>
                     </form>
                   )}
@@ -273,7 +273,7 @@ export default function EventDetail() {
                   <h3 className="font-display text-lg text-ink font-light mb-3">Upcoming Events</h3>
                   <p className="text-ink/50 font-body text-sm mb-4">Browse our other upcoming events.</p>
                   <Link to="/events" className="btn-outline w-full justify-center py-2.5 text-sm">
-                    View All Events
+                    <Calendar size={14} /> View All Events
                   </Link>
                 </div>
               )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, Calendar } from 'lucide-react';
 
 const NAV_LINKS = [
   { label: 'About',    to: '/about' },
@@ -127,7 +127,7 @@ export default function Navbar() {
         {/* CTA + Mobile toggle */}
         <div className="flex items-center gap-3">
           <Link to="/new-here" className="hidden sm:inline-flex btn-primary text-xs px-5 py-2.5">
-            Plan a Visit
+            <Calendar size={13} /> Plan a Visit
           </Link>
           <button
             type="button"
@@ -181,7 +181,7 @@ export default function Navbar() {
             )
           )}
           <Link to="/new-here" className="btn-primary mt-3 justify-center" onClick={() => setOpen(false)}>
-            Plan a Visit
+            <Calendar size={13} /> Plan a Visit
           </Link>
         </div>
       </div>
