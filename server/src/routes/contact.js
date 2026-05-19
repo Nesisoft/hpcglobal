@@ -18,16 +18,21 @@ const messageSchema = z.object({
 // POST /api/contact/message — public
 router.post('/message', validate(messageSchema), async (req, res) => {
   try {
-    const msg = await prisma.contactMessage.create({ data: req.body });
-    // Auto-reply to sender
-    await email.sendAutoReply(req.body.email, req.body.name);
-    // Notify church office
-    await email.notifyOffice(req.body);
-    res.status(201).json({ message: 'Message received. We will respond within 24 hours.' });
+    await prisma.contactMessage.create({ data: req.body });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Contact DB error:', err);
+    return res.status(500).json({ message: 'Server error' });
   }
+
+  // Email is best-effort — a failed send must not surface as an error to the user
+  try {
+    await email.sendAutoReply(req.body.email, req.body.name);
+    await email.notifyOffice(req.body);
+  } catch (emailErr) {
+    console.error('Contact email error (non-fatal):', emailErr.message);
+  }
+
+  res.status(201).json({ message: 'Message received. We will respond within 24 hours.' });
 });
 
 // GET /api/contact/messages — admin

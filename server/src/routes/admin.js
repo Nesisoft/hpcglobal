@@ -292,30 +292,21 @@ router.get('/giving/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear  = new Date(now.getFullYear(), 0, 1);
 
-    const [month, year, byCategory, byMethod] = await Promise.all([
-      prisma.givingRecord.aggregate({
-        where: { status: 'COMPLETED', createdAt: { gte: startOfMonth } },
-        _sum:  { amount: true }, _count: true,
-      }),
-      prisma.givingRecord.aggregate({
-        where: { status: 'COMPLETED', createdAt: { gte: startOfYear } },
-        _sum:  { amount: true }, _count: true,
-      }),
-      prisma.givingRecord.groupBy({
-        by:    ['category'],
-        where: { status: 'COMPLETED' },
-        _sum:  { amount: true },
-      }),
-      prisma.givingRecord.groupBy({
-        by:    ['method'],
-        where: { status: 'COMPLETED' },
-        _sum:  { amount: true },
-      }),
+    const whereMonth = { status: 'COMPLETED', createdAt: { gte: startOfMonth } };
+    const whereYear  = { status: 'COMPLETED', createdAt: { gte: startOfYear  } };
+
+    const [monthSum, monthCount, yearSum, yearCount, byCategory, byMethod] = await Promise.all([
+      prisma.givingRecord.aggregate({ where: whereMonth, _sum: { amount: true } }),
+      prisma.givingRecord.count({ where: whereMonth }),
+      prisma.givingRecord.aggregate({ where: whereYear,  _sum: { amount: true } }),
+      prisma.givingRecord.count({ where: whereYear }),
+      prisma.givingRecord.groupBy({ by: ['category'], where: { status: 'COMPLETED' }, _sum: { amount: true } }),
+      prisma.givingRecord.groupBy({ by: ['method'],   where: { status: 'COMPLETED' }, _sum: { amount: true } }),
     ]);
 
     res.json({
-      month:      { total: month._sum?.amount ?? 0, count: month._count?._all ?? month._count ?? 0 },
-      year:       { total: year._sum?.amount  ?? 0, count: year._count?._all  ?? year._count  ?? 0 },
+      month:      { total: monthSum._sum?.amount ?? 0, count: monthCount },
+      year:       { total: yearSum._sum?.amount  ?? 0, count: yearCount  },
       byCategory,
       byMethod,
     });
