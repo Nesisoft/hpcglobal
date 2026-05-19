@@ -17,7 +17,7 @@ router.get('/dashboard', async (_req, res) => {
 
     const [
       newPrayer, newVisitors, upcomingEvents, latestSermon,
-      givingMonth, unreadMessages,
+      givingMonth, givingMonthCount, unreadMessages,
     ] = await Promise.all([
       prisma.prayerRequest.count({ where: { status: 'NEW' } }),
       prisma.visitor.count({
@@ -34,21 +34,23 @@ router.get('/dashboard', async (_req, res) => {
         select:  { title: true, preacher: true, datePracticed: true },
       }),
       prisma.givingRecord.aggregate({
-        where:  { status: 'COMPLETED', createdAt: { gte: start } },
-        _sum:   { amount: true },
-        _count: true,
+        where: { status: 'COMPLETED', createdAt: { gte: start } },
+        _sum:  { amount: true },
+      }),
+      prisma.givingRecord.count({
+        where: { status: 'COMPLETED', createdAt: { gte: start } },
       }),
       prisma.contactMessage.count({ where: { isRead: false } }),
     ]);
 
     res.json({
-      newPrayerRequests:  newPrayer,
+      newPrayerRequests:   newPrayer,
       newVisitorsThisWeek: newVisitors,
       upcomingEvents,
       latestSermon,
       givingThisMonth: {
-        total: givingMonth._sum.amount || 0,
-        count: givingMonth._count,
+        total: givingMonth._sum?.amount ?? 0,
+        count: givingMonthCount,
       },
       unreadMessages,
     });
