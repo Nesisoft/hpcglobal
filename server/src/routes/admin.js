@@ -844,6 +844,21 @@ router.delete('/service-times/:id', async (req, res) => {
   }
 });
 
+router.post('/service-times/:id/image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No image file provided' });
+    const result = await uploadToCloudinary(req.file.buffer, 'hpcglobal/services');
+    const time = await prisma.serviceTime.update({
+      where: { id: req.params.id },
+      data:  { imageUrl: result.secure_url },
+    });
+    res.json(time);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ─── Admin: Settings ──────────────────────────────────────────────────────────
 router.get('/settings', requireRole('SUPER_ADMIN'), async (_req, res) => {
   try {

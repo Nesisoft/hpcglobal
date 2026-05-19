@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Play, Calendar, Heart, HandHeart, UserPlus, Users,
   BookOpen, MessageCircle, Clock, ChevronLeft, ChevronRight,
-  Radio, ArrowRight, Smartphone, Building2,
+  Radio, ArrowRight, Smartphone, Building2, CreditCard,
 } from 'lucide-react';
 import { FaYoutube, FaWhatsapp, FaFacebook, FaInstagram } from 'react-icons/fa';
 import { useApi } from '../../hooks/useApi';
@@ -182,27 +182,50 @@ function ServiceTimesBar({ services }) {
                 ? (s.youtubeUrl || 'https://youtube.com/@prophetclottey')
                 : '/services';
             const isExternal = linkHref.startsWith('http');
+            const linkLabel  = s.isOnline ? 'Get Zoom Link' : s.isStreamed ? 'Watch live' : 'Learn more';
 
             return (
-              <div key={s.id} className="text-center p-6 border border-white/10 rounded-lg hover:border-gold/30 transition-colors">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <Clock size={14} className="text-gold" />
-                  <span className="section-label">{s.day}</span>
+              <div key={s.id} className="flex flex-row md:flex-col rounded-xl overflow-hidden border border-white/10 hover:border-gold/30 transition-colors bg-white/5">
+                {/* Image — left on mobile, top on md+ */}
+                <div className="w-28 flex-shrink-0 md:w-full md:h-44 relative overflow-hidden">
+                  {s.imageUrl ? (
+                    <img
+                      src={s.imageUrl}
+                      alt={s.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-purple-deep/60 flex items-center justify-center">
+                      <Clock size={28} className="text-gold/40" />
+                    </div>
+                  )}
+                  {/* Day badge */}
+                  <span className="absolute top-2 left-2 bg-gold text-purple-deep text-[10px] font-body font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {s.day}
+                  </span>
                 </div>
-                <h3 className="font-display text-white text-h3 font-normal mb-1">{s.name}</h3>
-                <p className="text-gold font-body text-sm mb-1">{timeDisplay}</p>
-                <p className="text-white/50 font-body text-xs mb-4">
-                  {s.isOnline ? 'Online via Zoom' : s.isStreamed ? 'Physical + YouTube Live' : 'In Person'}
-                </p>
-                {isExternal ? (
-                  <a href={linkHref} target="_blank" rel="noopener noreferrer" className="btn-ghost text-xs">
-                    {s.isOnline ? 'Get Zoom Link' : 'Watch live'} <ArrowRight size={12} />
-                  </a>
-                ) : (
-                  <Link to={linkHref} className="btn-ghost text-xs">
-                    {s.isOnline ? 'Get Zoom Link' : 'Learn more'} <ArrowRight size={12} />
-                  </Link>
-                )}
+
+                {/* Content */}
+                <div className="flex flex-col justify-between flex-1 p-4 md:p-5">
+                  <div>
+                    <h3 className="font-display text-white text-base font-normal leading-snug mb-1">{s.name}</h3>
+                    <p className="text-gold font-body text-xs mb-1">{timeDisplay}</p>
+                    <p className="text-white/50 font-body text-[11px]">
+                      {s.isOnline ? 'Online via Zoom' : s.isStreamed ? 'Physical + YouTube Live' : 'In Person'}
+                    </p>
+                  </div>
+                  <div className="mt-3">
+                    {isExternal ? (
+                      <a href={linkHref} target="_blank" rel="noopener noreferrer" className="btn-ghost text-xs">
+                        {linkLabel} <ArrowRight size={12} />
+                      </a>
+                    ) : (
+                      <Link to={linkHref} className="btn-ghost text-xs">
+                        {linkLabel} <ArrowRight size={12} />
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -390,9 +413,8 @@ function GiveBand() {
         <p className="text-white/40 text-sm font-body mb-10">— Malachi 3:10</p>
         <div className="flex flex-wrap justify-center gap-3 mb-8">
           {[
-            { icon: Smartphone, label: 'MTN MoMo' },
-            { icon: Smartphone, label: 'Telecel Cash' },
-            { icon: Smartphone, label: 'AirtelTigo' },
+            { icon: Smartphone, label: 'Mobile Money' },
+            { icon: CreditCard, label: 'Card' },
             { icon: Building2,  label: 'Bank Transfer' },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4 py-2">

@@ -56,8 +56,8 @@ export const publicApi = {
   submitPrayer:    (data) => api.post('/prayer', data),
   submitVisitor:   (data) => api.post('/visitors', data),
   submitContact:   (data) => api.post('/contact/message', data),
-  initiateGiving:  (data) => api.post('/give', data),
-  verifyPayment:   (ref) => api.get(`/give/verify/${ref}`),
+  initiateGiving: (data) => api.post('/give', data),
+  verifyGiving:   (ref)  => api.get(`/give/verify/${ref}`),
 };
 
 // ─── Admin endpoints ─────────────────────────────────────────────────────────
@@ -123,10 +123,11 @@ export const adminApi = {
   getAbout:   ()  => api.get('/admin/about'),
   updateAbout: (d) => api.put('/admin/about', d),
 
-  getServiceTimes:    ()       => api.get('/admin/service-times'),
-  createServiceTime:  (d)      => api.post('/admin/service-times', d),
-  updateServiceTime:  (id, d)  => api.put(`/admin/service-times/${id}`, d),
-  deleteServiceTime:  (id)     => api.delete(`/admin/service-times/${id}`),
+  getServiceTimes:        ()       => api.get('/admin/service-times'),
+  createServiceTime:      (d)      => api.post('/admin/service-times', d),
+  updateServiceTime:      (id, d)  => api.put(`/admin/service-times/${id}`, d),
+  deleteServiceTime:      (id)     => api.delete(`/admin/service-times/${id}`),
+  uploadServiceTimeImage: (id, fd) => api.post(`/admin/service-times/${id}/image`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
 
   getSettings:    ()  => api.get('/admin/settings'),
   updateSettings: (d) => api.put('/admin/settings', d),

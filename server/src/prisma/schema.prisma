@@ -161,6 +161,7 @@ model ServiceTime {
   joinLink    String?
   isStreamed  Boolean @default(false)
   youtubeUrl  String?
+  imageUrl    String?
   order       Int
   isActive    Boolean @default(true)
 }
