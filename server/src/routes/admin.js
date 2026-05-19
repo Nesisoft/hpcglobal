@@ -313,7 +313,12 @@ router.get('/giving/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
       }),
     ]);
 
-    res.json({ month, year, byCategory, byMethod });
+    res.json({
+      month:      { total: month._sum?.amount ?? 0, count: month._count?._all ?? month._count ?? 0 },
+      year:       { total: year._sum?.amount  ?? 0, count: year._count?._all  ?? year._count  ?? 0 },
+      byCategory,
+      byMethod,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

@@ -96,10 +96,10 @@ export default function AdminGiving() {
   const total   = rawRecords?.total   ?? 0;
 
   // Totals from summary
-  const monthTotal = summary?.month?._sum?.amount ?? 0;
-  const monthCount = summary?.month?._count        ?? 0;
-  const yearTotal  = summary?.year?._sum?.amount   ?? 0;
-  const yearCount  = summary?.year?._count         ?? 0;
+  const monthTotal = summary?.month?.total ?? 0;
+  const monthCount = summary?.month?.count ?? 0;
+  const yearTotal  = summary?.year?.total  ?? 0;
+  const yearCount  = summary?.year?.count  ?? 0;
 
   const allCatTotal = (summary?.byCategory ?? []).reduce((s, r) => s + (r._sum?.amount ?? 0), 0);
 
@@ -277,7 +277,7 @@ export default function AdminGiving() {
         <select
           className="input py-2 text-sm w-36"
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); refetch(); }}
+          onChange={(e) => setFilterStatus(e.target.value)}
         >
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -285,7 +285,7 @@ export default function AdminGiving() {
         <select
           className="input py-2 text-sm w-40"
           value={filterCategory}
-          onChange={(e) => { setFilterCategory(e.target.value); refetch(); }}
+          onChange={(e) => setFilterCategory(e.target.value)}
         >
           <option value="">All categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{CAT_LABELS[c]}</option>)}
@@ -293,7 +293,7 @@ export default function AdminGiving() {
         <select
           className="input py-2 text-sm w-40"
           value={filterMethod}
-          onChange={(e) => { setFilterMethod(e.target.value); refetch(); }}
+          onChange={(e) => setFilterMethod(e.target.value)}
         >
           <option value="">All methods</option>
           {METHODS.map((m) => <option key={m} value={m}>{METHOD_LABELS[m]}</option>)}
