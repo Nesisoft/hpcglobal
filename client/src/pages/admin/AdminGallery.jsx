@@ -1,8 +1,16 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Pencil, Images, Upload, X, Check,
-  ChevronDown, ChevronUp, ImageOff, Star,
+  ChevronDown, ChevronUp, ImageOff, Star, GripVertical,
 } from 'lucide-react';
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext, verticalListSortingStrategy, arrayMove, useSortable,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -273,6 +281,31 @@ const EMPTY_ALBUM = {
   isPublished: false,
 };
 
+function SortableAlbumRow({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 10 : undefined }}
+      className="bg-white rounded-xl border border-purple-brand/8 overflow-hidden"
+    >
+      <div className="flex">
+        <button
+          type="button"
+          className="flex-shrink-0 w-8 flex items-center justify-center text-ink/20 hover:text-ink/50 cursor-grab active:cursor-grabbing touch-none border-r border-purple-brand/8"
+          title="Drag to reorder"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical size={15} />
+        </button>
+        <div className="flex-1 min-w-0">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminGallery() {
   const [albumModal, setAlbumModal]     = useState(false);
   const [editTarget, setEditTarget]     = useState(null);
@@ -282,10 +315,28 @@ export default function AdminGallery() {
   const [deleting, setDeleting]         = useState(false);
   const [openAlbumId, setOpenAlbumId]   = useState(null);
   const [error, setError]               = useState('');
+  const [ordered, setOrdered]           = useState([]);
 
   const fetchFn = useCallback(() => adminApi.getAlbums(), []);
   const { data: rawAlbums = [], loading, refetch } = useApi(fetchFn);
   const albums = Array.isArray(rawAlbums) ? rawAlbums : [];
+
+  useEffect(() => { setOrdered(albums); }, [rawAlbums]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  async function handleAlbumDragEnd(event) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = ordered.findIndex((a) => a.id === active.id);
+    const newIndex = ordered.findIndex((a) => a.id === over.id);
+    const next = arrayMove(ordered, oldIndex, newIndex);
+    setOrdered(next);
+    try { await adminApi.reorderAlbums(next.map((a) => a.id)); } catch { refetch(); }
+  }
 
   function openCreate() {
     setEditTarget(null);
@@ -358,77 +409,81 @@ export default function AdminGallery() {
           <p className="text-ink/35 font-body text-sm">No albums yet. Create your first one.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {albums.map((album) => {
-            const isOpen = openAlbumId === album.id;
-            return (
-              <div key={album.id} className="bg-white rounded-xl border border-purple-brand/8 overflow-hidden">
-                {/* Album row */}
-                <div className="flex items-center gap-4 px-5 py-4">
-                  {/* Cover thumbnail */}
-                  <div className="w-16 h-12 rounded-lg overflow-hidden bg-purple-brand/5 flex-shrink-0">
-                    {album.coverImage
-                      ? <img src={album.coverImage} alt="" className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center"><Images size={16} className="text-ink/20" /></div>}
-                  </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleAlbumDragEnd}>
+          <SortableContext items={ordered.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {ordered.map((album) => {
+                const isOpen = openAlbumId === album.id;
+                return (
+                  <SortableAlbumRow key={album.id} id={album.id}>
+                    {/* Album row */}
+                    <div className="flex items-center gap-4 px-4 py-4">
+                      {/* Cover thumbnail */}
+                      <div className="w-16 h-12 rounded-lg overflow-hidden bg-purple-brand/5 flex-shrink-0">
+                        {album.coverImage
+                          ? <img src={album.coverImage} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center"><Images size={16} className="text-ink/20" /></div>}
+                      </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-ink/90 text-sm">{album.name}</p>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-ink/40 text-[11px]">
-                        {album._count?.photos ?? 0} photo{album._count?.photos !== 1 ? 's' : ''}
-                      </span>
-                      {album.eventDate && (
-                        <span className="text-ink/40 text-[11px]">
-                          {new Date(album.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      )}
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${album.isPublished ? 'bg-green-50 text-green-700' : 'bg-ink/5 text-ink/40'}`}>
-                        {album.isPublished ? 'Published' : 'Draft'}
-                      </span>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-ink/90 text-sm">{album.name}</p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-ink/40 text-[11px]">
+                            {album._count?.photos ?? 0} photo{album._count?.photos !== 1 ? 's' : ''}
+                          </span>
+                          {album.eventDate && (
+                            <span className="text-ink/40 text-[11px]">
+                              {new Date(album.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${album.isPublished ? 'bg-green-50 text-green-700' : 'bg-ink/5 text-ink/40'}`}>
+                            {album.isPublished ? 'Published' : 'Draft'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => setOpenAlbumId(isOpen ? null : album.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-body text-purple-brand hover:bg-purple-brand/5 transition-colors"
+                        >
+                          <Images size={13} />
+                          Photos
+                          {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+                        <button
+                          onClick={() => openEdit(album)}
+                          className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors"
+                          title="Edit album"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(album)}
+                          className="p-1.5 text-ink/30 hover:text-red-500 rounded transition-colors"
+                          title="Delete album"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => setOpenAlbumId(isOpen ? null : album.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-body text-purple-brand hover:bg-purple-brand/5 transition-colors"
-                    >
-                      <Images size={13} />
-                      Photos
-                      {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                    </button>
-                    <button
-                      onClick={() => openEdit(album)}
-                      className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors"
-                      title="Edit album"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(album)}
-                      className="p-1.5 text-ink/30 hover:text-red-500 rounded transition-colors"
-                      title="Delete album"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Inline photo manager */}
-                {isOpen && (
-                  <PhotoManager
-                    album={album}
-                    onClose={() => setOpenAlbumId(null)}
-                    onAlbumUpdated={refetch}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    {/* Inline photo manager */}
+                    {isOpen && (
+                      <PhotoManager
+                        album={album}
+                        onClose={() => setOpenAlbumId(null)}
+                        onAlbumUpdated={refetch}
+                      />
+                    )}
+                  </SortableAlbumRow>
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Album create/edit modal */}

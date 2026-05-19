@@ -3,6 +3,8 @@ const { z }   = require('zod');
 
 const { validate }     = require('../middleware/validate');
 const { verifyToken }  = require('../middleware/auth');
+const emailService     = require('../services/email');
+const { sendSms }      = require('../services/sms');
 
 const prisma = require('../lib/prisma');
 
@@ -29,8 +31,21 @@ const prayerSchema = z.object({
 router.post('/', validate(prayerSchema), async (req, res) => {
   try {
     const prayer = await prisma.prayerRequest.create({ data: req.body });
-    // TODO: notify prayer coordinator via SMS/email
     res.status(201).json({ message: 'Prayer request received', id: prayer.id });
+
+    // Notify office — non-fatal
+    try {
+      await emailService.notifyPrayerRequest(prayer);
+      if (prayer.wantsCall && process.env.OFFICE_PHONE) {
+        const who = prayer.name ? `${prayer.name}` : 'Anonymous';
+        await sendSms(
+          process.env.OFFICE_PHONE,
+          `HPC Prayer: ${who} requests a call. Category: ${prayer.category}. Phone: ${prayer.phone || 'N/A'}`
+        );
+      }
+    } catch (notifyErr) {
+      console.error('Prayer notify error (non-fatal):', notifyErr.message);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

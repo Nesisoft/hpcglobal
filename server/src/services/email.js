@@ -47,4 +47,34 @@ async function notifyOffice(msg) {
   });
 }
 
-module.exports = { sendAutoReply, notifyOffice };
+async function sendPasswordReset(toEmail, resetUrl) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: 'Reset your admin password — HPC Global',
+    html: `
+      <p>You requested a password reset for your HPC Global admin account.</p>
+      <p><a href="${resetUrl}" style="background:#7E5BAC;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;display:inline-block">Reset Password</a></p>
+      <p>This link expires in <strong>1 hour</strong>. If you did not request this, ignore this email.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong></p>
+    `,
+  });
+}
+
+async function notifyPrayerRequest(prayer) {
+  const to = process.env.OFFICE_EMAIL || FROM;
+  await transporter.sendMail({
+    from:    `HPC Website <${FROM}>`,
+    to,
+    subject: `New prayer request: ${prayer.category}`,
+    html: `
+      <p><strong>Category:</strong> ${prayer.category}</p>
+      ${prayer.name ? `<p><strong>From:</strong> ${prayer.name}</p>` : '<p><em>Anonymous</em></p>'}
+      ${prayer.phone ? `<p><strong>Phone:</strong> ${prayer.phone}${prayer.wantsCall ? ' (wants a call)' : ''}</p>` : ''}
+      <p><strong>Request:</strong></p>
+      <p>${prayer.request}</p>
+    `,
+  });
+}
+
+module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest };

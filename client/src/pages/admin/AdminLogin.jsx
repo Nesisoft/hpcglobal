@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLogin() {
@@ -50,6 +50,11 @@ export default function AdminLogin() {
             className="w-full bg-gold text-purple-deep font-body font-semibold py-3 rounded text-sm hover:bg-gold-light transition-colors disabled:opacity-60">
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
+          <div className="text-center pt-1">
+            <Link to="/admin/forgot-password" className="text-white/35 hover:text-white/60 text-xs font-body transition-colors">
+              Forgot password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>

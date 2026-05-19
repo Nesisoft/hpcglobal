@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UserPlus, Phone, Mail, MapPin, Globe, X, Check, Download } from 'lucide-react';
+import { UserPlus, Phone, Mail, MapPin, Globe, X, Check, Download, Users } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -27,6 +27,8 @@ export default function AdminVisitors() {
   const [selected, setSelected]         = useState(null);
   const [form, setForm]                 = useState({ status: 'NEW', adminNotes: '', followedUp: false });
   const [saving, setSaving]             = useState(false);
+  const [checkedIds, setCheckedIds]     = useState(new Set());
+  const [bulking, setBulking]           = useState(false);
 
   const fetchFn = useCallback(
     () => adminApi.getVisitors({ status: filterStatus || undefined }),
@@ -35,6 +37,33 @@ export default function AdminVisitors() {
   const { data, loading, refetch } = useApi(fetchFn, [filterStatus]);
   const visitors = data?.visitors ?? [];
   const total    = data?.total ?? 0;
+
+  function toggleCheck(id, e) {
+    e.stopPropagation();
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll(e) {
+    setCheckedIds(e.target.checked ? new Set(visitors.map((v) => v.id)) : new Set());
+  }
+
+  async function handleBulkStatus(status) {
+    if (!checkedIds.size) return;
+    setBulking(true);
+    try {
+      await adminApi.bulkUpdateVisitors({ ids: [...checkedIds], status });
+      setCheckedIds(new Set());
+      refetch();
+    } catch {
+      // silent
+    } finally {
+      setBulking(false);
+    }
+  }
 
   function openDetail(row) {
     setSelected(row);
@@ -74,7 +103,29 @@ export default function AdminVisitors() {
     }
   }
 
+  const allChecked = visitors.length > 0 && checkedIds.size === visitors.length;
+
   const columns = [
+    {
+      key: '_check',
+      label: (
+        <input
+          type="checkbox"
+          checked={allChecked}
+          onChange={toggleAll}
+          className="accent-purple-brand cursor-pointer"
+        />
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={checkedIds.has(row.id)}
+          onChange={(e) => toggleCheck(row.id, e)}
+          onClick={(e) => e.stopPropagation()}
+          className="accent-purple-brand cursor-pointer"
+        />
+      ),
+    },
     {
       key: 'name',
       label: 'Visitor',
@@ -145,6 +196,34 @@ export default function AdminVisitors() {
           </button>
         </div>
       </AdminPageHeader>
+
+      {/* Bulk action bar */}
+      {checkedIds.size > 0 && (
+        <div className="flex items-center gap-3 mb-3 bg-purple-brand/5 border border-purple-brand/15 rounded-lg px-4 py-2.5">
+          <Users size={14} className="text-purple-brand flex-shrink-0" />
+          <span className="text-sm font-body text-purple-brand font-medium">
+            {checkedIds.size} selected
+          </span>
+          <span className="text-ink/20">·</span>
+          <span className="text-xs font-body text-ink/50">Mark as:</span>
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              onClick={() => handleBulkStatus(s)}
+              disabled={bulking}
+              className="text-xs font-body px-3 py-1.5 rounded border border-purple-brand/20 text-purple-brand hover:bg-purple-brand/10 transition-colors disabled:opacity-50"
+            >
+              {s}
+            </button>
+          ))}
+          <button
+            onClick={() => setCheckedIds(new Set())}
+            className="ml-auto text-ink/30 hover:text-ink transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <AdminTable
         columns={columns}

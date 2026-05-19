@@ -24,7 +24,9 @@ const Contact    = lazy(() => import('./pages/public/Contact'));
 const NotFound   = lazy(() => import('./pages/public/NotFound'));
 
 // ─── Admin pages (lazy) ───────────────────────────────────────────────────────
-const AdminLogin     = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminLogin           = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminForgotPassword  = lazy(() => import('./pages/admin/AdminForgotPassword'));
+const AdminResetPassword   = lazy(() => import('./pages/admin/AdminResetPassword'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminHero      = lazy(() => import('./pages/admin/AdminHero'));
 const AdminSermons   = lazy(() => import('./pages/admin/AdminSermons'));
@@ -78,7 +80,9 @@ export default function App() {
             <Route path="/contact"    element={<PublicLayout><Contact /></PublicLayout>} />
 
             {/* ── Admin routes ── */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/login"            element={<AdminLogin />} />
+            <Route path="/admin/forgot-password"  element={<AdminForgotPassword />} />
+            <Route path="/admin/reset-password"   element={<AdminResetPassword />} />
             <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/hero"       element={<ProtectedRoute><AdminHero /></ProtectedRoute>} />
             <Route path="/admin/sermons"    element={<ProtectedRoute><AdminSermons /></ProtectedRoute>} />

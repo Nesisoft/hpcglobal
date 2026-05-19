@@ -3,7 +3,8 @@ const { z }   = require('zod');
 
 const { validate }    = require('../middleware/validate');
 const { verifyToken } = require('../middleware/auth');
-const email = require('../services/email');
+const email        = require('../services/email');
+const { sendSms }  = require('../services/sms');
 
 const prisma = require('../lib/prisma');
 
@@ -24,12 +25,17 @@ router.post('/message', validate(messageSchema), async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 
-  // Email is best-effort — a failed send must not surface as an error to the user
   try {
     await email.sendAutoReply(req.body.email, req.body.name);
     await email.notifyOffice(req.body);
+    if (process.env.OFFICE_PHONE) {
+      await sendSms(
+        process.env.OFFICE_PHONE,
+        `HPC Contact: ${req.body.name} (${req.body.type}). Phone: ${req.body.phone || 'N/A'}. Check your email for details.`
+      );
+    }
   } catch (emailErr) {
-    console.error('Contact email error (non-fatal):', emailErr.message);
+    console.error('Contact notify error (non-fatal):', emailErr.message);
   }
 
   res.status(201).json({ message: 'Message received. We will respond within 24 hours.' });
