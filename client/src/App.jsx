@@ -12,7 +12,8 @@ const Services   = lazy(() => import('./pages/public/Services'));
 const Sermons    = lazy(() => import('./pages/public/Sermons'));
 const Events      = lazy(() => import('./pages/public/Events'));
 const EventDetail = lazy(() => import('./pages/public/EventDetail'));
-const Give       = lazy(() => import('./pages/public/Give'));
+const Give           = lazy(() => import('./pages/public/Give'));
+const GivingCallback = lazy(() => import('./pages/public/GivingCallback'));
 const Ministries = lazy(() => import('./pages/public/Ministries'));
 const NewHere    = lazy(() => import('./pages/public/NewHere'));
 const Prayer     = lazy(() => import('./pages/public/Prayer'));
@@ -65,7 +66,8 @@ export default function App() {
             <Route path="/sermons"    element={<PublicLayout><Sermons /></PublicLayout>} />
             <Route path="/events"     element={<PublicLayout><Events /></PublicLayout>} />
             <Route path="/events/:slug" element={<PublicLayout><EventDetail /></PublicLayout>} />
-            <Route path="/give"       element={<PublicLayout><Give /></PublicLayout>} />
+            <Route path="/give"              element={<PublicLayout><Give /></PublicLayout>} />
+            <Route path="/giving/callback"  element={<GivingCallback />} />
             <Route path="/ministries" element={<PublicLayout><Ministries /></PublicLayout>} />
             <Route path="/new-here"   element={<PublicLayout><NewHere /></PublicLayout>} />
             <Route path="/prayer"     element={<PublicLayout><Prayer /></PublicLayout>} />

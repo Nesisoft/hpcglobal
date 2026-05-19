@@ -56,8 +56,8 @@ export const publicApi = {
   submitPrayer:    (data) => api.post('/prayer', data),
   submitVisitor:   (data) => api.post('/visitors', data),
   submitContact:   (data) => api.post('/contact/message', data),
-  initiateGiving:  (data) => api.post('/give', data),
-  verifyPayment:   (ref) => api.get(`/give/verify/${ref}`),
+  initiateGiving: (data) => api.post('/give', data),
+  verifyGiving:   (ref)  => api.get(`/give/verify/${ref}`),
 };
 
 // ─── Admin endpoints ─────────────────────────────────────────────────────────

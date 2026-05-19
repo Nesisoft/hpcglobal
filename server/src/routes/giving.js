@@ -28,12 +28,14 @@ router.post('/', validate(giveSchema), async (req, res) => {
 
     // For Mobile Money — initialise Paystack
     if (['MTN_MOMO', 'TELECEL', 'AIRTELTIGO', 'CARD'].includes(method)) {
+      const callbackUrl = `${process.env.CLIENT_URL || 'https://www.hpcglobal.org'}/giving/callback`;
       const init = await paystack.initializePayment({
-        amount:    amount * 100, // kobo
-        email:     email || `${phone}@hpcglobal.org`,
-        reference: record.id,
-        metadata:  { name, phone, category, givingRecordId: record.id },
-        channels:  method === 'CARD' ? ['card'] : ['mobile_money'],
+        amount:       amount * 100, // kobo/pesewas
+        email:        email || `${phone}@hpcglobal.org`,
+        reference:    record.id,
+        callback_url: callbackUrl,
+        metadata:     { name, phone, category, givingRecordId: record.id },
+        channels:     method === 'CARD' ? ['card'] : ['mobile_money'],
       });
       return res.json({ url: init.data.authorization_url, reference: record.id });
     }
