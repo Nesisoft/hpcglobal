@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Plus, Trash2, Pencil, Video, MapPin } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { Plus, Trash2, Pencil, Video, MapPin, Upload, X } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -22,11 +22,57 @@ const EMPTY_FORM = {
   joinLink:   '',
   isStreamed: false,
   youtubeUrl: '',
+  imageUrl:   '',
   order:      '',
   isActive:   true,
 };
 
-function ServiceForm({ form, setForm }) {
+function ImageUploadField({ imageUrl, onFileSelect, uploading }) {
+  const inputRef = useRef(null);
+  return (
+    <FormField label="Service Image" hint="Displayed on the home page service cards">
+      <div className="flex items-start gap-3">
+        {imageUrl ? (
+          <div className="relative w-24 h-16 rounded overflow-hidden border border-purple-brand/15 flex-shrink-0">
+            <img src={imageUrl} alt="Service" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="w-24 h-16 rounded border-2 border-dashed border-purple-brand/20 flex items-center justify-center flex-shrink-0 bg-cream">
+            <Upload size={16} className="text-ink/30" />
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="btn-outline text-xs px-3 py-1.5 disabled:opacity-50"
+          >
+            {uploading ? 'Uploading…' : imageUrl ? 'Change image' : 'Upload image'}
+          </button>
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={() => setForm?.((f) => ({ ...f, imageUrl: '' }))}
+              className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1"
+            >
+              <X size={11} /> Remove
+            </button>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => onFileSelect(e.target.files[0])}
+          />
+        </div>
+      </div>
+    </FormField>
+  );
+}
+
+function ServiceForm({ form, setForm, onFileSelect, uploading }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -137,6 +183,13 @@ function ServiceForm({ form, setForm }) {
           />
         </FormField>
       )}
+
+      <ImageUploadField
+        imageUrl={form.imageUrl}
+        onFileSelect={onFileSelect}
+        uploading={uploading}
+        setForm={setForm}
+      />
     </div>
   );
 }
@@ -146,6 +199,8 @@ export default function AdminServices() {
   const [editTarget, setEditTarget]     = useState(null);
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [saving, setSaving]             = useState(false);
+  const [uploading, setUploading]       = useState(false);
+  const [pendingFile, setPendingFile]   = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]         = useState(false);
   const [error, setError]               = useState('');
@@ -157,6 +212,7 @@ export default function AdminServices() {
   function openCreate() {
     setEditTarget(null);
     setForm({ ...EMPTY_FORM, order: services.length + 1 });
+    setPendingFile(null);
     setError('');
     setModalOpen(true);
   }
@@ -175,9 +231,11 @@ export default function AdminServices() {
       joinLink:   row.joinLink   ?? '',
       isStreamed: row.isStreamed,
       youtubeUrl: row.youtubeUrl ?? '',
+      imageUrl:   row.imageUrl   ?? '',
       order:      row.order,
       isActive:   row.isActive,
     });
+    setPendingFile(null);
     setError('');
     setModalOpen(true);
   }
@@ -191,15 +249,27 @@ export default function AdminServices() {
     setError('');
     try {
       const payload = { ...form, order: Number(form.order) || 0 };
+      let saved;
       if (editTarget) {
-        await adminApi.updateServiceTime(editTarget.id, payload);
+        const res = await adminApi.updateServiceTime(editTarget.id, payload);
+        saved = res.data;
       } else {
-        await adminApi.createServiceTime(payload);
+        const res = await adminApi.createServiceTime(payload);
+        saved = res.data;
+      }
+      // Upload image if one was selected
+      if (pendingFile && saved?.id) {
+        setUploading(true);
+        const fd = new FormData();
+        fd.append('image', pendingFile);
+        await adminApi.uploadServiceTimeImage(saved.id, fd);
+        setUploading(false);
       }
       setModalOpen(false);
       refetch();
     } catch (e) {
       setError(e.response?.data?.message ?? 'Save failed. Please try again.');
+      setUploading(false);
     } finally {
       setSaving(false);
     }
@@ -309,7 +379,12 @@ export default function AdminServices() {
         title={editTarget ? 'Edit Service' : 'Add Service'}
         size="lg"
       >
-        <ServiceForm form={form} setForm={setForm} />
+        <ServiceForm
+          form={form}
+          setForm={setForm}
+          onFileSelect={(file) => { setPendingFile(file); setForm((f) => ({ ...f, imageUrl: URL.createObjectURL(file) })); }}
+          uploading={uploading}
+        />
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-purple-brand/8">
           <button onClick={() => setModalOpen(false)} className="btn-outline text-sm px-5 py-2">
