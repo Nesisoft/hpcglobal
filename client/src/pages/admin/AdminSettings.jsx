@@ -7,10 +7,11 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import FormField from '../../components/admin/FormField';
 
 const TABS = [
-  { id: 'church',   label: 'Church Info'   },
+  { id: 'church',   label: 'Church Info'      },
   { id: 'contact',  label: 'Contact & Social' },
-  { id: 'giving',   label: 'Giving Accounts' },
-  { id: 'ticker',   label: 'Ticker Messages' },
+  { id: 'giving',   label: 'Giving Accounts'  },
+  { id: 'ticker',   label: 'Ticker Messages'  },
+  { id: 'partner',  label: 'Partner Settings' },
 ];
 
 function Section({ title, children }) {
@@ -54,6 +55,8 @@ export default function AdminSettings() {
       bankAccount:      data.bankAccount      ?? '',
       bankBranch:       data.bankBranch       ?? '',
       paystackPublicKey: data.paystackPublicKey ?? '',
+      ministryVideoId:   data.ministryVideoId   ?? '',
+      zelleAccount:      data.zelleAccount      ?? '',
     });
     try {
       const parsed = JSON.parse(data.tickerMessages ?? '[]');
@@ -207,6 +210,28 @@ export default function AdminSettings() {
                 </div>
                 <FormField label="Paystack Public Key" hint="pk_live_... or pk_test_...">
                   <input className="input" value={form.paystackPublicKey ?? ''} onChange={set('paystackPublicKey')} />
+                </FormField>
+              </Section>
+            </>
+          )}
+
+          {/* ── Partner Settings ── */}
+          {tab === 'partner' && (
+            <>
+              <Section title="Ministry Project Video">
+                <p className="text-ink/50 text-xs font-body -mt-2">
+                  Shown in the "Support The Ministry" section on the homepage. Paste only the YouTube video ID (e.g. <code className="bg-ink/5 px-1 rounded">dQw4w9WgXcQ</code> from youtube.com/watch?v=<strong>dQw4w9WgXcQ</strong>). Works with unlisted videos.
+                </p>
+                <FormField label="YouTube Video ID" hint="Leave blank to hide the video section">
+                  <input className="input" placeholder="e.g. dQw4w9WgXcQ" value={form.ministryVideoId ?? ''} onChange={set('ministryVideoId')} />
+                </FormField>
+              </Section>
+              <Section title="Zelle (International Partners)">
+                <p className="text-ink/50 text-xs font-body -mt-2">
+                  Shown in the partner portal for partners with non-GHS currencies (diaspora). Enter the email or phone registered on your Zelle account.
+                </p>
+                <FormField label="Zelle Account" hint="e.g. giving@hpcglobal.org or +1 xxx-xxx-xxxx">
+                  <input className="input" placeholder="giving@hpcglobal.org" value={form.zelleAccount ?? ''} onChange={set('zelleAccount')} />
                 </FormField>
               </Section>
             </>

@@ -128,6 +128,8 @@ model SiteSettings {
   bankBranch      String   @default("")
   paystackPublicKey String @default("")
   tickerMessages  String   @default("[]")
+  ministryVideoId String   @default("")
+  zelleAccount    String   @default("")
   updatedAt       DateTime @updatedAt
 }
 
@@ -367,4 +369,51 @@ model ContactMessage {
   message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+enum PartnerStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+model Partner {
+  id                 String        @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String        @unique
+  phone              String?
+  country            String?
+  city               String?
+  monthlyAmount      Float
+  currency           String        @default("GHS")
+  motivation         String?
+  adminNotes         String?
+  status             PartnerStatus @default(PENDING)
+  passwordHash       String?
+  accountActivatedAt DateTime?
+  lastLogin          DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+}
+
+model ZoomSchedule {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  zoomLink    String
+  scheduledAt DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PartnerMessage {
+  id          String    @id @default(uuid())
+  title       String
+  body        String
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

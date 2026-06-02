@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Play, Calendar, Heart, HandHeart, UserPlus, Users,
@@ -402,30 +402,99 @@ function SermonsStrip() {
 // ─── Give Band ─────────────────────────────────────────────────────────────
 
 function GiveBand() {
+  const settingsFn = useCallback(() => publicApi.getSettings(), []);
+  const { data: settings } = useApi(settingsFn);
+  const videoId = settings?.ministryVideoId || '';
+
+  const sectionRef = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    if (!videoId) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { threshold: 0.25 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, [videoId]);
+
   return (
-    <section className="bg-purple-deep section-pad">
-      <div className="container-page text-center">
-        <p className="section-label text-gold mb-4">Support the Ministry</p>
-        <h2 className="section-heading-light mb-4">Give to HPC Global</h2>
-        <p className="font-display italic text-white/60 text-lg mb-2">
-          "Bring the whole tithe into the storehouse... and see if I will not throw open the floodgates of heaven."
-        </p>
-        <p className="text-white/40 text-sm font-body mb-10">— Malachi 3:10</p>
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {[
-            { icon: Smartphone, label: 'Mobile Money' },
-            { icon: CreditCard, label: 'Card' },
-            { icon: Building2,  label: 'Bank Transfer' },
-          ].map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4 py-2">
-              <Icon size={13} className="text-gold" />
-              <span className="text-white/70 text-xs font-body">{label}</span>
+    <section ref={sectionRef} className="bg-purple-deep section-pad">
+      <div className="container-page">
+        {videoId ? (
+          /* Side-by-side layout when video is set */
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 items-center">
+            {/* Video — 60% */}
+            <div className="lg:col-span-3 order-2 lg:order-1">
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl" style={{ paddingBottom: '56.25%' }}>
+                {inView ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&rel=0&modestbranding=1`}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                    title="Ministry Project Video"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-white/5 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-gold/20 flex items-center justify-center">
+                      <Play size={22} className="text-gold ml-1" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
-        <Link to="/give" className="btn-primary text-base px-8 py-4">
-          Give Now <Heart size={15} />
-        </Link>
+            {/* CTA — 40% */}
+            <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
+              <p className="section-label text-gold mb-4">Support the Ministry</p>
+              <h2 className="section-heading-light mb-4">Give to HPC Global</h2>
+              <p className="font-display italic text-white/60 text-base mb-2">
+                "Bring the whole tithe into the storehouse..."
+              </p>
+              <p className="text-white/40 text-sm font-body mb-8">— Malachi 3:10</p>
+              <div className="flex flex-wrap gap-2 mb-6 justify-center lg:justify-start">
+                {[
+                  { icon: Smartphone, label: 'MoMo' },
+                  { icon: CreditCard, label: 'Card' },
+                  { icon: Building2,  label: 'Bank' },
+                ].map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-full px-3 py-1.5">
+                    <Icon size={12} className="text-gold" />
+                    <span className="text-white/70 text-xs font-body">{label}</span>
+                  </div>
+                ))}
+              </div>
+              <Link to="/give" className="btn-primary text-base px-8 py-4 inline-flex">
+                Give Now <Heart size={15} />
+              </Link>
+            </div>
+          </div>
+        ) : (
+          /* Original centered layout when no video */
+          <div className="text-center">
+            <p className="section-label text-gold mb-4">Support the Ministry</p>
+            <h2 className="section-heading-light mb-4">Give to HPC Global</h2>
+            <p className="font-display italic text-white/60 text-lg mb-2">
+              "Bring the whole tithe into the storehouse... and see if I will not throw open the floodgates of heaven."
+            </p>
+            <p className="text-white/40 text-sm font-body mb-10">— Malachi 3:10</p>
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {[
+                { icon: Smartphone, label: 'Mobile Money' },
+                { icon: CreditCard, label: 'Card' },
+                { icon: Building2,  label: 'Bank Transfer' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4 py-2">
+                  <Icon size={13} className="text-gold" />
+                  <span className="text-white/70 text-xs font-body">{label}</span>
+                </div>
+              ))}
+            </div>
+            <Link to="/give" className="btn-primary text-base px-8 py-4">
+              Give Now <Heart size={15} />
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
