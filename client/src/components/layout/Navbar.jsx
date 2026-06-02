@@ -17,7 +17,8 @@ const NAV_LINKS = [
   },
   { label: 'Events', to: '/events' },
   { label: 'Blog',   to: '/blog'   },
-  { label: 'Give',   to: '/give'   },
+  { label: 'Give',    to: '/give'    },
+  { label: 'Partner', to: '/partner' },
 ];
 
 export default function Navbar() {

@@ -1218,4 +1218,160 @@ router.delete('/users/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
   }
 });
 
+// ─── Admin: Partners ─────────────────────────────────────────────────────────
+const emailService = require('../services/email');
+
+router.get('/partners', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const where = status ? { status } : {};
+    const [partners, total] = await Promise.all([
+      prisma.partner.findMany({ where, orderBy: { createdAt: 'desc' } }),
+      prisma.partner.count({ where }),
+    ]);
+    res.json({ partners, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/partners/:id/activate', async (req, res) => {
+  try {
+    const partner = await prisma.partner.findUnique({ where: { id: req.params.id } });
+    if (!partner) return res.status(404).json({ message: 'Partner not found' });
+    if (partner.status === 'APPROVED') return res.status(400).json({ message: 'Account already activated.' });
+
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const rawPassword = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const passwordHash = await bcrypt.hash(rawPassword, 12);
+
+    await prisma.partner.update({
+      where: { id: req.params.id },
+      data:  { status: 'APPROVED', passwordHash, accountActivatedAt: new Date() },
+    });
+    try {
+      await emailService.sendPartnerActivation(partner.email, partner.firstName, rawPassword);
+    } catch (e) {
+      console.error('Partner activation email error:', e.message);
+    }
+    res.json({ message: 'Account activated and credentials sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/partners/:id', async (req, res) => {
+  try {
+    const { status, adminNotes } = req.body;
+    const partner = await prisma.partner.update({
+      where: { id: req.params.id },
+      data:  { ...(status && { status }), ...(adminNotes !== undefined && { adminNotes }) },
+    });
+    res.json(partner);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/partners/:id', async (req, res) => {
+  try {
+    await prisma.partner.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Admin: Zoom Schedules ────────────────────────────────────────────────────
+router.get('/zoom-schedules', async (_req, res) => {
+  try {
+    const schedules = await prisma.zoomSchedule.findMany({ orderBy: { scheduledAt: 'asc' } });
+    res.json(schedules);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/zoom-schedules', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (data.scheduledAt) data.scheduledAt = new Date(data.scheduledAt);
+    const schedule = await prisma.zoomSchedule.create({ data });
+    res.status(201).json(schedule);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/zoom-schedules/:id', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (data.scheduledAt) data.scheduledAt = new Date(data.scheduledAt);
+    const schedule = await prisma.zoomSchedule.update({ where: { id: req.params.id }, data });
+    res.json(schedule);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/zoom-schedules/:id', async (req, res) => {
+  try {
+    await prisma.zoomSchedule.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Admin: Partner Messages ──────────────────────────────────────────────────
+router.get('/partner-messages', async (_req, res) => {
+  try {
+    const messages = await prisma.partnerMessage.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(messages);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/partner-messages', async (req, res) => {
+  try {
+    const msg = await prisma.partnerMessage.create({ data: req.body });
+    res.status(201).json(msg);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/partner-messages/:id', async (req, res) => {
+  try {
+    const data = { ...req.body };
+    if (data.isPublished && !data.publishedAt) data.publishedAt = new Date();
+    const msg = await prisma.partnerMessage.update({ where: { id: req.params.id }, data });
+    res.json(msg);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/partner-messages/:id', async (req, res) => {
+  try {
+    await prisma.partnerMessage.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

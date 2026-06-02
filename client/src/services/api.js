@@ -156,6 +156,21 @@ export const adminApi = {
   createUser:   (d)     => api.post('/admin/users', d),
   updateUser:   (id,d)  => api.put(`/admin/users/${id}`, d),
   deleteUser:   (id)    => api.delete(`/admin/users/${id}`),
+
+  getPartners:    (p)   => api.get('/admin/partners', { params: p }),
+  updatePartner:  (id,d)=> api.put(`/admin/partners/${id}`, d),
+  activatePartner:(id)  => api.put(`/admin/partners/${id}/activate`),
+  deletePartner:  (id)  => api.delete(`/admin/partners/${id}`),
+
+  getZoomSchedules:     ()      => api.get('/admin/zoom-schedules'),
+  createZoomSchedule:   (d)     => api.post('/admin/zoom-schedules', d),
+  updateZoomSchedule:   (id,d)  => api.put(`/admin/zoom-schedules/${id}`, d),
+  deleteZoomSchedule:   (id)    => api.delete(`/admin/zoom-schedules/${id}`),
+
+  getPartnerMessages:   ()      => api.get('/admin/partner-messages'),
+  createPartnerMessage: (d)     => api.post('/admin/partner-messages', d),
+  updatePartnerMessage: (id,d)  => api.put(`/admin/partner-messages/${id}`, d),
+  deletePartnerMessage: (id)    => api.delete(`/admin/partner-messages/${id}`),
 };
 
 export default api;

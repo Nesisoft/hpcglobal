@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PartnerAuthProvider } from './context/PartnerAuthContext';
 import PageWrapper from './components/layout/PageWrapper';
 import Spinner from './components/ui/Spinner';
 
@@ -25,8 +26,14 @@ const NotFound   = lazy(() => import('./pages/public/NotFound'));
 
 // ─── Admin pages (lazy) ───────────────────────────────────────────────────────
 const AdminLogin           = lazy(() => import('./pages/admin/AdminLogin'));
-const AdminForgotPassword  = lazy(() => import('./pages/admin/AdminForgotPassword'));
-const AdminResetPassword   = lazy(() => import('./pages/admin/AdminResetPassword'));
+const AdminForgotPassword    = lazy(() => import('./pages/admin/AdminForgotPassword'));
+const AdminResetPassword     = lazy(() => import('./pages/admin/AdminResetPassword'));
+const AdminPartners          = lazy(() => import('./pages/admin/AdminPartners'));
+const AdminZoomSchedules     = lazy(() => import('./pages/admin/AdminZoomSchedules'));
+const AdminPartnerMessages   = lazy(() => import('./pages/admin/AdminPartnerMessages'));
+const Partner                = lazy(() => import('./pages/public/Partner'));
+const PartnerLogin           = lazy(() => import('./pages/public/PartnerLogin'));
+const PartnerPortal          = lazy(() => import('./pages/public/PartnerPortal'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminHero      = lazy(() => import('./pages/admin/AdminHero'));
 const AdminSermons   = lazy(() => import('./pages/admin/AdminSermons'));
@@ -56,10 +63,16 @@ function PublicLayout({ children }) {
 
 export default function App() {
   return (
+    <PartnerAuthProvider>
     <AuthProvider>
       <BrowserRouter>
         <Suspense fallback={<div className="min-h-screen bg-purple-deep flex items-center justify-center"><Spinner /></div>}>
           <Routes>
+
+            {/* ── Partner routes ── */}
+            <Route path="/partner"        element={<PublicLayout><Partner /></PublicLayout>} />
+            <Route path="/partner/login"  element={<PartnerLogin />} />
+            <Route path="/partner/portal" element={<PartnerPortal />} />
 
             {/* ── Public routes ── */}
             <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
@@ -99,7 +112,10 @@ export default function App() {
             <Route path="/admin/services"   element={<ProtectedRoute><AdminServices /></ProtectedRoute>} />
             <Route path="/admin/settings"   element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/contact"    element={<ProtectedRoute><AdminContact /></ProtectedRoute>} />
-            <Route path="/admin/users"      element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/users"           element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/partners"        element={<ProtectedRoute><AdminPartners /></ProtectedRoute>} />
+            <Route path="/admin/zoom-schedules"  element={<ProtectedRoute><AdminZoomSchedules /></ProtectedRoute>} />
+            <Route path="/admin/partner-messages" element={<ProtectedRoute><AdminPartnerMessages /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
@@ -107,5 +123,6 @@ export default function App() {
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
+    </PartnerAuthProvider>
   );
 }

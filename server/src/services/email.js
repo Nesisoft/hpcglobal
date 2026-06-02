@@ -61,6 +61,48 @@ async function sendPasswordReset(toEmail, resetUrl) {
   });
 }
 
+async function sendPartnerApplicationConfirmation(toEmail, firstName) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: 'Your Partnership Application — HPC Global',
+    html: `
+      <p>Dear ${firstName},</p>
+      <p>Thank you for applying to partner with Prophet Clottey and HPC Global.</p>
+      <p>Your application is under review. Once verified, we will create your partner account and send your login credentials to this email address.</p>
+      <p>God bless you for your commitment to the ministry.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
+    `,
+  });
+}
+
+async function sendPartnerActivation(toEmail, firstName, password) {
+  const appUrl = process.env.APP_URL || 'https://www.hpcglobal.org';
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: 'Your HPC Global Partner Account is Ready',
+    html: `
+      <p>Dear ${firstName},</p>
+      <p>Your HPC Global partner account has been activated. You can now log in to the partner portal.</p>
+      <p>
+        <strong>Login URL:</strong> <a href="${appUrl}/partner/login">${appUrl}/partner/login</a><br>
+        <strong>Email:</strong> ${toEmail}<br>
+        <strong>Temporary Password:</strong> <code style="background:#f4f4f4;padding:2px 6px;border-radius:4px">${password}</code>
+      </p>
+      <p>Please change your password after your first login (you can do this from your profile settings).</p>
+      <p>As a partner you now have access to:</p>
+      <ul>
+        <li>Exclusive one-on-one Zoom meetings with the prophet</li>
+        <li>Spiritual instructions and guidance</li>
+        <li>Monthly payment portal</li>
+      </ul>
+      <p>God bless you. We look forward to this journey together.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong></p>
+    `,
+  });
+}
+
 async function notifyPrayerRequest(prayer) {
   const to = process.env.OFFICE_EMAIL || FROM;
   await transporter.sendMail({
@@ -77,4 +119,4 @@ async function notifyPrayerRequest(prayer) {
   });
 }
 
-module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest };
+module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation };
