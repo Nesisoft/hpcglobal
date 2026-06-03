@@ -377,6 +377,12 @@ enum PartnerStatus {
   SUSPENDED
 }
 
+enum CommitmentFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 model Partner {
   id                 String        @id @default(uuid())
   firstName          String
@@ -385,11 +391,14 @@ model Partner {
   phone              String?
   country            String?
   city               String?
-  monthlyAmount      Float
+  commitmentAmount   Float?
   currency           String        @default("GHS")
+  frequency          CommitmentFrequency?
+  commitmentSetAt    DateTime?
   motivation         String?
   adminNotes         String?
   status             PartnerStatus @default(PENDING)
+  supabaseUserId     String?
   passwordHash       String?
   accountActivatedAt DateTime?
   lastLogin          DateTime?

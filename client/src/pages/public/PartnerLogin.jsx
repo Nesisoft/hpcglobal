@@ -18,7 +18,7 @@ export default function PartnerLogin() {
       await login(email, pass);
       navigate('/partner/portal');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      setError(err.message || err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

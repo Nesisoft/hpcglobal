@@ -1,45 +1,73 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import api from '../services/api';
-
-const KEY = 'hpc_partner_token';
 
 const PartnerAuthContext = createContext(null);
 
 export function PartnerAuthProvider({ children }) {
-  const [partner, setPartner]         = useState(null);
-  const [isAuthenticated, setIsAuth]  = useState(false);
-  const [loading, setLoading]         = useState(true);
+  const [session, setSession]        = useState(null);
+  const [partner, setPartner]        = useState(null);
+  const [loading, setLoading]        = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem(KEY);
-    if (token) {
-      api.get('/partner/me', { headers: { Authorization: `Bearer ${token}` } })
-        .then(({ data }) => { setPartner(data); setIsAuth(true); })
-        .catch(() => { localStorage.removeItem(KEY); })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+  const loadProfile = useCallback(async (accessToken) => {
+    if (!accessToken) { setPartner(null); return; }
+    try {
+      const { data } = await api.get('/partner/me', { headers: { Authorization: `Bearer ${accessToken}` } });
+      setPartner(data);
+    } catch {
+      setPartner(null);
     }
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      await loadProfile(data.session?.access_token);
+      setLoading(false);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      await loadProfile(newSession?.access_token);
+    });
+
+    return () => { active = false; sub.subscription.unsubscribe(); };
+  }, [loadProfile]);
+
   async function login(email, password) {
-    const { data } = await api.post('/partner/login', { email, password });
-    localStorage.setItem(KEY, data.token);
-    setPartner(data.partner);
-    setIsAuth(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password });
+    if (error) throw error;
+    setSession(data.session);
+    await loadProfile(data.session?.access_token);
     return data;
   }
 
-  function logout() {
-    localStorage.removeItem(KEY);
+  async function logout() {
+    await supabase.auth.signOut();
+    setSession(null);
     setPartner(null);
-    setIsAuth(false);
   }
 
-  function getToken() { return localStorage.getItem(KEY); }
+  function getToken() { return session?.access_token ?? null; }
+
+  // Allow the portal to refresh the profile after the commitment is set
+  async function refreshProfile() { await loadProfile(session?.access_token); }
 
   return (
-    <PartnerAuthContext.Provider value={{ partner, isAuthenticated, loading, login, logout, getToken }}>
+    <PartnerAuthContext.Provider
+      value={{
+        partner,
+        session,
+        isAuthenticated: !!session && !!partner,
+        loading,
+        login,
+        logout,
+        getToken,
+        refreshProfile,
+      }}
+    >
       {children}
     </PartnerAuthContext.Provider>
   );

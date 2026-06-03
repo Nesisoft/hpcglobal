@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Heart, Video, BookOpen, Users, CheckCircle, ArrowRight, DollarSign } from 'lucide-react';
+import { Heart, Video, BookOpen, Users, CheckCircle, ArrowRight } from 'lucide-react';
 import SEO from '../../components/ui/SEO';
 import SectionHero from '../../components/ui/SectionHero';
 import api from '../../services/api';
@@ -15,24 +15,15 @@ const BENEFITS = [
   { icon: Users,    title: 'Partner Community',        desc: 'Join a global family of believers committed to advancing the Kingdom together.' },
 ];
 
-const CURRENCIES = [
-  { value: 'GHS', label: 'GHS — Ghana Cedis (Local)' },
-  { value: 'USD', label: 'USD — US Dollars (International)' },
-  { value: 'GBP', label: 'GBP — British Pounds' },
-  { value: 'EUR', label: 'EUR — Euros' },
-];
-
 const schema = z.object({
-  firstName:     z.string().min(1, 'First name required'),
-  lastName:      z.string().min(1, 'Last name required'),
-  email:         z.string().email('Valid email required'),
-  phone:         z.string().optional(),
-  country:       z.string().optional(),
-  city:          z.string().optional(),
-  monthlyAmount: z.number({ invalid_type_error: 'Enter an amount' }).positive('Must be positive'),
-  currency:      z.enum(['GHS', 'USD', 'GBP', 'EUR']).default('GHS'),
-  motivation:    z.string().optional(),
-  agreed:        z.boolean().refine((v) => v, 'You must agree to the commitment'),
+  firstName:  z.string().min(1, 'First name required'),
+  lastName:   z.string().min(1, 'Last name required'),
+  email:      z.string().email('Valid email required'),
+  phone:      z.string().optional(),
+  country:    z.string().optional(),
+  city:       z.string().optional(),
+  motivation: z.string().optional(),
+  agreed:     z.boolean().refine((v) => v, 'You must agree before continuing'),
 });
 
 export default function Partner() {
@@ -40,16 +31,12 @@ export default function Partner() {
   const [done, setDone]             = useState(false);
   const [serverError, setServerError] = useState('');
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { currency: 'GHS' },
   });
-
-  const currency = watch('currency');
 
   async function onSubmit(data) {
     const { agreed, ...payload } = data;
-    payload.monthlyAmount = Number(payload.monthlyAmount);
     setSubmitting(true);
     setServerError('');
     try {
@@ -156,40 +143,13 @@ export default function Partner() {
                 <input className="input" {...register('city')} />
               </div>
 
-              {/* Monthly Commitment */}
-              <div className="rounded-xl bg-purple-brand/5 border border-purple-brand/15 p-5">
-                <p className="font-body font-semibold text-ink/80 text-sm mb-4 flex items-center gap-2">
-                  <DollarSign size={15} className="text-purple-brand" />
-                  Monthly Commitment
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-ink/70 text-xs font-body font-medium uppercase tracking-wide block mb-1.5">Currency</label>
-                    <select className="input" {...register('currency')}>
-                      {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-ink/70 text-xs font-body font-medium uppercase tracking-wide block mb-1.5">Amount per Month <span className="text-red-400">*</span></label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40 text-sm font-body">{currency}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="0.01"
-                        className="input pl-14"
-                        placeholder="50.00"
-                        {...register('monthlyAmount', { valueAsNumber: true })}
-                      />
-                    </div>
-                    {errors.monthlyAmount && <p className="text-red-500 text-xs font-body mt-1">{errors.monthlyAmount.message}</p>}
-                  </div>
-                </div>
-              </div>
-
               <div>
                 <label className="text-ink/70 text-xs font-body font-medium uppercase tracking-wide block mb-1.5">Why do you want to partner with the ministry? <span className="text-ink/35 text-xs">(optional)</span></label>
                 <textarea className="input min-h-[80px] resize-y" {...register('motivation')} />
+              </div>
+
+              <div className="rounded-xl bg-purple-brand/5 border border-purple-brand/15 p-4 text-xs font-body text-ink/60 leading-relaxed">
+                You'll choose your giving commitment and frequency (weekly, bi-weekly, or monthly) from your partner dashboard once your account is activated.
               </div>
 
               <label className="flex items-start gap-3 cursor-pointer group">
@@ -199,10 +159,10 @@ export default function Partner() {
                   {...register('agreed')}
                 />
                 <span className="text-sm font-body text-ink/70 leading-relaxed">
-                  I commit to giving the stated amount monthly and understand that my partner account will be created after verification. I agree to the <span className="text-purple-brand underline cursor-pointer">terms of partnership</span>.
+                  I understand my partner account will be created after verification, and I agree to the <span className="text-purple-brand underline cursor-pointer">terms of partnership</span>.
                 </span>
               </label>
-              {errors.agreed && <p className="field-error -mt-3">{errors.agreed.message}</p>}
+              {errors.agreed && <p className="text-red-500 text-xs font-body -mt-3">{errors.agreed.message}</p>}
 
               <button
                 type="submit"

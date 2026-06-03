@@ -15,7 +15,11 @@ const STATUS_COLORS = {
   SUSPENDED: 'bg-red-50 text-red-500',
 };
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-const fmtAmt  = (p) => `${p.currency} ${Number(p.monthlyAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+const FREQ_PER = { WEEKLY: 'week', BIWEEKLY: '2 weeks', MONTHLY: 'month' };
+const fmtAmt = (p) =>
+  p.commitmentAmount != null
+    ? `${p.currency} ${Number(p.commitmentAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} / ${FREQ_PER[p.frequency] ?? 'month'}`
+    : 'Not set';
 
 export default function AdminPartners() {
   const [filterStatus, setFilterStatus] = useState('');
@@ -52,8 +56,8 @@ export default function AdminPartners() {
     if (!selected) return;
     setActivating(true);
     try {
-      await adminApi.activatePartner(selected.id);
-      alert(`Account activated. Credentials sent to ${selected.email}`);
+      const { data } = await adminApi.activatePartner(selected.id);
+      alert(data?.message || `Approved. Activation email sent to ${selected.email}`);
       setSelected(null);
       refetch();
     } catch (err) {
@@ -84,8 +88,12 @@ export default function AdminPartners() {
     },
     {
       key: 'commitment',
-      label: 'Monthly',
-      render: (row) => <span className="font-display text-base text-ink font-light">{fmtAmt(row)}</span>,
+      label: 'Commitment',
+      render: (row) => (
+        <span className={`text-sm ${row.commitmentAmount != null ? 'text-ink font-display text-base font-light' : 'text-ink/30 italic'}`}>
+          {fmtAmt(row)}
+        </span>
+      ),
     },
     {
       key: 'location',
@@ -155,7 +163,7 @@ export default function AdminPartners() {
               <div className="flex items-center gap-2 text-ink/70"><Mail size={13} className="text-ink/40" /> {selected.email}</div>
               {selected.phone && <div className="flex items-center gap-2 text-ink/70"><Phone size={13} className="text-ink/40" /> {selected.phone}</div>}
               {(selected.city || selected.country) && <div className="flex items-center gap-2 text-ink/70"><Globe size={13} className="text-ink/40" /> {[selected.city, selected.country].filter(Boolean).join(', ')}</div>}
-              <div className="flex items-center gap-2 text-ink/70"><DollarSign size={13} className="text-ink/40" /> {fmtAmt(selected)} / month</div>
+              <div className="flex items-center gap-2 text-ink/70"><DollarSign size={13} className="text-ink/40" /> {fmtAmt(selected)}</div>
             </div>
 
             {selected.motivation && (
@@ -196,7 +204,7 @@ export default function AdminPartners() {
                   disabled={activating}
                   className="btn-primary text-sm px-5 py-2 disabled:opacity-60"
                 >
-                  {activating ? 'Activating…' : <><CheckCircle size={14} /> Activate Account & Send Credentials</>}
+                  {activating ? 'Sending…' : <><CheckCircle size={14} /> Approve & Send Activation Email</>}
                 </button>
               )}
               <button onClick={handleSave} disabled={saving} className="btn-outline text-sm px-4 py-2 disabled:opacity-60">
