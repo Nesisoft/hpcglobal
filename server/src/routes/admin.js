@@ -1219,7 +1219,8 @@ router.delete('/users/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
 });
 
 // ─── Admin: Partners ─────────────────────────────────────────────────────────
-const emailService = require('../services/email');
+const emailService  = require('../services/email');
+const supabaseAdmin = require('../lib/supabaseAdmin');
 
 router.get('/partners', async (req, res) => {
   try {
@@ -1242,20 +1243,35 @@ router.put('/partners/:id/activate', async (req, res) => {
     if (!partner) return res.status(404).json({ message: 'Partner not found' });
     if (partner.status === 'APPROVED') return res.status(400).json({ message: 'Account already activated.' });
 
-    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    const rawPassword = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const passwordHash = await bcrypt.hash(rawPassword, 12);
+    const appUrl = process.env.APP_URL || 'https://www.hpcglobal.org';
+    // Supabase sends an invite email; the link lands the partner on the
+    // set-password page where they create their own password.
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(partner.email, {
+      redirectTo: `${appUrl}/partner/set-password`,
+      data: { partnerId: partner.id, firstName: partner.firstName, lastName: partner.lastName },
+    });
+
+    if (error) {
+      // If the user already exists in Supabase, fall back to a password-recovery link
+      if (/already.*registered|exists/i.test(error.message)) {
+        const { error: linkErr } = await supabaseAdmin.auth.resetPasswordForEmail(partner.email, {
+          redirectTo: `${appUrl}/partner/set-password`,
+        });
+        if (linkErr) return res.status(502).json({ message: `Could not send activation email: ${linkErr.message}` });
+      } else {
+        return res.status(502).json({ message: `Could not send activation email: ${error.message}` });
+      }
+    }
 
     await prisma.partner.update({
       where: { id: req.params.id },
-      data:  { status: 'APPROVED', passwordHash, accountActivatedAt: new Date() },
+      data:  {
+        status: 'APPROVED',
+        accountActivatedAt: new Date(),
+        ...(data?.user?.id && { supabaseUserId: data.user.id }),
+      },
     });
-    try {
-      await emailService.sendPartnerActivation(partner.email, partner.firstName, rawPassword);
-    } catch (e) {
-      console.error('Partner activation email error:', e.message);
-    }
-    res.json({ message: 'Account activated and credentials sent.' });
+    res.json({ message: 'Account approved. An activation email has been sent to the partner.' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -1278,6 +1294,12 @@ router.put('/partners/:id', async (req, res) => {
 
 router.delete('/partners/:id', async (req, res) => {
   try {
+    const partner = await prisma.partner.findUnique({ where: { id: req.params.id } });
+    if (partner?.supabaseUserId) {
+      supabaseAdmin.auth.admin.deleteUser(partner.supabaseUserId).catch((e) =>
+        console.error('Supabase user delete error (non-fatal):', e.message)
+      );
+    }
     await prisma.partner.delete({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
   } catch (err) {

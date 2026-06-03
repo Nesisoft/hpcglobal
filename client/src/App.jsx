@@ -33,6 +33,7 @@ const AdminZoomSchedules     = lazy(() => import('./pages/admin/AdminZoomSchedul
 const AdminPartnerMessages   = lazy(() => import('./pages/admin/AdminPartnerMessages'));
 const Partner                = lazy(() => import('./pages/public/Partner'));
 const PartnerLogin           = lazy(() => import('./pages/public/PartnerLogin'));
+const PartnerSetPassword     = lazy(() => import('./pages/public/PartnerSetPassword'));
 const PartnerPortal          = lazy(() => import('./pages/public/PartnerPortal'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminHero      = lazy(() => import('./pages/admin/AdminHero'));
@@ -70,9 +71,10 @@ export default function App() {
           <Routes>
 
             {/* ── Partner routes ── */}
-            <Route path="/partner"        element={<PublicLayout><Partner /></PublicLayout>} />
-            <Route path="/partner/login"  element={<PartnerLogin />} />
-            <Route path="/partner/portal" element={<PartnerPortal />} />
+            <Route path="/partner"               element={<PublicLayout><Partner /></PublicLayout>} />
+            <Route path="/partner/login"         element={<PartnerLogin />} />
+            <Route path="/partner/set-password"  element={<PartnerSetPassword />} />
+            <Route path="/partner/portal"        element={<PartnerPortal />} />
 
             {/* ── Public routes ── */}
             <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
