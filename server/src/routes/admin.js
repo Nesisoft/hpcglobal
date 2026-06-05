@@ -1225,6 +1225,41 @@ router.delete('/users/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
 const emailService  = require('../services/email');
 const supabaseAdmin = require('../lib/supabaseAdmin');
 
+// Partner payments summary (scoped to source=PARTNER)
+router.get('/partner-payments/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    const now          = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear  = new Date(now.getFullYear(), 0, 1);
+    const base = { source: 'PARTNER', status: 'COMPLETED' };
+
+    const [monthSum, monthCount, yearSum, yearCount, completed] = await Promise.all([
+      prisma.givingRecord.aggregate({ where: { ...base, createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
+      prisma.givingRecord.count({     where: { ...base, createdAt: { gte: startOfMonth } } }),
+      prisma.givingRecord.aggregate({ where: { ...base, createdAt: { gte: startOfYear  } }, _sum: { amount: true } }),
+      prisma.givingRecord.count({     where: { ...base, createdAt: { gte: startOfYear  } } }),
+      prisma.givingRecord.findMany({  where: base, select: { method: true, amount: true, partnerId: true } }),
+    ]);
+
+    const byMethod = Object.entries(
+      completed.reduce((acc, r) => { acc[r.method] = (acc[r.method] || 0) + r.amount; return acc; }, {})
+    ).map(([method, total]) => ({ method, _sum: { amount: total } }));
+
+    // Unique active partners (those with at least one completed payment)
+    const uniquePartners = new Set(completed.map((r) => r.partnerId).filter(Boolean)).size;
+
+    res.json({
+      month:          { total: monthSum._sum?.amount ?? 0, count: monthCount },
+      year:           { total: yearSum._sum?.amount  ?? 0, count: yearCount  },
+      byMethod,
+      uniquePartners,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/partners', async (req, res) => {
   try {
     const { status } = req.query;

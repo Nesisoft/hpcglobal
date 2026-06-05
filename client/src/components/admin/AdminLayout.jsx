@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Image, Mic2, Calendar, BookOpen, Images,
   Users, Church, FileText, Clock, Settings, Mail, Heart,
   HandHeart, UserPlus, Menu, X, LogOut, ExternalLink, ChevronDown, Library,
-  Video, MessageSquare,
+  Video, MessageSquare, Banknote,
 } from 'lucide-react';
 
 const NAV = [
@@ -31,6 +31,7 @@ const NAV = [
   { label: 'Giving',      to: '/admin/giving',        icon: Heart     },
   { divider: 'Partners' },
   { label: 'Partners',          to: '/admin/partners',          icon: Users        },
+  { label: 'Partner Payments',  to: '/admin/partner-payments',  icon: Banknote     },
   { label: 'Zoom Schedules',    to: '/admin/zoom-schedules',    icon: Video        },
   { label: 'Partner Messages',  to: '/admin/partner-messages',  icon: MessageSquare},
 ];

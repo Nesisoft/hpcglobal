@@ -31,6 +31,7 @@ const AdminResetPassword     = lazy(() => import('./pages/admin/AdminResetPasswo
 const AdminPartners          = lazy(() => import('./pages/admin/AdminPartners'));
 const AdminZoomSchedules     = lazy(() => import('./pages/admin/AdminZoomSchedules'));
 const AdminPartnerMessages   = lazy(() => import('./pages/admin/AdminPartnerMessages'));
+const AdminPartnerPayments   = lazy(() => import('./pages/admin/AdminPartnerPayments'));
 const Partner                = lazy(() => import('./pages/public/Partner'));
 const PartnerLogin           = lazy(() => import('./pages/public/PartnerLogin'));
 const PartnerSetPassword     = lazy(() => import('./pages/public/PartnerSetPassword'));
@@ -116,8 +117,9 @@ export default function App() {
             <Route path="/admin/contact"    element={<ProtectedRoute><AdminContact /></ProtectedRoute>} />
             <Route path="/admin/users"           element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/partners"        element={<ProtectedRoute><AdminPartners /></ProtectedRoute>} />
-            <Route path="/admin/zoom-schedules"  element={<ProtectedRoute><AdminZoomSchedules /></ProtectedRoute>} />
-            <Route path="/admin/partner-messages" element={<ProtectedRoute><AdminPartnerMessages /></ProtectedRoute>} />
+            <Route path="/admin/zoom-schedules"    element={<ProtectedRoute><AdminZoomSchedules /></ProtectedRoute>} />
+            <Route path="/admin/partner-messages"  element={<ProtectedRoute><AdminPartnerMessages /></ProtectedRoute>} />
+            <Route path="/admin/partner-payments"  element={<ProtectedRoute><AdminPartnerPayments /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
