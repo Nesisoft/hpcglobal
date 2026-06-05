@@ -4,6 +4,7 @@ const { z }     = require('zod');
 const { validate }   = require('../middleware/validate');
 const emailService   = require('../services/email');
 const supabaseAdmin  = require('../lib/supabaseAdmin');
+const paystack       = require('../services/paystack');
 const prisma         = require('../lib/prisma');
 
 // ─── Partner auth middleware (validates a Supabase access token) ───────────────
@@ -86,6 +87,64 @@ router.put('/commitment', verifyPartner, validate(commitmentSchema), async (req,
       currency: updated.currency,
       frequency: updated.frequency,
       commitmentSet: true,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Pay (partner commitment via Paystack — tagged source=PARTNER) ─────────────
+const paySchema = z.object({
+  method: z.enum(['MTN_MOMO', 'TELECEL', 'AIRTELTIGO', 'BANK_TRANSFER', 'CARD']),
+});
+
+router.post('/pay', verifyPartner, validate(paySchema), async (req, res) => {
+  try {
+    const p = req.partner;
+    if (p.commitmentAmount == null) {
+      return res.status(400).json({ message: 'Please set your giving commitment first.' });
+    }
+    const { method } = req.body;
+
+    // Create a pending giving record tagged as a partner payment
+    const record = await prisma.givingRecord.create({
+      data: {
+        name:      `${p.firstName} ${p.lastName}`,
+        phone:     p.phone || '000',
+        email:     p.email,
+        amount:    p.commitmentAmount,
+        currency:  'GHS',
+        category:  'PASTORAL',
+        method,
+        status:    'PENDING',
+        source:    'PARTNER',
+        partnerId: p.id,
+      },
+    });
+
+    if (['MTN_MOMO', 'TELECEL', 'AIRTELTIGO', 'CARD'].includes(method)) {
+      const callbackUrl = `${process.env.CLIENT_URL || 'https://www.hpcglobal.org'}/giving/callback`;
+      const init = await paystack.initializePayment({
+        amount:       p.commitmentAmount * 100,
+        email:        p.email || `${p.phone}@hpcglobal.org`,
+        reference:    record.id,
+        callback_url: callbackUrl,
+        metadata:     { name: record.name, phone: record.phone, source: 'PARTNER', partnerId: p.id, givingRecordId: record.id },
+        channels:     method === 'CARD' ? ['card'] : ['mobile_money'],
+      });
+      return res.json({ url: init.data.authorization_url, reference: record.id });
+    }
+
+    // Bank transfer — return account details
+    const settings = await prisma.siteSettings.findUnique({ where: { id: 'singleton' } });
+    res.json({
+      reference: record.id,
+      bankDetails: {
+        bankName:    settings?.bankName,
+        bankAccount: settings?.bankAccount,
+        bankBranch:  settings?.bankBranch,
+      },
     });
   } catch (err) {
     console.error(err);

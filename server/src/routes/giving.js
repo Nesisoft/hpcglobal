@@ -56,17 +56,23 @@ router.post('/', validate(giveSchema), async (req, res) => {
   }
 });
 
-// GET /api/give/verify/:ref — payment callback
+// GET /api/give/verify/:ref — payment callback (shared by giving + partner)
 router.get('/verify/:ref', async (req, res) => {
   try {
     const { ref } = req.params;
     const result  = await paystack.verifyPayment(ref);
     const status  = result.data.status === 'success' ? 'COMPLETED' : 'FAILED';
-    await prisma.givingRecord.update({
+    const record  = await prisma.givingRecord.update({
       where: { id: ref },
       data:  { status, reference: result.data.reference },
     });
-    res.json({ status });
+    res.json({
+      status,
+      source:   record.source,   // 'GIVING' | 'PARTNER'
+      category: record.category,
+      amount:   record.amount,
+      currency: record.currency,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

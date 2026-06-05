@@ -1,33 +1,60 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, RefreshCcw, Heart, ArrowLeft } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, RefreshCcw, Heart, ArrowLeft, Handshake } from 'lucide-react';
 import SEO from '../../components/ui/SEO';
 import { publicApi } from '../../services/api';
+
+const CATEGORY_LABELS = {
+  TITHE:         'tithe',
+  OFFERING:      'offering',
+  FIRST_FRUITS:  'first fruits',
+  BUILDING_FUND: 'building fund',
+  MISSIONS:      'missions',
+  PASTORAL:      'pastoral support',
+  OTHER:         'gift',
+};
 
 export default function GivingCallback() {
   const [searchParams] = useSearchParams();
   const reference = searchParams.get('reference') || searchParams.get('trxref');
 
   const [status, setStatus] = useState('loading'); // loading | success | failed | error
+  const [details, setDetails] = useState(null);    // { source, category, amount, currency }
 
   useEffect(() => {
     if (!reference) { setStatus('error'); return; }
     publicApi.verifyGiving(reference)
-      .then((res) => setStatus(res.data.status === 'COMPLETED' ? 'success' : 'failed'))
+      .then((res) => {
+        setDetails(res.data);
+        setStatus(res.data.status === 'COMPLETED' ? 'success' : 'failed');
+      })
       .catch(() => setStatus('error'));
   }, [reference]);
+
+  const isPartner = details?.source === 'PARTNER';
+  const amountStr = details?.amount != null
+    ? `${details.currency} ${Number(details.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+    : null;
+
+  const successState = isPartner
+    ? {
+        icon:  <Handshake size={52} className="text-green-500 mx-auto" />,
+        title: 'Partnership payment received!',
+        body:  `Thank you for honouring your partnership commitment${amountStr ? ` of ${amountStr}` : ''}. Your faithful support is a seed sown into the ministry — God bless you.`,
+      }
+    : {
+        icon:  <CheckCircle size={52} className="text-green-500 mx-auto" />,
+        title: 'Thank you for your generosity!',
+        body:  `Your ${CATEGORY_LABELS[details?.category] ?? 'gift'}${amountStr ? ` of ${amountStr}` : ''} has been received and confirmed. It is an act of worship and a seed for the Kingdom.`,
+      };
 
   const states = {
     loading: {
       icon: <Loader2 size={52} className="text-gold animate-spin mx-auto" />,
-      title: 'Verifying your gift…',
+      title: 'Verifying your payment…',
       body:  'Please wait while we confirm your transaction.',
     },
-    success: {
-      icon: <CheckCircle size={52} className="text-green-500 mx-auto" />,
-      title: 'Thank you for your generosity!',
-      body:  'Your gift has been received and confirmed. It is an act of worship and a seed for the Kingdom.',
-    },
+    success: successState,
     failed: {
       icon: <XCircle size={52} className="text-red-400 mx-auto" />,
       title: 'Payment not completed',
@@ -55,7 +82,9 @@ export default function GivingCallback() {
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
             {status === 'failed' || status === 'error' ? (
-              <Link to="/give" className="btn-primary"><RefreshCcw size={14} /> Try Again</Link>
+              <Link to={isPartner ? '/partner/portal' : '/give'} className="btn-primary"><RefreshCcw size={14} /> Try Again</Link>
+            ) : isPartner ? (
+              <Link to="/partner/portal" className="btn-primary"><Handshake size={14} /> Back to Portal</Link>
             ) : (
               <Link to="/give" className="btn-primary"><Heart size={14} /> Give Again</Link>
             )}

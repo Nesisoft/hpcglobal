@@ -357,6 +357,8 @@ model GivingRecord {
   method    PaymentMethod
   reference String?
   status    PaymentStatus  @default(PENDING)
+  source    String         @default("GIVING") // "GIVING" | "PARTNER"
+  partnerId String?
   createdAt DateTime       @default(now())
 }
 
