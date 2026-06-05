@@ -145,7 +145,7 @@ function ZoomCard({ schedule }) {
   );
 }
 
-function PaySection({ partner, settings }) {
+function PaySection({ partner, settings, getToken }) {
   const isGhs    = partner.currency === 'GHS';
   const [method, setMethod]   = useState('MTN_MOMO');
   const [paying, setPaying]   = useState(false);
@@ -155,14 +155,11 @@ function PaySection({ partner, settings }) {
   async function handlePay() {
     setPaying(true);
     try {
-      const res = await publicApi.initiateGiving({
-        name:     `${partner.firstName} ${partner.lastName}`,
-        phone:    partner.phone || '000',
-        email:    partner.email,
-        amount:   partner.commitmentAmount,
-        category: 'PASTORAL',
-        method,
-      });
+      const res = await api.post(
+        '/partner/pay',
+        { method },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
       if (res.data.url) {
         window.location.href = res.data.url;
       } else if (res.data.bankDetails) {
@@ -459,7 +456,7 @@ export default function PartnerPortal() {
         </div>
 
         {/* Payment */}
-        <PaySection partner={partner} settings={settings} />
+        <PaySection partner={partner} settings={settings} getToken={getToken} />
       </main>
     </div>
   );

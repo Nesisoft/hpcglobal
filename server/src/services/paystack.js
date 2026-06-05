@@ -6,9 +6,9 @@ const client = axios.create({
   headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
 });
 
-async function initializePayment({ amount, email, reference, metadata, channels }) {
+async function initializePayment({ amount, email, reference, metadata, channels, callback_url }) {
   const { data } = await client.post('/transaction/initialize', {
-    amount, email, reference, metadata, channels,
+    amount, email, reference, metadata, channels, callback_url,
     currency: 'GHS',
   });
   return data;
