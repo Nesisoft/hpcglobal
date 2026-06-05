@@ -56,9 +56,7 @@ function Sidebar({ open, onClose, user, onLogout }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/8 flex-shrink-0">
           <Link to="/admin" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-purple-deep font-display font-semibold text-xs">
-              H
-            </div>
+            <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-7 w-auto object-contain" />
             <div className="leading-tight">
               <div className="text-white font-body text-sm font-semibold">HPC Global</div>
               <div className="text-white/30 text-[9px] font-body tracking-widest uppercase">Admin</div>

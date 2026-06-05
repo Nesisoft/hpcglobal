@@ -26,7 +26,7 @@ export default function AdminForgotPassword() {
     <div className="min-h-screen bg-purple-deep flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-full bg-gold flex items-center justify-center text-purple-deep font-display font-semibold text-lg mx-auto mb-3">H</div>
+          <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-16 w-auto mx-auto mb-3 object-contain" />
           <h1 className="font-display text-white text-2xl font-light">Reset Password</h1>
           <p className="text-white/40 font-body text-sm mt-1">Enter your email to receive a reset link</p>
         </div>

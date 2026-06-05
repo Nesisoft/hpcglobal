@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Download, TrendingUp, DollarSign, Calendar, BarChart2, Handshake } from 'lucide-react';
+import { Download, TrendingUp, DollarSign, Calendar, BarChart2 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend,
@@ -85,7 +85,6 @@ export default function AdminGiving() {
   const [filterStatus,   setFilterStatus]   = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterMethod,   setFilterMethod]   = useState('');
-  const [filterSource,   setFilterSource]   = useState('');
 
   // Summary stats
   const summaryFn = useCallback(() => adminApi.givingSummary(), []);
@@ -97,11 +96,10 @@ export default function AdminGiving() {
       status:   filterStatus   || undefined,
       category: filterCategory || undefined,
       method:   filterMethod   || undefined,
-      source:   filterSource   || undefined,
     }),
-    [filterStatus, filterCategory, filterMethod, filterSource]
+    [filterStatus, filterCategory, filterMethod]
   );
-  const { data: rawRecords, loading, refetch } = useApi(recordsFn, [filterStatus, filterCategory, filterMethod, filterSource]);
+  const { data: rawRecords, loading, refetch } = useApi(recordsFn, [filterStatus, filterCategory, filterMethod]);
   const records = rawRecords?.records ?? [];
   const total   = rawRecords?.total   ?? 0;
 
@@ -120,7 +118,6 @@ export default function AdminGiving() {
         status:   filterStatus   || undefined,
         category: filterCategory || undefined,
         method:   filterMethod   || undefined,
-        source:   filterSource   || undefined,
       });
       downloadBlob(data, `giving-${new Date().toISOString().slice(0, 10)}.csv`);
     } catch {
@@ -134,14 +131,7 @@ export default function AdminGiving() {
       label: 'Donor',
       render: (row) => (
         <div>
-          <div className="flex items-center gap-1.5">
-            <p className="font-medium text-ink/90 text-sm leading-tight">{row.name}</p>
-            {row.source === 'PARTNER' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-gold/15 text-gold leading-none">
-                <Handshake size={9} /> Partner
-              </span>
-            )}
-          </div>
+          <p className="font-medium text-ink/90 text-sm leading-tight">{row.name}</p>
           <p className="text-ink/40 text-[11px]">{row.phone}</p>
         </div>
       ),
@@ -315,15 +305,6 @@ export default function AdminGiving() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <select
-          className="input py-2 text-sm w-36"
-          value={filterSource}
-          onChange={(e) => setFilterSource(e.target.value)}
-        >
-          <option value="">All sources</option>
-          <option value="GIVING">Giving</option>
-          <option value="PARTNER">Partner</option>
-        </select>
         <select
           className="input py-2 text-sm w-36"
           value={filterStatus}
