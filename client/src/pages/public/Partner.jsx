@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Heart, Video, BookOpen, Users, CheckCircle, ArrowRight } from 'lucide-react';
 import SEO from '../../components/ui/SEO';
 import SectionHero from '../../components/ui/SectionHero';
-import api from '../../services/api';
+import { partnerHttp } from '../../services/api';
 
 const BENEFITS = [
   { icon: Video,    title: 'One-on-One Zoom Sessions', desc: 'Exclusive access to scheduled Zoom meetings with the prophet for personal guidance.' },
@@ -40,7 +40,7 @@ export default function Partner() {
     setSubmitting(true);
     setServerError('');
     try {
-      await api.post('/partner/apply', payload);
+      await partnerHttp.post('/partner/apply', payload);
       setDone(true);
     } catch (err) {
       setServerError(err.response?.data?.message || 'Something went wrong. Please try again.');
