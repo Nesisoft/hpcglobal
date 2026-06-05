@@ -294,9 +294,12 @@ export default function PartnerPortal() {
   const settingsFn = useCallback(() => publicApi.getSettings(), []);
 
   const commitmentSet = !!partner?.commitmentSet;
-  const { data: zoomSchedules = [] } = useApi(zoomFn, [commitmentSet]);
-  const { data: messages = [] }      = useApi(msgFn, [commitmentSet]);
-  const { data: settings }           = useApi(settingsFn);
+  const { data: zoomData }     = useApi(zoomFn, [commitmentSet]);
+  const { data: messagesData } = useApi(msgFn, [commitmentSet]);
+  const { data: settings }     = useApi(settingsFn);
+  // useApi initialises data to null; coalesce so first render is safe
+  const zoomSchedules = zoomData ?? [];
+  const messages      = messagesData ?? [];
 
   const [openMsg, setOpenMsg]   = useState(null);
   const [editing, setEditing]   = useState(false);
