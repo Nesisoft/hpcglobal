@@ -364,11 +364,12 @@ router.get('/events/:id/rsvps/export', async (req, res) => {
 // ─── Admin: Giving ────────────────────────────────────────────────────────────
 router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { status, category, method, page = 1, limit = 20 } = req.query;
+    const { status, category, method, source, page = 1, limit = 20 } = req.query;
     const where = {
       ...(status   && { status }),
       ...(category && { category }),
       ...(method   && { method }),
+      ...(source   && { source }),
     };
     const [records, total] = await Promise.all([
       prisma.givingRecord.findMany({
@@ -388,11 +389,12 @@ router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
 
 router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { status, category, method } = req.query;
+    const { status, category, method, source } = req.query;
     const where = {
       ...(status   && { status }),
       ...(category && { category }),
       ...(method   && { method }),
+      ...(source   && { source }),
     };
     const records = await prisma.givingRecord.findMany({
       where,
@@ -400,6 +402,7 @@ router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
     });
     const csv = toCsv(records, [
       { label: 'Date',      value: (r) => fmtCsvDate(r.createdAt) },
+      { label: 'Source',    value: (r) => r.source === 'PARTNER' ? 'Partner' : 'Giving' },
       { label: 'Name',      value: (r) => r.name },
       { label: 'Phone',     value: (r) => r.phone },
       { label: 'Email',     value: (r) => r.email },
