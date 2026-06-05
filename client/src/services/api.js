@@ -169,9 +169,9 @@ export const adminApi = {
   updateUser:   (id,d)  => api.put(`/admin/users/${id}`, d),
   deleteUser:   (id)    => api.delete(`/admin/users/${id}`),
 
-  getPartnerPayments:        (p) => api.get('/admin/giving', { params: { ...p, source: 'PARTNER' } }),
+  getPartnerPayments:        (p) => api.get('/admin/partner-payments', { params: p }),
   partnerPaymentsSummary:    ()  => api.get('/admin/partner-payments/summary'),
-  exportPartnerPayments:     (p) => api.get('/admin/giving/export', { params: { ...p, source: 'PARTNER' }, responseType: 'blob' }),
+  exportPartnerPayments:     (p) => api.get('/admin/partner-payments/export', { params: p, responseType: 'blob' }),
 
   getPartners:    (p)   => api.get('/admin/partners', { params: p }),
   updatePartner:  (id,d)=> api.put(`/admin/partners/${id}`, d),
