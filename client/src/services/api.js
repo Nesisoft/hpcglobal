@@ -97,7 +97,7 @@ export const adminApi = {
   getEventRsvps:  (id)   => api.get(`/admin/events/${id}/rsvps`),
   exportEventRsvps: (id) => api.get(`/admin/events/${id}/rsvps/export`, { responseType: 'blob' }),
 
-  getGiving:    (p)    => api.get('/admin/giving', { params: p }),
+  getGiving:     (p)   => api.get('/admin/giving', { params: p }),
   givingSummary: ()    => api.get('/admin/giving/summary'),
   exportGiving:  (p)   => api.get('/admin/giving/export', { params: p, responseType: 'blob' }),
   exportVisitors: (p)  => api.get('/admin/visitors/export', { params: p, responseType: 'blob' }),
