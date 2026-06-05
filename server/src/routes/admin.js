@@ -362,14 +362,16 @@ router.get('/events/:id/rsvps/export', async (req, res) => {
 });
 
 // ─── Admin: Giving ────────────────────────────────────────────────────────────
+// Note: partner commitment payments (source=PARTNER) are excluded here — they
+// have their own page at /admin/partner-payments.
 router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { status, category, method, source, page = 1, limit = 20 } = req.query;
+    const { status, category, method, page = 1, limit = 20 } = req.query;
     const where = {
+      source: { not: 'PARTNER' },
       ...(status   && { status }),
       ...(category && { category }),
       ...(method   && { method }),
-      ...(source   && { source }),
     };
     const [records, total] = await Promise.all([
       prisma.givingRecord.findMany({
@@ -389,12 +391,12 @@ router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
 
 router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { status, category, method, source } = req.query;
+    const { status, category, method } = req.query;
     const where = {
+      source: { not: 'PARTNER' },
       ...(status   && { status }),
       ...(category && { category }),
       ...(method   && { method }),
-      ...(source   && { source }),
     };
     const records = await prisma.givingRecord.findMany({
       where,
@@ -402,7 +404,6 @@ router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
     });
     const csv = toCsv(records, [
       { label: 'Date',      value: (r) => fmtCsvDate(r.createdAt) },
-      { label: 'Source',    value: (r) => r.source === 'PARTNER' ? 'Partner' : 'Giving' },
       { label: 'Name',      value: (r) => r.name },
       { label: 'Phone',     value: (r) => r.phone },
       { label: 'Email',     value: (r) => r.email },
@@ -426,8 +427,10 @@ router.get('/giving/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear  = new Date(now.getFullYear(), 0, 1);
 
-    const whereMonth = { status: 'COMPLETED', createdAt: { gte: startOfMonth } };
-    const whereYear  = { status: 'COMPLETED', createdAt: { gte: startOfYear  } };
+    // Exclude partner payments — they are reported separately.
+    const notPartner = { source: { not: 'PARTNER' } };
+    const whereMonth = { ...notPartner, status: 'COMPLETED', createdAt: { gte: startOfMonth } };
+    const whereYear  = { ...notPartner, status: 'COMPLETED', createdAt: { gte: startOfYear  } };
 
     // Run sequentially so a failure tells us exactly which query broke
     const monthSum   = await prisma.givingRecord.aggregate({ where: whereMonth, _sum: { amount: true } });
@@ -438,7 +441,7 @@ router.get('/giving/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
     // groupBy — fetch all completed records and group in JS to avoid potential
     // Prisma/pgbouncer groupBy issues in serverless
     const completed = await prisma.givingRecord.findMany({
-      where:  { status: 'COMPLETED' },
+      where:  { ...notPartner, status: 'COMPLETED' },
       select: { category: true, method: true, amount: true },
     });
 
