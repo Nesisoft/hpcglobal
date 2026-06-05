@@ -49,11 +49,11 @@ router.get('/dashboard', async (_req, res) => {
         select:  { title: true, preacher: true, datePracticed: true },
       }),
       prisma.givingRecord.aggregate({
-        where: { status: 'COMPLETED', createdAt: { gte: start } },
+        where: { status: 'COMPLETED', source: { not: 'PARTNER' }, createdAt: { gte: start } },
         _sum:  { amount: true },
       }),
       prisma.givingRecord.count({
-        where: { status: 'COMPLETED', createdAt: { gte: start } },
+        where: { status: 'COMPLETED', source: { not: 'PARTNER' }, createdAt: { gte: start } },
       }),
       prisma.contactMessage.count({ where: { isRead: false } }),
     ]);

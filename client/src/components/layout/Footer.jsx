@@ -68,7 +68,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full bg-gold flex items-center justify-center text-purple-deep font-display font-semibold text-sm">H</div>
+              <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-8 w-auto object-contain" />
               <div>
                 <div className="font-display text-white font-semibold">HPC Global</div>
                 <div className="text-white/40 text-[10px] tracking-widest uppercase font-body">Hopepress Chapel</div>

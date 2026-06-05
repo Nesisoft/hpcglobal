@@ -145,11 +145,10 @@ function ZoomCard({ schedule }) {
 }
 
 function PaySection({ partner, settings, getToken }) {
-  const isGhs    = partner.currency === 'GHS';
+  const isGhs = partner.currency === 'GHS';
   const [method, setMethod]   = useState('MTN_MOMO');
   const [paying, setPaying]   = useState(false);
   const [bankDetails, setBankDetails] = useState(null);
-  const [expanded, setExpanded] = useState(false);
 
   async function handlePay() {
     setPaying(true);
@@ -171,85 +170,66 @@ function PaySection({ partner, settings, getToken }) {
     }
   }
 
-  return (
-    <div className="bg-white rounded-2xl border border-purple-brand/10 overflow-hidden">
-      <button
-        onClick={() => setExpanded((x) => !x)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center">
-            <CreditCard size={16} className="text-gold" />
-          </div>
-          <div>
-            <p className="font-body font-semibold text-ink/90 text-sm">Make a Payment</p>
-            <p className="text-ink/45 text-xs font-body">
-              Your commitment: {fmtCommitment(partner)}
-            </p>
-          </div>
+  if (!isGhs) {
+    return (
+      <div className="rounded-xl bg-[#F4F2F9] border border-purple-brand/15 p-5 text-sm font-body">
+        <div className="flex items-center gap-3 mb-3">
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/6/60/Zelle_logo.svg"
+            alt="Zelle"
+            className="h-6 object-contain"
+          />
+          <p className="font-semibold text-ink/80">Pay via Zelle</p>
         </div>
-        {expanded ? <ChevronUp size={16} className="text-ink/30" /> : <ChevronDown size={16} className="text-ink/30" />}
-      </button>
+        {settings?.zelleAccount ? (
+          <p className="text-ink/70">
+            Send your {FREQ_LABEL[partner.frequency]?.toLowerCase() ?? ''} commitment ({partner.currency} {Number(partner.commitmentAmount).toLocaleString()}) to: <strong>{settings.zelleAccount}</strong>
+          </p>
+        ) : (
+          <p className="text-ink/55">Please contact the office for Zelle payment details.</p>
+        )}
+        <p className="text-ink/45 text-xs mt-2">Use your name and "Partner" as the payment note.</p>
+      </div>
+    );
+  }
 
-      {expanded && (
-        <div className="px-6 pb-6 border-t border-purple-brand/8 pt-5 space-y-4">
-          {isGhs ? (
-            bankDetails ? (
-              <div className="rounded-xl bg-cream/60 border border-purple-brand/15 p-4 text-sm font-body space-y-1">
-                <p className="font-semibold text-ink/80 mb-2">Bank Transfer Details</p>
-                {Object.entries(bankDetails).map(([k, v]) => (
-                  <p key={k} className="text-ink/70"><span className="text-ink/45">{k}:</span> {v}</p>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div>
-                  <p className="text-xs font-body text-ink/55 mb-2">Select payment method</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {METHODS.map(({ value, label, Icon }) => (
-                      <button
-                        key={value}
-                        onClick={() => setMethod(value)}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-body transition-colors ${
-                          method === value
-                            ? 'border-purple-brand bg-purple-brand/8 text-purple-brand'
-                            : 'border-purple-brand/15 text-ink/60 hover:border-purple-brand/30'
-                        }`}
-                      >
-                        <Icon size={13} /> {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={handlePay}
-                  disabled={paying}
-                  className="btn-primary w-full justify-center py-3 disabled:opacity-60"
-                >
-                  {paying ? 'Processing…' : `Pay ${partner.currency} ${Number(partner.commitmentAmount).toLocaleString()} via ${METHODS.find((m) => m.value === method)?.label}`}
-                </button>
-              </>
-            )
-          ) : (
-            <div className="rounded-xl bg-cream/60 border border-purple-brand/15 p-5 text-sm font-body">
-              <div className="flex items-center gap-3 mb-3">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/6/60/Zelle_logo.svg"
-                  alt="Zelle"
-                  className="h-6 object-contain"
-                />
-                <p className="font-semibold text-ink/80">Pay via Zelle</p>
-              </div>
-              {settings?.zelleAccount ? (
-                <p className="text-ink/70">Send your {FREQ_LABEL[partner.frequency]?.toLowerCase() ?? ''} commitment ({partner.currency} {Number(partner.commitmentAmount).toLocaleString()}) to: <strong>{settings.zelleAccount}</strong></p>
-              ) : (
-                <p className="text-ink/55">Please contact the office for Zelle payment details.</p>
-              )}
-              <p className="text-ink/45 text-xs mt-2">Use your name and "Partner" as the payment note.</p>
-            </div>
-          )}
-        </div>
-      )}
+  if (bankDetails) {
+    return (
+      <div className="rounded-xl bg-[#F4F2F9] border border-purple-brand/15 p-4 text-sm font-body space-y-1">
+        <p className="font-semibold text-ink/80 mb-2">Bank Transfer Details</p>
+        {Object.entries(bankDetails).map(([k, v]) => (
+          <p key={k} className="text-ink/70"><span className="text-ink/45">{k}:</span> {v}</p>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-body text-ink/55 mb-2">Select payment method</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {METHODS.map(({ value, label, Icon }) => (
+          <button
+            key={value}
+            onClick={() => setMethod(value)}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-body transition-colors ${
+              method === value
+                ? 'border-purple-brand bg-purple-brand/8 text-purple-brand'
+                : 'border-purple-brand/15 text-ink/60 hover:border-purple-brand/30'
+            }`}
+          >
+            <Icon size={13} /> {label}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs font-body text-ink/45">Commitment: {fmtCommitment(partner)}</p>
+      <button
+        onClick={handlePay}
+        disabled={paying}
+        className="btn-primary w-full justify-center py-3 disabled:opacity-60"
+      >
+        {paying ? 'Processing…' : `Pay ${partner.currency} ${Number(partner.commitmentAmount).toLocaleString()} via ${METHODS.find((m) => m.value === method)?.label}`}
+      </button>
     </div>
   );
 }
@@ -302,6 +282,7 @@ export default function PartnerPortal() {
 
   const [openMsg, setOpenMsg]   = useState(null);
   const [editing, setEditing]   = useState(false);
+  const [payOpen, setPayOpen]   = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate('/partner/login');
@@ -363,8 +344,32 @@ export default function PartnerPortal() {
               </button>
             </span>
             <span className="bg-white/15 px-3 py-1.5 rounded-full">Status: Active Partner</span>
+            <button
+              onClick={() => setPayOpen(true)}
+              className="bg-gold text-purple-deep px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-body font-semibold hover:bg-gold-light transition-colors"
+            >
+              <CreditCard size={11} /> Make a Payment
+            </button>
           </div>
         </div>
+
+        {/* Payment modal */}
+        {payOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setPayOpen(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center flex-shrink-0">
+                    <CreditCard size={16} className="text-gold" />
+                  </div>
+                  <h3 className="font-display text-lg text-ink font-light">Make a Payment</h3>
+                </div>
+                <button onClick={() => setPayOpen(false)} className="text-ink/30 hover:text-ink text-lg leading-none">✕</button>
+              </div>
+              <PaySection partner={partner} settings={settings} getToken={getToken} />
+            </div>
+          </div>
+        )}
 
         {/* Edit commitment modal */}
         {editing && (
@@ -457,8 +462,6 @@ export default function PartnerPortal() {
           )}
         </div>
 
-        {/* Payment */}
-        <PaySection partner={partner} settings={settings} getToken={getToken} />
       </main>
     </div>
   );

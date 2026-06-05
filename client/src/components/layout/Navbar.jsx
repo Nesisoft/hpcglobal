@@ -56,9 +56,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group" onClick={() => setOpen(false)}>
-          <div className="w-9 h-9 rounded-full bg-gold flex items-center justify-center text-purple-deep font-display font-semibold text-sm">
-            H
-          </div>
+          <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-9 w-auto object-contain" />
           <div className="leading-tight">
             <div className="font-display text-white text-base font-semibold tracking-wide group-hover:text-gold-light transition-colors">
               HPC Global
