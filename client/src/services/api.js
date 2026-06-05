@@ -5,8 +5,20 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT on every request
+// ─── Partner HTTP client ───────────────────────────────────────────────────────
+// Separate instance with NO admin interceptors. Partner requests authenticate
+// with an explicit Supabase Bearer token, so they must never have the admin
+// JWT injected over them, and a partner-side 401 must never redirect to the
+// admin login (that caused a reload loop between /partner and /admin/login).
+export const partnerHttp = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Attach admin JWT on every request — but never overwrite an explicit
+// Authorization header (e.g. a partner Supabase token passed per-request).
 api.interceptors.request.use((config) => {
+  if (config.headers.Authorization) return config;
   const token = localStorage.getItem('hpc_access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;

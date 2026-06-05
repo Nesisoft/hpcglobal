@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import api from '../services/api';
+import { partnerHttp } from '../services/api';
 
 const PartnerAuthContext = createContext(null);
 
@@ -12,7 +12,7 @@ export function PartnerAuthProvider({ children }) {
   const loadProfile = useCallback(async (accessToken) => {
     if (!accessToken) { setPartner(null); return; }
     try {
-      const { data } = await api.get('/partner/me', { headers: { Authorization: `Bearer ${accessToken}` } });
+      const { data } = await partnerHttp.get('/partner/me', { headers: { Authorization: `Bearer ${accessToken}` } });
       setPartner(data);
     } catch {
       setPartner(null);

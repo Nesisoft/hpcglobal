@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Video, BookOpen, CreditCard, LogOut, Calendar, Clock, ExternalLink, Smartphone, Building2, ChevronDown, ChevronUp, Pencil, Heart, Check } from 'lucide-react';
 import { usePartnerAuth } from '../../context/PartnerAuthContext';
 import { useApi } from '../../hooks/useApi';
-import { publicApi } from '../../services/api';
-import api from '../../services/api';
+import { publicApi, partnerHttp } from '../../services/api';
 import RichContent from '../../components/ui/RichContent';
 
 const METHODS = [
@@ -51,7 +50,7 @@ function CommitmentForm({ initial, onSaved, getToken, submitLabel = 'Save Commit
     setSaving(true);
     setError('');
     try {
-      await api.put('/partner/commitment',
+      await partnerHttp.put('/partner/commitment',
         { amount: amt, currency, frequency },
         { headers: { Authorization: `Bearer ${getToken()}` } }
       );
@@ -155,7 +154,7 @@ function PaySection({ partner, settings, getToken }) {
   async function handlePay() {
     setPaying(true);
     try {
-      const res = await api.post(
+      const res = await partnerHttp.post(
         '/partner/pay',
         { method },
         { headers: { Authorization: `Bearer ${getToken()}` } }
@@ -284,11 +283,11 @@ export default function PartnerPortal() {
   const navigate = useNavigate();
 
   const zoomFn = useCallback(() => {
-    return api.get('/partner/zoom-schedules', { headers: { Authorization: `Bearer ${getToken()}` } }).then((r) => r.data);
+    return partnerHttp.get('/partner/zoom-schedules', { headers: { Authorization: `Bearer ${getToken()}` } }).then((r) => r.data);
   }, [getToken]);
 
   const msgFn = useCallback(() => {
-    return api.get('/partner/messages', { headers: { Authorization: `Bearer ${getToken()}` } }).then((r) => r.data);
+    return partnerHttp.get('/partner/messages', { headers: { Authorization: `Bearer ${getToken()}` } }).then((r) => r.data);
   }, [getToken]);
 
   const settingsFn = useCallback(() => publicApi.getSettings(), []);
