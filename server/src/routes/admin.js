@@ -1236,13 +1236,11 @@ router.get('/partner-payments/summary', requireRole('SUPER_ADMIN'), async (_req,
     const startOfYear  = new Date(now.getFullYear(), 0, 1);
     const base = { source: 'PARTNER', status: 'COMPLETED' };
 
-    const [monthSum, monthCount, yearSum, yearCount, completed] = await Promise.all([
-      prisma.givingRecord.aggregate({ where: { ...base, createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
-      prisma.givingRecord.count({     where: { ...base, createdAt: { gte: startOfMonth } } }),
-      prisma.givingRecord.aggregate({ where: { ...base, createdAt: { gte: startOfYear  } }, _sum: { amount: true } }),
-      prisma.givingRecord.count({     where: { ...base, createdAt: { gte: startOfYear  } } }),
-      prisma.givingRecord.findMany({  where: base, select: { method: true, amount: true, partnerId: true } }),
-    ]);
+    const monthSum   = await prisma.givingRecord.aggregate({ where: { ...base, createdAt: { gte: startOfMonth } }, _sum: { amount: true } });
+    const monthCount = await prisma.givingRecord.count({     where: { ...base, createdAt: { gte: startOfMonth } } });
+    const yearSum    = await prisma.givingRecord.aggregate({ where: { ...base, createdAt: { gte: startOfYear  } }, _sum: { amount: true } });
+    const yearCount  = await prisma.givingRecord.count({     where: { ...base, createdAt: { gte: startOfYear  } } });
+    const completed  = await prisma.givingRecord.findMany({  where: base, select: { method: true, amount: true, partnerId: true } });
 
     const byMethod = Object.entries(
       completed.reduce((acc, r) => { acc[r.method] = (acc[r.method] || 0) + r.amount; return acc; }, {})
@@ -1258,8 +1256,60 @@ router.get('/partner-payments/summary', requireRole('SUPER_ADMIN'), async (_req,
       uniquePartners,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Partner payments summary error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+});
+
+// Records list — dedicated to partner commitment payments (source=PARTNER).
+router.get('/partner-payments', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const { status, method, page = 1, limit = 20 } = req.query;
+    const where = {
+      source: 'PARTNER',
+      ...(status && { status }),
+      ...(method && { method }),
+    };
+    const [records, total] = await Promise.all([
+      prisma.givingRecord.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (Number(page) - 1) * Number(limit),
+        take: Number(limit),
+      }),
+      prisma.givingRecord.count({ where }),
+    ]);
+    res.json({ records, total });
+  } catch (err) {
+    console.error('Partner payments list error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
+});
+
+router.get('/partner-payments/export', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const { status, method } = req.query;
+    const where = {
+      source: 'PARTNER',
+      ...(status && { status }),
+      ...(method && { method }),
+    };
+    const records = await prisma.givingRecord.findMany({ where, orderBy: { createdAt: 'desc' } });
+    const csv = toCsv(records, [
+      { label: 'Date',      value: (r) => fmtCsvDate(r.createdAt) },
+      { label: 'Name',      value: (r) => r.name },
+      { label: 'Phone',     value: (r) => r.phone },
+      { label: 'Email',     value: (r) => r.email },
+      { label: 'Amount',    value: (r) => r.amount },
+      { label: 'Currency',  value: (r) => r.currency },
+      { label: 'Method',    value: (r) => r.method },
+      { label: 'Status',    value: (r) => r.status },
+      { label: 'Reference', value: (r) => r.reference },
+    ]);
+    sendCsv(res, `partner-payments-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  } catch (err) {
+    console.error('Partner payments export error:', err);
+    res.status(500).json({ message: err.message || 'Server error' });
   }
 });
 
