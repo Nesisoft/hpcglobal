@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SEO from '../../components/ui/SEO';
 import { Heart, Smartphone, Building2, CreditCard, CheckCircle, Home } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -27,14 +27,19 @@ const METHODS = [
   { value: 'CARD',          label: 'Card',            Icon: CreditCard },
 ];
 
+const OPTIONAL_NAME_CATEGORIES = ['TITHE', 'OFFERING'];
+
 const schema = z.object({
-  name:     z.string().min(1, 'Name is required'),
-  phone:    z.string().min(9, 'Valid phone required'),
-  email:    z.string().email('Valid email required').optional().or(z.literal('')),
-  amount:   z.number({ invalid_type_error: 'Enter an amount' }).positive('Must be positive'),
-  category: z.string().min(1, 'Select a category'),
-  method:   z.string().min(1, 'Select a payment method'),
-});
+  name:        z.string().optional(),
+  email:       z.string().email('Valid email required'),
+  amount:      z.number({ invalid_type_error: 'Enter an amount' }).positive('Must be positive'),
+  category:    z.string().min(1, 'Select a category'),
+  method:      z.string().min(1, 'Select a payment method'),
+  titheNumber: z.string().optional(),
+}).refine(
+  (d) => OPTIONAL_NAME_CATEGORIES.includes(d.category) || !!d.name?.trim(),
+  { message: 'Name is required', path: ['name'] }
+);
 
 export default function Give() {
   const [customAmount, setCustomAmount] = useState(false);
@@ -43,14 +48,18 @@ export default function Give() {
   const [success, setSuccess] = useState(null);
   const [bankDetails, setBankDetails] = useState(null);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: { category: 'TITHE', method: 'MTN_MOMO' },
   });
 
   const selectedCategory = watch('category');
   const selectedMethod   = watch('method');
-  const categoryDesc = CATEGORIES.find((c) => c.value === selectedCategory)?.desc;
+  const categoryDesc     = CATEGORIES.find((c) => c.value === selectedCategory)?.desc;
+  const nameOptional     = OPTIONAL_NAME_CATEGORIES.includes(selectedCategory);
+
+  // Re-validate name whenever category changes (required-ness may have changed)
+  useEffect(() => { trigger('name'); }, [selectedCategory, trigger]);
 
   function pickAmount(amt) {
     setCustomAmount(false);
@@ -208,21 +217,25 @@ export default function Give() {
                 </div>
 
                 {/* Personal details */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
-                    <label className="section-label block mb-2">Full Name *</label>
+                    <label className="section-label block mb-2">Email *</label>
+                    <input type="email" className="input" placeholder="your@email.com" {...register('email')} />
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                  </div>
+                  <div>
+                    <label className="section-label block mb-2">
+                      Full Name{nameOptional ? ' (optional)' : ' *'}
+                    </label>
                     <input type="text" className="input" placeholder="Your name" {...register('name')} />
                     {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
                   </div>
-                  <div>
-                    <label className="section-label block mb-2">Phone Number *</label>
-                    <input type="tel" className="input" placeholder="+233..." {...register('phone')} />
-                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="section-label block mb-2">Email (optional)</label>
-                    <input type="email" className="input" placeholder="For receipt" {...register('email')} />
-                  </div>
+                  {selectedCategory === 'TITHE' && (
+                    <div>
+                      <label className="section-label block mb-2">Tithe Number / Reference (optional)</label>
+                      <input type="text" className="input" placeholder="e.g. T-00123" {...register('titheNumber')} />
+                    </div>
+                  )}
                 </div>
 
                 <button type="submit" disabled={submitting} className="btn-primary w-full justify-center py-4 text-base">

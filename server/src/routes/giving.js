@@ -7,23 +7,26 @@ const paystack = require('../services/paystack');
 const prisma = require('../lib/prisma');
 
 const giveSchema = z.object({
-  name:     z.string().min(1),
-  phone:    z.string().min(1),
-  email:    z.string().email().optional(),
-  amount:   z.number().positive(),
-  currency: z.string().default('GHS'),
-  category: z.enum(['TITHE','OFFERING','FIRST_FRUITS','BUILDING_FUND','MISSIONS','PASTORAL','OTHER']),
-  method:   z.enum(['MTN_MOMO','TELECEL','AIRTELTIGO','BANK_TRANSFER','CARD']),
-});
+  name:        z.string().optional(),
+  email:       z.string().email(),
+  amount:      z.number().positive(),
+  currency:    z.string().default('GHS'),
+  category:    z.enum(['TITHE','OFFERING','FIRST_FRUITS','BUILDING_FUND','MISSIONS','PASTORAL','OTHER']),
+  method:      z.enum(['MTN_MOMO','TELECEL','AIRTELTIGO','BANK_TRANSFER','CARD']),
+  titheNumber: z.string().optional(),
+}).refine(
+  (d) => ['TITHE', 'OFFERING'].includes(d.category) || !!d.name?.trim(),
+  { message: 'Name is required', path: ['name'] }
+);
 
 // POST /api/give — initiate payment
 router.post('/', validate(giveSchema), async (req, res) => {
   try {
-    const { name, phone, email, amount, currency, category, method } = req.body;
+    const { name, email, amount, currency, category, method, titheNumber } = req.body;
 
     // Create a pending record first
     const record = await prisma.givingRecord.create({
-      data: { name, phone, email, amount, currency, category, method, status: 'PENDING' },
+      data: { name, email, amount, currency, category, method, titheNumber, status: 'PENDING' },
     });
 
     // For Mobile Money — initialise Paystack
@@ -31,10 +34,10 @@ router.post('/', validate(giveSchema), async (req, res) => {
       const callbackUrl = `${process.env.CLIENT_URL || 'https://www.hpcglobal.org'}/giving/callback`;
       const init = await paystack.initializePayment({
         amount:       amount * 100, // kobo/pesewas
-        email:        email || `${phone}@hpcglobal.org`,
+        email,
         reference:    record.id,
         callback_url: callbackUrl,
-        metadata:     { name, phone, category, givingRecordId: record.id },
+        metadata:     { name, category, givingRecordId: record.id },
         channels:     method === 'CARD' ? ['card'] : ['mobile_money'],
       });
       return res.json({ url: init.data.authorization_url, reference: record.id });
