@@ -347,19 +347,20 @@ model Visitor {
 }
 
 model GivingRecord {
-  id        String         @id @default(uuid())
-  name      String
-  phone     String
-  email     String?
-  amount    Float
-  currency  String         @default("GHS")
-  category  GivingCategory
-  method    PaymentMethod
-  reference String?
-  status    PaymentStatus  @default(PENDING)
-  source    String         @default("GIVING") // "GIVING" | "PARTNER"
-  partnerId String?
-  createdAt DateTime       @default(now())
+  id          String         @id @default(uuid())
+  name        String?
+  phone       String?
+  email       String?
+  amount      Float
+  currency    String         @default("GHS")
+  category    GivingCategory
+  method      PaymentMethod
+  reference   String?
+  titheNumber String?
+  status      PaymentStatus  @default(PENDING)
+  source      String         @default("GIVING") // "GIVING" | "PARTNER"
+  partnerId   String?
+  createdAt   DateTime       @default(now())
 }
 
 model ContactMessage {
