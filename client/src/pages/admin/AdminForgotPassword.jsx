@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import { LOGO_URL } from '../../config/brand';
 
 export default function AdminForgotPassword() {
   const [email, setEmail]   = useState('');
@@ -26,7 +27,7 @@ export default function AdminForgotPassword() {
     <div className="min-h-screen bg-purple-deep flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-16 w-auto mx-auto mb-3 object-contain" />
+          <img src={LOGO_URL} alt="HPC Global" className="h-16 w-auto mx-auto mb-3 object-contain" />
           <h1 className="font-display text-white text-2xl font-light">Reset Password</h1>
           <p className="text-white/40 font-body text-sm mt-1">Enter your email to receive a reset link</p>
         </div>

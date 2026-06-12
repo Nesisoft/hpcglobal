@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { LOGO_URL } from '../../config/brand';
 import {
   LayoutDashboard, Image, Mic2, Calendar, BookOpen, Images,
   Users, Church, FileText, Clock, Settings, Mail, Heart,
@@ -57,7 +58,7 @@ function Sidebar({ open, onClose, user, onLogout }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/8 flex-shrink-0">
           <Link to="/admin" className="flex items-center gap-2.5">
-            <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-7 w-auto object-contain" />
+            <img src={LOGO_URL} alt="HPC Global" className="h-7 w-auto object-contain" />
             <div className="leading-tight">
               <div className="text-white font-body text-sm font-semibold">HPC Global</div>
               <div className="text-white/30 text-[9px] font-body tracking-widest uppercase">Admin</div>
