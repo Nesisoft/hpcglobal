@@ -9,10 +9,11 @@ const NAV_LINKS = [
   {
     label: 'Connect',
     children: [
-      { label: 'New Here?',  to: '/new-here'   },
-      { label: 'Ministries', to: '/ministries' },
-      { label: 'Prayer',     to: '/prayer'     },
-      { label: 'Leadership', to: '/leadership' },
+      { label: 'New Here?',          to: '/new-here'     },
+      { label: 'Book Appointment',   to: '/appointments' },
+      { label: 'Ministries',         to: '/ministries'   },
+      { label: 'Prayer',             to: '/prayer'       },
+      { label: 'Leadership',         to: '/leadership'   },
     ],
   },
   { label: 'Events', to: '/events' },

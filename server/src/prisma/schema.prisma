@@ -130,6 +130,7 @@ model SiteSettings {
   bankCode        String   @default("")
   paystackPublicKey String @default("")
   partnerMinAmount Float   @default(0)
+  appointmentReasons String @default("[]")
   tickerMessages  String   @default("[]")
   ministryVideoId String   @default("")
   zelleAccount    String   @default("")
@@ -431,4 +432,38 @@ model PartnerMessage {
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+// Recurring weekly availability windows the Prophet is open for appointments.
+// dayOfWeek: 0 = Sunday … 6 = Saturday. Times are "HH:mm" (24h) in GMT.
+model AppointmentAvailability {
+  id          String   @id @default(uuid())
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  slotMinutes Int      @default(30)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Appointment {
+  id        String            @id @default(uuid())
+  name      String
+  email     String
+  phone     String
+  date      DateTime          // the day of the appointment
+  time      String            // "HH:mm" start time of the slot
+  reason    String
+  notes     String?
+  status    AppointmentStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@unique([date, time])
 }
