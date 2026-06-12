@@ -103,6 +103,35 @@ async function sendPartnerActivation(toEmail, firstName, password) {
   });
 }
 
+async function sendEventRsvpConfirmation(toEmail, name, eventTitle, attendance) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: `Your seat is reserved — ${eventTitle}`,
+    html: `
+      <p>Dear ${name},</p>
+      <p>Your seat for <strong>${eventTitle}</strong> has been reserved${attendance ? ` (${attendance})` : ''}. We look forward to seeing you there.</p>
+      <p>If your plans change, simply reply to this email to let us know.</p>
+      <p>God bless you.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
+    `,
+  });
+}
+
+async function sendPrayerConfirmation(toEmail, name) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: 'We are praying with you — HPC Global',
+    html: `
+      <p>Dear ${name || 'Beloved'},</p>
+      <p>We have received your prayer request and our prayer team is standing with you in agreement.</p>
+      <p>Be encouraged — God hears and answers prayer.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
+    `,
+  });
+}
+
 async function notifyPrayerRequest(prayer) {
   const to = process.env.OFFICE_EMAIL || FROM;
   await transporter.sendMail({
@@ -119,4 +148,4 @@ async function notifyPrayerRequest(prayer) {
   });
 }
 
-module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation };
+module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation, sendEventRsvpConfirmation, sendPrayerConfirmation };

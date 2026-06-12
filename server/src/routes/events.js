@@ -3,6 +3,8 @@ const { z }   = require('zod');
 
 const { verifyToken }  = require('../middleware/auth');
 const { validate }     = require('../middleware/validate');
+const emailService     = require('../services/email');
+const { sendSms }      = require('../services/sms');
 
 const prisma = require('../lib/prisma');
 
@@ -73,6 +75,26 @@ router.post('/:id/rsvp', validate(rsvpSchema), async (req, res) => {
       data: { ...req.body, eventId: req.params.id },
     });
     res.status(201).json(rsvp);
+
+    // Confirm to the attendee — non-fatal
+    try {
+      const event = await prisma.event.findUnique({
+        where: { id: req.params.id },
+        select: { title: true },
+      });
+      const title = event?.title || 'our event';
+      if (req.body.email) {
+        await emailService.sendEventRsvpConfirmation(req.body.email, req.body.name, title, req.body.attendance);
+      }
+      if (req.body.phone) {
+        await sendSms(
+          req.body.phone,
+          `HPC Global: Hi ${req.body.name}, your seat for "${title}" is reserved. See you there! God bless you.`
+        );
+      }
+    } catch (notifyErr) {
+      console.error('RSVP notify error (non-fatal):', notifyErr.message);
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

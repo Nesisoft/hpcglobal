@@ -3,6 +3,7 @@ const { z }     = require('zod');
 
 const { validate }   = require('../middleware/validate');
 const emailService   = require('../services/email');
+const { sendSms }    = require('../services/sms');
 const supabaseAdmin  = require('../lib/supabaseAdmin');
 const paystack       = require('../services/paystack');
 const prisma         = require('../lib/prisma');
@@ -44,8 +45,16 @@ router.post('/apply', validate(applySchema), async (req, res) => {
     const existing = await prisma.partner.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ message: 'An application with this email already exists.' });
     const partner = await prisma.partner.create({ data: { ...req.body, email } });
-    try { await emailService.sendPartnerApplicationConfirmation(partner.email, partner.firstName); } catch (e) {
-      console.error('Partner confirmation email error (non-fatal):', e.message);
+    try {
+      await emailService.sendPartnerApplicationConfirmation(partner.email, partner.firstName);
+      if (partner.phone) {
+        await sendSms(
+          partner.phone,
+          `HPC Global: Hi ${partner.firstName}, we have received your partnership application. We will email you to activate your account after verification. God bless you.`
+        );
+      }
+    } catch (e) {
+      console.error('Partner confirmation notify error (non-fatal):', e.message);
     }
     res.status(201).json({ message: 'Application received. You will receive an email to activate your account after verification.' });
   } catch (err) {
