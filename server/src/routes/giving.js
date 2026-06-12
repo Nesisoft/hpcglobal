@@ -43,14 +43,32 @@ router.post('/', validate(giveSchema), async (req, res) => {
       return res.json({ url: init.data.authorization_url, reference: record.id });
     }
 
-    // Bank transfer — just return account details
+    // Bank transfer — try Paystack's bank-transfer channel, fall back to manual details
     const settings = await prisma.siteSettings.findUnique({ where: { id: 'singleton' } });
+    try {
+      const callbackUrl = `${process.env.CLIENT_URL || 'https://www.hpcglobal.org'}/giving/callback`;
+      const init = await paystack.initializePayment({
+        amount:       amount * 100,
+        email,
+        reference:    record.id,
+        callback_url: callbackUrl,
+        metadata:     { name, category, givingRecordId: record.id },
+        channels:     ['bank_transfer'],
+      });
+      if (init?.data?.authorization_url) {
+        return res.json({ url: init.data.authorization_url, reference: record.id });
+      }
+    } catch (bankErr) {
+      console.warn('Paystack bank transfer unavailable, using manual details:', bankErr.response?.data?.message || bankErr.message);
+    }
     res.json({
       reference: record.id,
       bankDetails: {
-        bankName:      settings?.bankName,
-        bankAccount:   settings?.bankAccount,
-        bankBranch:    settings?.bankBranch,
+        bankName:    settings?.bankName,
+        bankAccount: settings?.bankAccount,
+        bankBranch:  settings?.bankBranch,
+        ...(settings?.bankSwift && { bankSwift: settings.bankSwift }),
+        ...(settings?.bankCode  && { bankCode:  settings.bankCode  }),
       },
     });
   } catch (err) {

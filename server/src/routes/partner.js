@@ -87,6 +87,19 @@ const commitmentSchema = z.object({
 router.put('/commitment', verifyPartner, validate(commitmentSchema), async (req, res) => {
   try {
     const { amount, currency, frequency } = req.body;
+
+    // Enforce the admin-configured minimum partner giving threshold
+    const settings = await prisma.siteSettings.findUnique({
+      where:  { id: 'singleton' },
+      select: { partnerMinAmount: true },
+    });
+    const minAmount = settings?.partnerMinAmount ?? 0;
+    if (minAmount > 0 && amount < minAmount) {
+      return res.status(400).json({
+        message: `The minimum partner commitment is ${currency} ${minAmount.toLocaleString()}. Please enter at least this amount.`,
+      });
+    }
+
     const updated = await prisma.partner.update({
       where: { id: req.partner.id },
       data:  { commitmentAmount: amount, currency, frequency, commitmentSetAt: new Date() },
@@ -145,14 +158,32 @@ router.post('/pay', verifyPartner, validate(paySchema), async (req, res) => {
       return res.json({ url: init.data.authorization_url, reference: record.id });
     }
 
-    // Bank transfer — return account details
+    // Bank transfer — try Paystack's bank-transfer channel, fall back to manual details
     const settings = await prisma.siteSettings.findUnique({ where: { id: 'singleton' } });
+    try {
+      const callbackUrl = `${process.env.CLIENT_URL || 'https://www.hpcglobal.org'}/giving/callback`;
+      const init = await paystack.initializePayment({
+        amount:       p.commitmentAmount * 100,
+        email:        p.email || `${p.phone}@hpcglobal.org`,
+        reference:    record.id,
+        callback_url: callbackUrl,
+        metadata:     { name: record.name, source: 'PARTNER', partnerId: p.id, givingRecordId: record.id },
+        channels:     ['bank_transfer'],
+      });
+      if (init?.data?.authorization_url) {
+        return res.json({ url: init.data.authorization_url, reference: record.id });
+      }
+    } catch (bankErr) {
+      console.warn('Paystack bank transfer unavailable, using manual details:', bankErr.response?.data?.message || bankErr.message);
+    }
     res.json({
       reference: record.id,
       bankDetails: {
         bankName:    settings?.bankName,
         bankAccount: settings?.bankAccount,
         bankBranch:  settings?.bankBranch,
+        ...(settings?.bankSwift && { bankSwift: settings.bankSwift }),
+        ...(settings?.bankCode  && { bankCode:  settings.bankCode  }),
       },
     });
   } catch (err) {

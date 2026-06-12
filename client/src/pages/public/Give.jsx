@@ -100,6 +100,8 @@ export default function Give() {
                 <p><span className="text-ink/50">Bank:</span> <strong>{bankDetails.bankName}</strong></p>
                 <p><span className="text-ink/50">Account:</span> <strong>{bankDetails.bankAccount}</strong></p>
                 <p><span className="text-ink/50">Branch:</span> <strong>{bankDetails.bankBranch}</strong></p>
+                {bankDetails.bankSwift && <p><span className="text-ink/50">SWIFT Code:</span> <strong>{bankDetails.bankSwift}</strong></p>}
+                {bankDetails.bankCode && <p><span className="text-ink/50">Bank Code:</span> <strong>{bankDetails.bankCode}</strong></p>}
                 <p className="pt-2 border-t border-purple-brand/10"><span className="text-ink/50">Reference:</span> <strong className="text-gold">{success}</strong></p>
               </div>
               <a href="/" className="btn-primary"><Home size={14} /> Back to Home</a>

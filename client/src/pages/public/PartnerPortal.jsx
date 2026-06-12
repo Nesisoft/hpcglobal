@@ -37,7 +37,7 @@ const fmtDate = (d) => new Date(d).toLocaleDateString('en-GB', { weekday: 'long'
 const fmtTime = (d) => new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 
 // ─── Commitment form (used for first-time setup + editing) ────────────────────
-function CommitmentForm({ initial, onSaved, getToken, submitLabel = 'Save Commitment' }) {
+function CommitmentForm({ initial, onSaved, getToken, submitLabel = 'Save Commitment', minAmount = 0 }) {
   const [amount, setAmount]       = useState(initial?.commitmentAmount ?? '');
   const [currency, setCurrency]   = useState(initial?.currency ?? 'GHS');
   const [frequency, setFrequency] = useState(initial?.frequency ?? 'MONTHLY');
@@ -47,6 +47,10 @@ function CommitmentForm({ initial, onSaved, getToken, submitLabel = 'Save Commit
   async function save() {
     const amt = Number(amount);
     if (!amt || amt <= 0) { setError('Please enter a valid amount.'); return; }
+    if (minAmount > 0 && amt < minAmount) {
+      setError(`The minimum partner commitment is ${currency} ${Number(minAmount).toLocaleString()}.`);
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -97,13 +101,18 @@ function CommitmentForm({ initial, onSaved, getToken, submitLabel = 'Save Commit
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40 text-sm font-body">{currency}</span>
             <input
-              type="number" min="1" step="0.01"
+              type="number" min={minAmount || 1} step="0.01"
               className="input pl-14"
               placeholder="50.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
+          {minAmount > 0 && (
+            <p className="text-ink/45 text-xs font-body mt-1.5">
+              Minimum: {currency} {Number(minAmount).toLocaleString()}
+            </p>
+          )}
         </div>
       </div>
       {error && <p className="text-red-500 text-xs font-body">{error}</p>}
@@ -316,6 +325,7 @@ export default function PartnerPortal() {
             <CommitmentForm
               getToken={getToken}
               submitLabel="Set Commitment & Continue"
+              minAmount={settings?.partnerMinAmount ?? 0}
               onSaved={refreshProfile}
             />
           </div>
@@ -383,6 +393,7 @@ export default function PartnerPortal() {
                 initial={partner}
                 getToken={getToken}
                 submitLabel="Save Changes"
+                minAmount={settings?.partnerMinAmount ?? 0}
                 onSaved={async () => { await refreshProfile(); setEditing(false); }}
               />
             </div>
