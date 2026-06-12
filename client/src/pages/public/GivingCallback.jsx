@@ -40,12 +40,12 @@ export default function GivingCallback() {
     ? {
         icon:  <Handshake size={52} className="text-green-500 mx-auto" />,
         title: 'Partnership payment received!',
-        body:  `Thank you for honouring your partnership commitment${amountStr ? ` of ${amountStr}` : ''}. Your faithful support is a seed sown into the ministry — God bless you.`,
+        body:  `Thank you for honouring your partnership commitment${amountStr ? ` of ${amountStr}` : ''}. Your faithful support is a seed sown into the ministry — God bless you. We celebrate you.`,
       }
     : {
         icon:  <CheckCircle size={52} className="text-green-500 mx-auto" />,
         title: 'Thank you for your generosity!',
-        body:  `Your ${CATEGORY_LABELS[details?.category] ?? 'gift'}${amountStr ? ` of ${amountStr}` : ''} has been received and confirmed. It is an act of worship and a seed for the Kingdom.`,
+        body:  `Your ${CATEGORY_LABELS[details?.category] ?? 'gift'}${amountStr ? ` of ${amountStr}` : ''} has been received and confirmed. It is an act of worship and a seed for the Kingdom. We celebrate you.`,
       };
 
   const states = {

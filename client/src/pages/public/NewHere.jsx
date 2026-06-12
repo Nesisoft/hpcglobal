@@ -35,9 +35,19 @@ export default function NewHere() {
   const waNum = settings?.whatsapp || null;
   const waUrl = waNum ? `https://wa.me/${waNum.replace(/\D/g, '')}` : 'https://wa.me/233000000000';
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
   });
+
+  // Preferred services support multiple selections, stored as a comma-joined string.
+  const preferredSvc = watch('preferredSvc') || '';
+  const selectedServices = preferredSvc ? preferredSvc.split(', ').filter(Boolean) : [];
+  const toggleService = (svc) => {
+    const next = selectedServices.includes(svc)
+      ? selectedServices.filter((s) => s !== svc)
+      : [...selectedServices, svc];
+    setValue('preferredSvc', next.join(', '));
+  };
 
   async function onSubmit(data) {
     setSubmitting(true);
@@ -200,11 +210,29 @@ export default function NewHere() {
                 </div>
               </div>
               <div>
-                <label className="section-label block mb-2">Preferred Service</label>
-                <select className="input" {...register('preferredSvc')}>
-                  <option value="">Select…</option>
-                  {SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <label className="section-label block mb-2">Preferred Service(s)</label>
+                <input type="hidden" {...register('preferredSvc')} />
+                <div className="flex flex-wrap gap-2">
+                  {SERVICES.map((s) => {
+                    const active = selectedServices.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleService(s)}
+                        className={`px-4 py-2 rounded-full text-xs font-body font-medium border transition-colors ${
+                          active
+                            ? 'bg-gold/10 border-gold text-ink'
+                            : 'bg-white border-purple-brand/15 text-ink/60 hover:border-gold/40'
+                        }`}
+                      >
+                        {active && <CheckCircle size={12} className="inline mr-1.5 -mt-0.5 text-gold" />}
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-ink/40 text-xs font-body mt-1.5">Select all that apply.</p>
               </div>
               <div>
                 <label className="section-label block mb-2">What are you hoping to find? (optional)</label>
