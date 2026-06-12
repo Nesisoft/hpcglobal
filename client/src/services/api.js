@@ -70,6 +70,8 @@ export const publicApi = {
   submitContact:   (data) => api.post('/contact/message', data),
   initiateGiving: (data) => api.post('/give', data),
   verifyGiving:   (ref)  => api.get(`/give/verify/${ref}`),
+  getAppointmentSlots: () => api.get('/appointments/slots'),
+  bookAppointment: (data) => api.post('/appointments', data),
 };
 
 // ─── Admin endpoints ─────────────────────────────────────────────────────────
@@ -187,6 +189,12 @@ export const adminApi = {
   createPartnerMessage: (d)     => api.post('/admin/partner-messages', d),
   updatePartnerMessage: (id,d)  => api.put(`/admin/partner-messages/${id}`, d),
   deletePartnerMessage: (id)    => api.delete(`/admin/partner-messages/${id}`),
+
+  getAppointments:       (p)    => api.get('/appointments', { params: p }),
+  updateAppointment:     (id,d) => api.put(`/appointments/${id}`, d),
+  getAvailability:       ()     => api.get('/appointments/availability/all'),
+  createAvailability:    (d)    => api.post('/appointments/availability', d),
+  deleteAvailability:    (id)   => api.delete(`/appointments/availability/${id}`),
 };
 
 export default api;

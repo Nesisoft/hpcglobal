@@ -34,6 +34,13 @@ router.post('/message', validate(messageSchema), async (req, res) => {
         `HPC Contact: ${req.body.name} (${req.body.type}). Phone: ${req.body.phone || 'N/A'}. Check your email for details.`
       );
     }
+    // Confirm to the sender by SMS if they shared a phone number
+    if (req.body.phone) {
+      await sendSms(
+        req.body.phone,
+        `HPC Global: Hi ${req.body.name}, we have received your message and will respond within 24 hours. God bless you.`
+      );
+    }
   } catch (emailErr) {
     console.error('Contact notify error (non-fatal):', emailErr.message);
   }

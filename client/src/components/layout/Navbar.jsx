@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X, ChevronDown, Calendar } from 'lucide-react';
+import { LOGO_URL } from '../../config/brand';
 
 const NAV_LINKS = [
   { label: 'About',    to: '/about' },
@@ -9,10 +10,11 @@ const NAV_LINKS = [
   {
     label: 'Connect',
     children: [
-      { label: 'New Here?',  to: '/new-here'   },
-      { label: 'Ministries', to: '/ministries' },
-      { label: 'Prayer',     to: '/prayer'     },
-      { label: 'Leadership', to: '/leadership' },
+      { label: 'New Here?',          to: '/new-here'     },
+      { label: 'Book Appointment',   to: '/appointments' },
+      { label: 'Ministries',         to: '/ministries'   },
+      { label: 'Prayer',             to: '/prayer'       },
+      { label: 'Leadership',         to: '/leadership'   },
     ],
   },
   { label: 'Events', to: '/events' },
@@ -56,7 +58,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group" onClick={() => setOpen(false)}>
-          <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-9 w-auto object-contain" />
+          <img src={LOGO_URL} alt="HPC Global" className="h-9 w-auto object-contain" />
           <div className="leading-tight">
             <div className="font-display text-white text-base font-semibold tracking-wide group-hover:text-gold-light transition-colors">
               HPC Global

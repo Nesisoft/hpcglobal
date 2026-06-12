@@ -30,6 +30,7 @@ export default function AdminSettings() {
   const [tab, setTab]     = useState('church');
   const [form, setForm]   = useState({});
   const [ticker, setTicker] = useState([]);
+  const [reasons, setReasons] = useState([]);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -54,6 +55,9 @@ export default function AdminSettings() {
       bankName:         data.bankName         ?? '',
       bankAccount:      data.bankAccount      ?? '',
       bankBranch:       data.bankBranch       ?? '',
+      bankSwift:        data.bankSwift        ?? '',
+      bankCode:         data.bankCode         ?? '',
+      partnerMinAmount: data.partnerMinAmount ?? '',
       paystackPublicKey: data.paystackPublicKey ?? '',
       ministryVideoId:   data.ministryVideoId   ?? '',
       zelleAccount:      data.zelleAccount      ?? '',
@@ -62,6 +66,10 @@ export default function AdminSettings() {
       const parsed = JSON.parse(data.tickerMessages ?? '[]');
       setTicker(Array.isArray(parsed) ? parsed : []);
     } catch { setTicker([]); }
+    try {
+      const parsedReasons = JSON.parse(data.appointmentReasons ?? '[]');
+      setReasons(Array.isArray(parsedReasons) ? parsedReasons : []);
+    } catch { setReasons([]); }
   }, [data]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -74,7 +82,9 @@ export default function AdminSettings() {
         ...form,
         mapsLat: form.mapsLat ? Number(form.mapsLat) : undefined,
         mapsLng: form.mapsLng ? Number(form.mapsLng) : undefined,
+        partnerMinAmount: form.partnerMinAmount ? Number(form.partnerMinAmount) : 0,
         tickerMessages: JSON.stringify(ticker.filter(Boolean)),
+        appointmentReasons: JSON.stringify(reasons.filter(Boolean)),
       });
       setStatus('Settings saved.');
       setTimeout(() => setStatus(''), 2500);
@@ -201,6 +211,12 @@ export default function AdminSettings() {
                   <FormField label="Branch">
                     <input className="input" value={form.bankBranch ?? ''} onChange={set('bankBranch')} />
                   </FormField>
+                  <FormField label="SWIFT Code" hint="For international transfers">
+                    <input className="input" value={form.bankSwift ?? ''} onChange={set('bankSwift')} />
+                  </FormField>
+                  <FormField label="Bank Code" hint="Sort / branch code">
+                    <input className="input" value={form.bankCode ?? ''} onChange={set('bankCode')} />
+                  </FormField>
                 </div>
               </Section>
               <Section title="Online Payments (Paystack)">
@@ -225,6 +241,53 @@ export default function AdminSettings() {
                 <FormField label="YouTube Video ID" hint="Leave blank to hide the video section">
                   <input className="input" placeholder="e.g. dQw4w9WgXcQ" value={form.ministryVideoId ?? ''} onChange={set('ministryVideoId')} />
                 </FormField>
+              </Section>
+              <Section title="Minimum Commitment">
+                <p className="text-ink/50 text-xs font-body -mt-2">
+                  The lowest amount a partner is allowed to commit to give. Partners cannot set a commitment below this. Set to 0 to allow any amount.
+                </p>
+                <FormField label="Minimum Partner Amount (GHS)" hint="e.g. 100">
+                  <input
+                    type="number" min="0" step="1"
+                    className="input"
+                    placeholder="0"
+                    value={form.partnerMinAmount ?? ''}
+                    onChange={set('partnerMinAmount')}
+                  />
+                </FormField>
+              </Section>
+              <Section title="Appointment Reasons">
+                <p className="text-ink/50 text-xs font-body -mt-2">
+                  Options shown in the "Reason" dropdown when a visitor books an appointment with the Prophet. An "Other" option is always available.
+                </p>
+                <div className="space-y-2">
+                  {reasons.map((r, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        className="input flex-1 text-sm"
+                        placeholder="e.g. Counselling, Prophetic direction…"
+                        value={r}
+                        onChange={(e) => {
+                          const next = [...reasons];
+                          next[i] = e.target.value;
+                          setReasons(next);
+                        }}
+                      />
+                      <button
+                        onClick={() => setReasons(reasons.filter((_, j) => j !== i))}
+                        className="p-2 text-ink/30 hover:text-red-500 rounded transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setReasons([...reasons, ''])}
+                  className="flex items-center gap-1.5 text-xs text-purple-brand hover:bg-purple-brand/5 px-3 py-2 rounded transition-colors mt-1"
+                >
+                  <Plus size={13} /> Add reason
+                </button>
               </Section>
               <Section title="Zelle (International Partners)">
                 <p className="text-ink/50 text-xs font-body -mt-2">

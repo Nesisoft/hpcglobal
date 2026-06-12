@@ -15,6 +15,7 @@ const Events      = lazy(() => import('./pages/public/Events'));
 const EventDetail = lazy(() => import('./pages/public/EventDetail'));
 const Give           = lazy(() => import('./pages/public/Give'));
 const GivingCallback = lazy(() => import('./pages/public/GivingCallback'));
+const BookAppointment = lazy(() => import('./pages/public/BookAppointment'));
 const Ministries = lazy(() => import('./pages/public/Ministries'));
 const NewHere    = lazy(() => import('./pages/public/NewHere'));
 const Prayer     = lazy(() => import('./pages/public/Prayer'));
@@ -32,6 +33,7 @@ const AdminPartners          = lazy(() => import('./pages/admin/AdminPartners'))
 const AdminZoomSchedules     = lazy(() => import('./pages/admin/AdminZoomSchedules'));
 const AdminPartnerMessages   = lazy(() => import('./pages/admin/AdminPartnerMessages'));
 const AdminPartnerPayments   = lazy(() => import('./pages/admin/AdminPartnerPayments'));
+const AdminAppointments      = lazy(() => import('./pages/admin/AdminAppointments'));
 const Partner                = lazy(() => import('./pages/public/Partner'));
 const PartnerLogin           = lazy(() => import('./pages/public/PartnerLogin'));
 const PartnerSetPassword     = lazy(() => import('./pages/public/PartnerSetPassword'));
@@ -87,6 +89,7 @@ export default function App() {
             <Route path="/events/:slug" element={<PublicLayout><EventDetail /></PublicLayout>} />
             <Route path="/give"              element={<PublicLayout><Give /></PublicLayout>} />
             <Route path="/giving/callback"  element={<GivingCallback />} />
+            <Route path="/appointments"     element={<PublicLayout><BookAppointment /></PublicLayout>} />
             <Route path="/ministries" element={<PublicLayout><Ministries /></PublicLayout>} />
             <Route path="/new-here"   element={<PublicLayout><NewHere /></PublicLayout>} />
             <Route path="/prayer"     element={<PublicLayout><Prayer /></PublicLayout>} />
@@ -120,6 +123,7 @@ export default function App() {
             <Route path="/admin/zoom-schedules"    element={<ProtectedRoute><AdminZoomSchedules /></ProtectedRoute>} />
             <Route path="/admin/partner-messages"  element={<ProtectedRoute><AdminPartnerMessages /></ProtectedRoute>} />
             <Route path="/admin/partner-payments"  element={<ProtectedRoute><AdminPartnerPayments /></ProtectedRoute>} />
+            <Route path="/admin/appointments"      element={<ProtectedRoute><AdminAppointments /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

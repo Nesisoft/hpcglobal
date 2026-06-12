@@ -33,7 +33,7 @@ router.post('/', validate(prayerSchema), async (req, res) => {
     const prayer = await prisma.prayerRequest.create({ data: req.body });
     res.status(201).json({ message: 'Prayer request received', id: prayer.id });
 
-    // Notify office — non-fatal
+    // Notify office + confirm to the requester — non-fatal
     try {
       await emailService.notifyPrayerRequest(prayer);
       if (prayer.wantsCall && process.env.OFFICE_PHONE) {
@@ -41,6 +41,16 @@ router.post('/', validate(prayerSchema), async (req, res) => {
         await sendSms(
           process.env.OFFICE_PHONE,
           `HPC Prayer: ${who} requests a call. Category: ${prayer.category}. Phone: ${prayer.phone || 'N/A'}`
+        );
+      }
+      // Confirmation to the requester (if they shared contact details)
+      if (prayer.email) {
+        await emailService.sendPrayerConfirmation(prayer.email, prayer.name);
+      }
+      if (prayer.phone) {
+        await sendSms(
+          prayer.phone,
+          `HPC Global: ${prayer.name ? `Hi ${prayer.name}, ` : ''}we have received your prayer request and our team is praying with you. God bless you.`
         );
       }
     } catch (notifyErr) {

@@ -4,6 +4,7 @@ import { MapPin, Clock, Mail, Phone } from 'lucide-react';
 import { FaYoutube, FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
+import { LOGO_URL } from '../../config/brand';
 
 const COL_SERVICES = [
   { label: 'Dominion Encounter',       sub: 'Sundays 9 AM GMT' },
@@ -68,7 +69,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src="https://i.ibb.co/BVYBsKKY/LOGO.png" alt="HPC Global" className="h-8 w-auto object-contain" />
+              <img src={LOGO_URL} alt="HPC Global" className="h-8 w-auto object-contain" />
               <div>
                 <div className="font-display text-white font-semibold">HPC Global</div>
                 <div className="text-white/40 text-[10px] tracking-widest uppercase font-body">Hopepress Chapel</div>

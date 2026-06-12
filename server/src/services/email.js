@@ -103,6 +103,68 @@ async function sendPartnerActivation(toEmail, firstName, password) {
   });
 }
 
+async function sendEventRsvpConfirmation(toEmail, name, eventTitle, attendance) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: `Your seat is reserved — ${eventTitle}`,
+    html: `
+      <p>Dear ${name},</p>
+      <p>Your seat for <strong>${eventTitle}</strong> has been reserved${attendance ? ` (${attendance})` : ''}. We look forward to seeing you there.</p>
+      <p>If your plans change, simply reply to this email to let us know.</p>
+      <p>God bless you.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
+    `,
+  });
+}
+
+async function sendPrayerConfirmation(toEmail, name) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: 'We are praying with you — HPC Global',
+    html: `
+      <p>Dear ${name || 'Beloved'},</p>
+      <p>We have received your prayer request and our prayer team is standing with you in agreement.</p>
+      <p>Be encouraged — God hears and answers prayer.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
+    `,
+  });
+}
+
+async function sendAppointmentConfirmation(toEmail, name, whenLabel, reason) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: 'Your Appointment Request — HPC Global',
+    html: `
+      <p>Dear ${name},</p>
+      <p>We have received your request to book an appointment with the Prophet for <strong>${whenLabel}</strong>.</p>
+      <p><strong>Reason:</strong> ${reason}</p>
+      <p>Your request is pending confirmation. We will notify you once it is confirmed.</p>
+      <p>God bless you.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
+    `,
+  });
+}
+
+async function sendAppointmentStatus(toEmail, name, whenLabel, statusWord) {
+  await transporter.sendMail({
+    from:    `HPC Global <${FROM}>`,
+    to:      toEmail,
+    subject: `Your Appointment is ${statusWord === 'confirmed' ? 'Confirmed' : 'Cancelled'} — HPC Global`,
+    html: `
+      <p>Dear ${name},</p>
+      <p>Your appointment with the Prophet for <strong>${whenLabel}</strong> has been <strong>${statusWord}</strong>.</p>
+      ${statusWord === 'confirmed'
+        ? '<p>We look forward to seeing you. Please arrive a few minutes early.</p>'
+        : '<p>If you would like to reschedule, please book another slot or contact the office.</p>'}
+      <p>God bless you.</p>
+      <p><strong>HPC Global — Hopepress Chapel</strong></p>
+    `,
+  });
+}
+
 async function notifyPrayerRequest(prayer) {
   const to = process.env.OFFICE_EMAIL || FROM;
   await transporter.sendMail({
@@ -119,4 +181,4 @@ async function notifyPrayerRequest(prayer) {
   });
 }
 
-module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation };
+module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation, sendEventRsvpConfirmation, sendPrayerConfirmation, sendAppointmentConfirmation, sendAppointmentStatus };

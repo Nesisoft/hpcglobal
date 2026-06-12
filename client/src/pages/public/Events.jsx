@@ -129,7 +129,7 @@ export default function Events() {
     () => publicApi.getEvents(activeCategory ? { category: activeCategory } : {}),
     [activeCategory],
   );
-  const { data: rawEvents, loading } = useApi(fetchFn);
+  const { data: rawEvents, loading } = useApi(fetchFn, [activeCategory]);
   const events = Array.isArray(rawEvents) ? rawEvents : [];
 
   const featured = events.find((e) => e.isFeatured) ?? events[0] ?? null;

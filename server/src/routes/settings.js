@@ -10,7 +10,8 @@ const PUBLIC_FIELDS = {
   address: true, mapsLat: true, mapsLng: true, zoomLink: true,
   youtubeHandle: true, facebookUrl: true, instagramUrl: true,
   mtnMomoNumber: true, telecelNumber: true, airteltigo: true,
-  bankName: true, bankAccount: true, bankBranch: true,
+  bankName: true, bankAccount: true, bankBranch: true, bankSwift: true, bankCode: true,
+  partnerMinAmount: true, zelleAccount: true, appointmentReasons: true,
 };
 
 // GET /api/settings — public (safe fields only)

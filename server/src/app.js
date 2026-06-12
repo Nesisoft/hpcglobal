@@ -53,6 +53,7 @@ app.use('/api/youtube',       require('./routes/youtube'));
 app.use('/api/settings',      require('./routes/settings'));
 app.use('/api/admin',         require('./routes/admin'));
 app.use('/api/partner',       require('./routes/partner'));
+app.use('/api/appointments',  require('./routes/appointments'));
 
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
