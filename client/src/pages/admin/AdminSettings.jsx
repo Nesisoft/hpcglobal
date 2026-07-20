@@ -39,6 +39,8 @@ export default function AdminSettings() {
     setForm({
       churchName:       data.churchName       ?? '',
       tagline:          data.tagline          ?? '',
+      weeklyServices:   data.weeklyServices   ?? '',
+      ministryStartYear: data.ministryStartYear ?? '',
       phone:            data.phone            ?? '',
       email:            data.email            ?? '',
       whatsapp:         data.whatsapp         ?? '',
@@ -82,6 +84,8 @@ export default function AdminSettings() {
         ...form,
         mapsLat: form.mapsLat ? Number(form.mapsLat) : undefined,
         mapsLng: form.mapsLng ? Number(form.mapsLng) : undefined,
+        weeklyServices:    form.weeklyServices    ? Number(form.weeklyServices)    : 0,
+        ministryStartYear: form.ministryStartYear ? Number(form.ministryStartYear) : 0,
         partnerMinAmount: form.partnerMinAmount ? Number(form.partnerMinAmount) : 0,
         tickerMessages: JSON.stringify(ticker.filter(Boolean)),
         appointmentReasons: JSON.stringify(reasons.filter(Boolean)),
@@ -133,6 +137,14 @@ export default function AdminSettings() {
                 </FormField>
                 <FormField label="Tagline">
                   <input className="input" value={form.tagline ?? ''} onChange={set('tagline')} />
+                </FormField>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Weekly Services" hint="Shown on the homepage 'Who we are' stats">
+                  <input type="number" min="0" step="1" className="input" placeholder="3" value={form.weeklyServices ?? ''} onChange={set('weeklyServices')} />
+                </FormField>
+                <FormField label="Ministry Start Year" hint="Homepage shows current year minus this as 'Years in Ministry'">
+                  <input type="number" min="1900" step="1" className="input" placeholder="e.g. 2009" value={form.ministryStartYear ?? ''} onChange={set('ministryStartYear')} />
                 </FormField>
               </div>
               <FormField label="Physical Address">

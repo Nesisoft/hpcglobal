@@ -110,6 +110,8 @@ model SiteSettings {
   id              String   @id @default("singleton")
   churchName      String   @default("HPC Global")
   tagline         String   @default("Where Hope Meets Destiny")
+  weeklyServices  Int      @default(3)
+  ministryStartYear Int    @default(0)
   phone           String   @default("")
   email           String   @default("")
   whatsapp        String   @default("")

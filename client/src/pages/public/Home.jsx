@@ -237,7 +237,12 @@ function ServiceTimesBar({ services }) {
 
 // ─── About Snapshot ────────────────────────────────────────────────────────
 
-function AboutSnapshot() {
+function AboutSnapshot({ settings }) {
+  const weeklyServices = settings?.weeklyServices > 0 ? String(settings.weeklyServices) : '3';
+  const startYear = settings?.ministryStartYear;
+  const yearsInMinistry = startYear > 0
+    ? `${Math.max(0, new Date().getFullYear() - startYear)}+`
+    : '15+';
   return (
     <section className="section-pad bg-cream">
       <div className="container-page">
@@ -264,8 +269,8 @@ function AboutSnapshot() {
         </div>
         <div className="flex justify-center gap-8 text-center mb-10">
           {[
-            { n: '3', label: 'Weekly Services' },
-            { n: '15+', label: 'Years in Ministry' },
+            { n: weeklyServices, label: 'Weekly Services' },
+            { n: yearsInMinistry, label: 'Years in Ministry' },
             { n: 'Global', label: 'Online Reach' },
           ].map((s) => (
             <div key={s.label}>
@@ -586,7 +591,7 @@ export default function Home() {
       <HeroCarousel slides={slides} />
       <EventTicker messages={tickerMessages} />
       <ServiceTimesBar services={services} />
-      <Reveal><AboutSnapshot /></Reveal>
+      <Reveal><AboutSnapshot settings={settings} /></Reveal>
       <Reveal><FeatureCards /></Reveal>
       <Reveal><SermonsStrip /></Reveal>
       <Reveal><GiveBand /></Reveal>
