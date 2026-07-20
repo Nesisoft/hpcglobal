@@ -6,7 +6,8 @@ const prisma = require('../lib/prisma');
 
 // Safe fields returned to the public
 const PUBLIC_FIELDS = {
-  churchName: true, tagline: true, phone: true, email: true, whatsapp: true,
+  churchName: true, tagline: true, weeklyServices: true, ministryStartYear: true,
+  phone: true, email: true, whatsapp: true,
   address: true, mapsLat: true, mapsLng: true, zoomLink: true,
   youtubeHandle: true, facebookUrl: true, instagramUrl: true,
   mtnMomoNumber: true, telecelNumber: true, airteltigo: true,
