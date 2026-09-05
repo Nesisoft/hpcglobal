@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, ExternalLink, Clock, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, ExternalLink, Clock, X, Check } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTable from '../../components/admin/AdminTable';
+import AdminPagination from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
@@ -36,6 +37,8 @@ const CAT_COLORS = {
   EVENT_RECAP:    'bg-cyan-50 text-cyan-700',
   ANNOUNCEMENT:   'bg-amber-50 text-amber-600',
 };
+
+const PAGE_SIZE = 20;
 
 const EMPTY_FORM = {
   title:         '',
@@ -125,7 +128,7 @@ export default function AdminBlog() {
 
   const fetchFn = useCallback(
     () => adminApi.getBlog({
-      page, limit: 20,
+      page, limit: PAGE_SIZE,
       search:   search    || undefined,
       category: filterCat || undefined,
     }),
@@ -134,7 +137,6 @@ export default function AdminBlog() {
   const { data, loading, refetch } = useApi(fetchFn, [page, search, filterCat]);
   const posts      = data?.posts ?? [];
   const total      = data?.total ?? 0;
-  const totalPages = Math.ceil(total / 20);
 
   function openCreate() {
     setEditTarget(null);
@@ -316,27 +318,13 @@ export default function AdminBlog() {
         empty="No posts yet. Click 'New Post' to write your first one."
       />
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-xs text-ink/40 font-body">Page {page} of {totalPages}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={page === 1}
-              className="btn-outline text-xs px-3 py-1.5 disabled:opacity-40"
-            >
-              <ChevronLeft size={13} /> Previous
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page === totalPages}
-              className="btn-outline text-xs px-3 py-1.5 disabled:opacity-40"
-            >
-              Next <ChevronRight size={13} />
-            </button>
-          </div>
-        </div>
-      )}
+      <AdminPagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onChange={setPage}
+        noun="posts"
+      />
 
       <AdminModal
         open={modalOpen}
