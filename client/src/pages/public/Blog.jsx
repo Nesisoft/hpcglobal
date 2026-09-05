@@ -107,7 +107,7 @@ export default function Blog() {
     () => publicApi.getBlog({ category: category || undefined, page, limit: PAGE_SIZE }),
     [category, page],
   );
-  const { data, loading } = useApi(fetchFn);
+  const { data, loading } = useApi(fetchFn, [category, page]);
 
   const posts = data?.posts ?? [];
   const total = data?.total ?? 0;

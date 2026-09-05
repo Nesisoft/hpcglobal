@@ -1,5 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+/**
+ * Runs `fetchFn` on mount and whenever `deps` change.
+ *
+ * `deps` drives the refetch on its own — a memoized `fetchFn` closing over
+ * newer state is not enough, because the effect only re-runs when `deps`
+ * change. So whatever `fetchFn` is memoized on has to be repeated here:
+ *
+ *   const fetchFn = useCallback(() => api.getPosts({ page }), [page]);
+ *   useApi(fetchFn, [page]);   // omitting [page] silently pins page 1
+ *
+ * Callers passing a stable reference (an api method, or a useCallback with no
+ * dependencies of its own) can leave `deps` off.
+ */
 export function useApi(fetchFn, deps = []) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

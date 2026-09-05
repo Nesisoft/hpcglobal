@@ -60,7 +60,7 @@ export default function Sermons() {
     () => publicApi.getSermons({ limit: 24, series: activeSeries || undefined }),
     [activeSeries],
   );
-  const { data: dbData, loading: dbLoading } = useApi(fetchDb);
+  const { data: dbData, loading: dbLoading } = useApi(fetchDb, [activeSeries]);
   const { data: ytVideos, loading: ytLoading } = useApi(() => publicApi.getYouTube({ count: 12 }));
 
   const dbSermons = dbData?.sermons ?? [];

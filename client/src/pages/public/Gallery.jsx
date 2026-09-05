@@ -74,7 +74,7 @@ function Lightbox({ photos, startIndex, onClose }) {
 
 function AlbumView({ album, onBack }) {
   const fetchFn = useCallback(() => publicApi.getAlbum(album.id), [album.id]);
-  const { data, loading } = useApi(fetchFn);
+  const { data, loading } = useApi(fetchFn, [album.id]);
   const photos = data?.photos ?? [];
 
   const [lightboxIdx, setLightboxIdx] = useState(null);
