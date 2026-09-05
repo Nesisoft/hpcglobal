@@ -1,15 +1,18 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, ExternalLink, X, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, ExternalLink, X, Check } from 'lucide-react';
 import { FaYoutube } from 'react-icons/fa';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTable from '../../components/admin/AdminTable';
+import AdminPagination from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
 import Toggle from '../../components/admin/Toggle';
+
+const PAGE_SIZE = 20;
 
 const EMPTY_FORM = {
   youtubeUrl:    '',
@@ -223,13 +226,12 @@ export default function AdminSermons() {
   const [error, setError]               = useState('');
 
   const fetchFn = useCallback(
-    () => adminApi.getSermons({ page, limit: 20, search: search || undefined }),
+    () => adminApi.getSermons({ page, limit: PAGE_SIZE, search: search || undefined }),
     [page, search]
   );
   const { data, loading, refetch } = useApi(fetchFn, [page, search]);
   const sermons    = data?.sermons ?? [];
   const total      = data?.total   ?? 0;
-  const totalPages = Math.ceil(total / 20);
 
   const { data: serviceTimesData = [] } = useApi(adminApi.getServiceTimes);
   const serviceTimes = Array.isArray(serviceTimesData) ? serviceTimesData : [];
@@ -379,27 +381,13 @@ export default function AdminSermons() {
         empty="No sermons yet. Click 'Add Sermon' to get started."
       />
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-xs text-ink/40 font-body">Page {page} of {totalPages}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={page === 1}
-              className="btn-outline text-xs px-3 py-1.5 disabled:opacity-40"
-            >
-              <ChevronLeft size={13} /> Previous
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page === totalPages}
-              className="btn-outline text-xs px-3 py-1.5 disabled:opacity-40"
-            >
-              Next <ChevronRight size={13} />
-            </button>
-          </div>
-        </div>
-      )}
+      <AdminPagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onChange={setPage}
+        noun="sermons"
+      />
 
       {/* Add / Edit modal */}
       <AdminModal
