@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Download, TrendingUp, DollarSign, Calendar, BarChart2 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -9,6 +9,7 @@ import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTable from '../../components/admin/AdminTable';
+import AdminPagination from '../../components/admin/AdminPagination';
 import { downloadBlob } from '../../utils/download';
 
 // ─── Enum maps ────────────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ const STATUS_COLORS = {
   COMPLETED: 'bg-green-50 text-green-700',
   FAILED:    'bg-red-50 text-red-600',
 };
+
+const PAGE_SIZE = 20;
 
 const BAR_COLOR  = '#7E5BAC';
 const PIE_COLORS = ['#7E5BAC', '#C49A3C', '#5B8AC4', '#4CAF8A', '#E07D4F', '#9B59B6', '#95A5A6'];
@@ -85,6 +88,14 @@ export default function AdminGiving() {
   const [filterStatus,   setFilterStatus]   = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterMethod,   setFilterMethod]   = useState('');
+  const [page,           setPage]           = useState(1);
+
+  // Any filter change invalidates the current offset — page 4 of the unfiltered
+  // ledger is usually past the end of a filtered one.
+  const changeFilter = (setFilter) => (e) => {
+    setFilter(e.target.value);
+    setPage(1);
+  };
 
   // Summary stats
   const summaryFn = useCallback(() => adminApi.givingSummary(), []);
@@ -96,13 +107,23 @@ export default function AdminGiving() {
       status:   filterStatus   || undefined,
       category: filterCategory || undefined,
       method:   filterMethod   || undefined,
+      page,
+      limit: PAGE_SIZE,
     }),
-    [filterStatus, filterCategory, filterMethod]
+    [filterStatus, filterCategory, filterMethod, page]
   );
   const { data: rawRecords, loading, error: recordsError, refetch } =
-    useApi(recordsFn, [filterStatus, filterCategory, filterMethod]);
+    useApi(recordsFn, [filterStatus, filterCategory, filterMethod, page]);
   const records = rawRecords?.records ?? [];
   const total   = rawRecords?.total   ?? 0;
+
+  // The result set can shrink under us — records reconciled elsewhere, or a
+  // stale deep link. Step back rather than sitting on an empty page.
+  useEffect(() => {
+    if (loading) return;
+    const lastPage = Math.max(Math.ceil(total / PAGE_SIZE), 1);
+    if (page > lastPage) setPage(lastPage);
+  }, [loading, total, page]);
 
   // Totals from summary
   const monthTotal = summary?.month?.total ?? 0;
@@ -312,7 +333,7 @@ export default function AdminGiving() {
         <select
           className="input py-2 text-sm w-36"
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          onChange={changeFilter(setFilterStatus)}
         >
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -320,7 +341,7 @@ export default function AdminGiving() {
         <select
           className="input py-2 text-sm w-40"
           value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
+          onChange={changeFilter(setFilterCategory)}
         >
           <option value="">All categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{CAT_LABELS[c]}</option>)}
@@ -328,7 +349,7 @@ export default function AdminGiving() {
         <select
           className="input py-2 text-sm w-40"
           value={filterMethod}
-          onChange={(e) => setFilterMethod(e.target.value)}
+          onChange={changeFilter(setFilterMethod)}
         >
           <option value="">All methods</option>
           {METHODS.map((m) => <option key={m} value={m}>{METHOD_LABELS[m]}</option>)}
@@ -343,12 +364,21 @@ export default function AdminGiving() {
           </button>
         </div>
       ) : (
-        <AdminTable
-          columns={columns}
-          rows={records}
-          loading={loading}
-          empty="No giving records match the current filters."
-        />
+        <>
+          <AdminTable
+            columns={columns}
+            rows={records}
+            loading={loading}
+            empty="No giving records match the current filters."
+          />
+          <AdminPagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onChange={setPage}
+            noun="giving records"
+          />
+        </>
       )}
     </AdminLayout>
   );
