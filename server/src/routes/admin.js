@@ -5,9 +5,19 @@ const { verifyToken }  = require('../middleware/auth');
 const { requireRole }  = require('../middleware/adminOnly');
 
 const prisma = require('../lib/prisma');
+const { withDbRetry, isRetryable } = require('../lib/dbRetry');
 
 // All admin routes require auth
 router.use(verifyToken);
+
+// ─── Error helpers ────────────────────────────────────────────────────────────
+// A pool that is momentarily full is the database being busy, not the request
+// being wrong — 503 tells the browser (and the admin) it is worth trying again.
+const dbStatus  = (err) => (isRetryable(err) ? 503 : 500);
+const dbMessage = (err) =>
+  (isRetryable(err)
+    ? 'The database is busy right now. Please try again in a moment.'
+    : 'Server error');
 
 // ─── CSV helpers ──────────────────────────────────────────────────────────────
 function toCsv(rows, columns) {
@@ -364,44 +374,52 @@ router.get('/events/:id/rsvps/export', async (req, res) => {
 // ─── Admin: Giving ────────────────────────────────────────────────────────────
 // Note: partner commitment payments (source=PARTNER) are excluded here — they
 // have their own page at /admin/partner-payments.
+//
+// These handlers run one query at a time rather than in Promise.all. The
+// datasource is capped at a single pooler connection per lambda (see
+// lib/prisma.js), so parallel queries only queue up behind each other — and a
+// burst of them is what used to exhaust the Supabase pool when an admin
+// clicked through the filters.
+function givingFilter({ status, category, method }) {
+  return {
+    source: { not: 'PARTNER' },
+    ...(status   && { status }),
+    ...(category && { category }),
+    ...(method   && { method }),
+  };
+}
+
 router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { status, category, method, page = 1, limit = 20 } = req.query;
-    const where = {
-      source: { not: 'PARTNER' },
-      ...(status   && { status }),
-      ...(category && { category }),
-      ...(method   && { method }),
-    };
-    const [records, total] = await Promise.all([
-      prisma.givingRecord.findMany({
+    const { page = 1, limit = 20 } = req.query;
+    const where = givingFilter(req.query);
+    const take  = Math.min(Math.max(Number(limit) || 20, 1), 200);
+    const skip  = (Math.max(Number(page) || 1, 1) - 1) * take;
+
+    const { records, total } = await withDbRetry(async () => ({
+      records: await prisma.givingRecord.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (Number(page) - 1) * Number(limit),
-        take: Number(limit),
+        skip,
+        take,
       }),
-      prisma.givingRecord.count({ where }),
-    ]);
+      total: await prisma.givingRecord.count({ where }),
+    }), { label: 'admin giving list' });
+
     res.json({ records, total });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Giving list error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
   }
 });
 
 router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
-    const { status, category, method } = req.query;
-    const where = {
-      source: { not: 'PARTNER' },
-      ...(status   && { status }),
-      ...(category && { category }),
-      ...(method   && { method }),
-    };
-    const records = await prisma.givingRecord.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+    const where = givingFilter(req.query);
+    const records = await withDbRetry(
+      () => prisma.givingRecord.findMany({ where, orderBy: { createdAt: 'desc' } }),
+      { label: 'admin giving export' }
+    );
     const csv = toCsv(records, [
       { label: 'Date',      value: (r) => fmtCsvDate(r.createdAt) },
       { label: 'Name',      value: (r) => r.name },
@@ -416,8 +434,8 @@ router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
     ]);
     sendCsv(res, `giving-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Giving export error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
   }
 });
 
@@ -427,47 +445,40 @@ router.get('/giving/summary', requireRole('SUPER_ADMIN'), async (_req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear  = new Date(now.getFullYear(), 0, 1);
 
-    // Exclude partner payments — they are reported separately.
-    const notPartner = { source: { not: 'PARTNER' } };
-    const whereMonth = { ...notPartner, status: 'COMPLETED', createdAt: { gte: startOfMonth } };
-    const whereYear  = { ...notPartner, status: 'COMPLETED', createdAt: { gte: startOfYear  } };
+    // One query for the whole summary. This used to be four aggregates plus a
+    // findMany; every extra round trip is another turn waiting on the single
+    // pooled connection, and month/year/category/method all fall out of the
+    // same rows in JS. Partner payments are reported separately.
+    const completed = await withDbRetry(
+      () => prisma.givingRecord.findMany({
+        where:  { source: { not: 'PARTNER' }, status: 'COMPLETED' },
+        select: { category: true, method: true, amount: true, createdAt: true },
+      }),
+      { label: 'admin giving summary' }
+    );
 
-    // Run sequentially so a failure tells us exactly which query broke
-    const monthSum   = await prisma.givingRecord.aggregate({ where: whereMonth, _sum: { amount: true } });
-    const monthCount = await prisma.givingRecord.count({ where: whereMonth });
-    const yearSum    = await prisma.givingRecord.aggregate({ where: whereYear,  _sum: { amount: true } });
-    const yearCount  = await prisma.givingRecord.count({ where: whereYear });
+    const month      = { total: 0, count: 0 };
+    const year       = { total: 0, count: 0 };
+    const byCategory = new Map();
+    const byMethod   = new Map();
 
-    // groupBy — fetch all completed records and group in JS to avoid potential
-    // Prisma/pgbouncer groupBy issues in serverless
-    const completed = await prisma.givingRecord.findMany({
-      where:  { ...notPartner, status: 'COMPLETED' },
-      select: { category: true, method: true, amount: true },
-    });
-
-    const byCategory = Object.entries(
-      completed.reduce((acc, r) => {
-        acc[r.category] = (acc[r.category] || 0) + r.amount;
-        return acc;
-      }, {})
-    ).map(([category, total]) => ({ category, _sum: { amount: total } }));
-
-    const byMethod = Object.entries(
-      completed.reduce((acc, r) => {
-        acc[r.method] = (acc[r.method] || 0) + r.amount;
-        return acc;
-      }, {})
-    ).map(([method, total]) => ({ method, _sum: { amount: total } }));
+    for (const r of completed) {
+      const amount = r.amount ?? 0;
+      if (r.createdAt >= startOfMonth) { month.total += amount; month.count += 1; }
+      if (r.createdAt >= startOfYear)  { year.total  += amount; year.count  += 1; }
+      byCategory.set(r.category, (byCategory.get(r.category) ?? 0) + amount);
+      byMethod.set(r.method,     (byMethod.get(r.method)     ?? 0) + amount);
+    }
 
     res.json({
-      month: { total: monthSum._sum?.amount ?? 0, count: monthCount },
-      year:  { total: yearSum._sum?.amount  ?? 0, count: yearCount  },
-      byCategory,
-      byMethod,
+      month,
+      year,
+      byCategory: [...byCategory].map(([category, total]) => ({ category, _sum: { amount: total } })),
+      byMethod:   [...byMethod].map(([method, total])     => ({ method,   _sum: { amount: total } })),
     });
   } catch (err) {
     console.error('Giving summary error:', err);
-    res.status(500).json({ message: err.message || 'Server error' });
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
   }
 });
 
