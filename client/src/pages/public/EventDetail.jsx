@@ -62,7 +62,7 @@ const RSVP_EMPTY = { name: '', email: '', phone: '', attendance: 'in-person' };
 export default function EventDetail() {
   const { slug } = useParams();
   const fetchFn = useCallback(() => publicApi.getEvent(slug), [slug]);
-  const { data: event, loading, error } = useApi(fetchFn);
+  const { data: event, loading, error } = useApi(fetchFn, [slug]);
 
   const countdown = useCountdown(event?.startDate);
 

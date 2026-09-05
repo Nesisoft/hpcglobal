@@ -27,7 +27,7 @@ function fmtDate(d) {
 export default function BlogPost() {
   const { slug } = useParams();
   const fetchFn = useCallback(() => publicApi.getBlogPost(slug), [slug]);
-  const { data: post, loading, error } = useApi(fetchFn);
+  const { data: post, loading, error } = useApi(fetchFn, [slug]);
 
   if (loading) {
     return (
