@@ -88,7 +88,7 @@ export default function AdminGiving() {
 
   // Summary stats
   const summaryFn = useCallback(() => adminApi.givingSummary(), []);
-  const { data: summary, error: summaryError } = useApi(summaryFn);
+  const { data: summary, error: summaryError, refetch: refetchSummary } = useApi(summaryFn);
 
   // Records list
   const recordsFn = useCallback(
@@ -99,7 +99,8 @@ export default function AdminGiving() {
     }),
     [filterStatus, filterCategory, filterMethod]
   );
-  const { data: rawRecords, loading, refetch } = useApi(recordsFn, [filterStatus, filterCategory, filterMethod]);
+  const { data: rawRecords, loading, error: recordsError, refetch } =
+    useApi(recordsFn, [filterStatus, filterCategory, filterMethod]);
   const records = rawRecords?.records ?? [];
   const total   = rawRecords?.total   ?? 0;
 
@@ -197,8 +198,11 @@ export default function AdminGiving() {
 
       {/* Summary error */}
       {summaryError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-red-600 text-sm font-body">
-          Summary failed to load: {summaryError}
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-red-600 text-sm font-body flex items-center justify-between gap-3">
+          <span>Summary failed to load: {summaryError}</span>
+          <button type="button" onClick={refetchSummary} className="underline flex-shrink-0">
+            Retry
+          </button>
         </div>
       )}
 
@@ -331,12 +335,21 @@ export default function AdminGiving() {
         </select>
       </div>
 
-      <AdminTable
-        columns={columns}
-        rows={records}
-        loading={loading}
-        empty="No giving records match the current filters."
-      />
+      {recordsError ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-600 text-sm font-body flex items-center justify-between gap-3">
+          <span>Could not load giving records: {recordsError}</span>
+          <button type="button" onClick={refetch} className="underline flex-shrink-0">
+            Retry
+          </button>
+        </div>
+      ) : (
+        <AdminTable
+          columns={columns}
+          rows={records}
+          loading={loading}
+          empty="No giving records match the current filters."
+        />
+      )}
     </AdminLayout>
   );
 }
