@@ -47,6 +47,17 @@ api.interceptors.response.use(
   }
 );
 
+// ─── Head-of-department portal ─────────────────────────────────────────────────
+// Same JWT and interceptors as adminApi — HoDs sign in through the admin login;
+// the server keeps them to these routes.
+export const hodApi = {
+  me:           ()      => api.get('/reports/me'),
+  listReports:  (p)     => api.get('/reports', { params: p }),
+  getReport:    (id)    => api.get(`/reports/${id}`),
+  submitReport: (d)     => api.post('/reports', d),
+  updateReport: (id, d) => api.put(`/reports/${id}`, d),
+};
+
 // ─── Public endpoints ───────────────────────────────────────────────────────
 export const publicApi = {
   getHero:         () => api.get('/hero'),
@@ -165,6 +176,12 @@ export const adminApi = {
 
   getMessages:  (p)    => api.get('/admin/contact/messages', { params: p }),
   readMessage:  (id)   => api.put(`/admin/contact/messages/${id}`),
+
+  getReports:        (p)     => api.get('/admin/reports', { params: p }),
+  getReport:         (id)    => api.get(`/admin/reports/${id}`),
+  reviewReport:      (id, d) => api.put(`/admin/reports/${id}/review`, d),
+  getReportDepartments: ()   => api.get('/admin/reports/departments'),
+  exportReports:     (p)     => api.get('/admin/reports/export', { params: p, responseType: 'blob' }),
 
   getUsers:     ()      => api.get('/admin/users'),
   createUser:   (d)     => api.post('/admin/users', d),

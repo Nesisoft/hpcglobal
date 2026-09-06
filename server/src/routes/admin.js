@@ -1,14 +1,23 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
+const { z }  = require('zod');
 
 const { verifyToken }  = require('../middleware/auth');
 const { requireRole }  = require('../middleware/adminOnly');
+const { validate }     = require('../middleware/validate');
 
 const prisma = require('../lib/prisma');
 const { withDbRetry, isRetryable } = require('../lib/dbRetry');
 
 // All admin routes require auth
 router.use(verifyToken);
+
+// ...and one of the content-admin roles. Most routes below predate requireRole
+// and check nothing beyond a valid token, so this allow-list is the single
+// place that keeps other account types — HoDs today — out of the whole content
+// API. It fails closed: a role added to the enum later is denied until it is
+// named here deliberately.
+router.use(requireRole('SUPER_ADMIN', 'CONTENT_EDITOR', 'MEDIA_MANAGER'));
 
 // ─── Error helpers ────────────────────────────────────────────────────────────
 // A pool that is momentarily full is the database being busy, not the request
@@ -1180,58 +1189,274 @@ router.put('/contact/messages/:id', async (req, res) => {
 });
 
 // ─── Admin: Users (SUPER_ADMIN only) ─────────────────────────────────────────
+// ─── Admin: Admin users ───────────────────────────────────────────────────────
+// HOD accounts are created here too, which is why department is part of the
+// payload: it is the department a head of department reports for, and the one
+// field their reports are grouped by.
+const USER_ROLES = ['SUPER_ADMIN', 'CONTENT_EDITOR', 'MEDIA_MANAGER', 'HOD'];
+
+const departmentRequiredForHod = (v) => v.role !== 'HOD' || Boolean(v.department);
+const departmentMessage = {
+  message: 'Department is required for a head of department',
+  path: ['department'],
+};
+
+const userFields = {
+  name:       z.string().trim().min(2, 'Name must be at least 2 characters'),
+  email:      z.string().trim().toLowerCase().email('A valid email is required'),
+  role:       z.enum(USER_ROLES, { message: 'Pick a valid role' }),
+  department: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(2, 'Department must be at least 2 characters').max(80).optional()
+  ),
+};
+
+const userCreateSchema = z
+  .object({ ...userFields, password: z.string().min(8, 'Password must be at least 8 characters') })
+  .refine(departmentRequiredForHod, departmentMessage);
+
+const userUpdateSchema = z
+  .object({
+    ...userFields,
+    // Blank means "keep the current password".
+    password: z.preprocess(
+      (v) => (typeof v === 'string' && v === '' ? undefined : v),
+      z.string().min(8, 'Password must be at least 8 characters').optional()
+    ),
+  })
+  .refine(departmentRequiredForHod, departmentMessage);
+
+const USER_SELECT = {
+  id: true, name: true, email: true, role: true,
+  department: true, lastLogin: true, createdAt: true,
+};
+
+// A duplicate email is the caller's mistake, not a server fault.
+function handleUserWriteError(err, res) {
+  if (err?.code === 'P2002') {
+    return res.status(409).json({ message: 'An account with that email already exists' });
+  }
+  if (err?.code === 'P2025') {
+    return res.status(404).json({ message: 'User not found' });
+  }
+  console.error('Admin user write error:', err);
+  return res.status(dbStatus(err)).json({ message: dbMessage(err) });
+}
+
 router.get('/users', requireRole('SUPER_ADMIN'), async (_req, res) => {
   try {
-    const users = await prisma.adminUser.findMany({
-      orderBy: { createdAt: 'asc' },
-      select:  { id: true, name: true, email: true, role: true, lastLogin: true, createdAt: true },
-    });
+    const users = await withDbRetry(
+      () => prisma.adminUser.findMany({ orderBy: { createdAt: 'asc' }, select: USER_SELECT }),
+      { label: 'admin users list' }
+    );
     res.json(users);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Admin users list error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
   }
 });
 
-router.post('/users', requireRole('SUPER_ADMIN'), async (req, res) => {
+router.post('/users', requireRole('SUPER_ADMIN'), validate(userCreateSchema), async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
-    const passwordHash = await bcrypt.hash(password, 12);
+    const { name, email, password, role, department } = req.body;
     const user = await prisma.adminUser.create({
-      data: { name, email, passwordHash, role },
-      select: { id: true, name: true, email: true, role: true },
+      data: {
+        name,
+        email,
+        role,
+        passwordHash: await bcrypt.hash(password, 12),
+        // Only HoDs carry a department; storing one on an admin would be noise.
+        department: role === 'HOD' ? department : null,
+      },
+      select: USER_SELECT,
     });
     res.status(201).json(user);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    handleUserWriteError(err, res);
   }
 });
 
-router.put('/users/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
+router.put('/users/:id', requireRole('SUPER_ADMIN'), validate(userUpdateSchema), async (req, res) => {
   try {
-    const { name, email, role, password } = req.body;
-    const data = { name, email, role };
+    const { name, email, role, password, department } = req.body;
+
+    // Don't let a super admin strip their own privileges and lock the last one
+    // out of user management.
+    if (req.params.id === req.user.id && role !== 'SUPER_ADMIN') {
+      return res.status(400).json({ message: 'You cannot change your own role' });
+    }
+
+    const data = { name, email, role, department: role === 'HOD' ? department : null };
     if (password) data.passwordHash = await bcrypt.hash(password, 12);
+
     const user = await prisma.adminUser.update({
       where: { id: req.params.id },
       data,
-      select: { id: true, name: true, email: true, role: true },
+      select: USER_SELECT,
     });
     res.json(user);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    handleUserWriteError(err, res);
   }
 });
 
 router.delete('/users/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ message: 'You cannot delete your own account' });
+    }
+    // Reports outlive the account that filed them — DepartmentReport.hodId is
+    // nullable and set null here, keeping the snapshot of who reported what.
     await prisma.adminUser.delete({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    handleUserWriteError(err, res);
+  }
+});
+
+// ─── Admin: Department reports ────────────────────────────────────────────────
+// HoDs file these through /api/reports; this side is read-and-review only, so
+// there is no create or delete — a submitted report is a church record.
+const REPORT_PERIODS  = ['WEEKLY', 'MONTHLY', 'QUARTERLY', 'EVENT'];
+const REPORT_STATUSES = ['SUBMITTED', 'REVIEWED'];
+
+function reportFilter({ department, status, periodType, from, to }) {
+  const range = {
+    ...(from && { gte: new Date(from) }),
+    ...(to   && { lte: new Date(to)   }),
+  };
+  return {
+    ...(department && { department }),
+    ...(REPORT_STATUSES.includes(status)     && { status }),
+    ...(REPORT_PERIODS.includes(periodType)  && { periodType }),
+    // Filter on the period reported about, not the day it happened to be filed.
+    ...(Object.keys(range).length > 0 && { periodStart: range }),
+  };
+}
+
+const REPORT_ORDER = [{ periodStart: 'desc' }, { createdAt: 'desc' }];
+
+router.get('/reports', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const where = reportFilter(req.query);
+    const take  = Math.min(Math.max(Number(req.query.limit) || 20, 1), 200);
+    const skip  = (Math.max(Number(req.query.page) || 1, 1) - 1) * take;
+
+    const { records, total } = await withDbRetry(async () => ({
+      records: await prisma.departmentReport.findMany({ where, orderBy: REPORT_ORDER, skip, take }),
+      total:   await prisma.departmentReport.count({ where }),
+    }), { label: 'admin reports list' });
+
+    res.json({ records, total });
+  } catch (err) {
+    console.error('Reports list error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
+  }
+});
+
+// Departments worth offering in the filter: everything that has ever reported,
+// plus every HoD account's department, so a newly added HoD appears at once.
+router.get('/reports/departments', requireRole('SUPER_ADMIN'), async (_req, res) => {
+  try {
+    const departments = await withDbRetry(async () => {
+      const reported = await prisma.departmentReport.findMany({
+        distinct: ['department'],
+        select:   { department: true },
+      });
+      const staffed = await prisma.adminUser.findMany({
+        where:  { role: 'HOD', department: { not: null } },
+        select: { department: true },
+      });
+      return [...new Set([...reported, ...staffed].map((r) => r.department).filter(Boolean))].sort();
+    }, { label: 'admin report departments' });
+
+    res.json(departments);
+  } catch (err) {
+    console.error('Report departments error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
+  }
+});
+
+router.get('/reports/export', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const where = reportFilter(req.query);
+    const rows = await withDbRetry(
+      () => prisma.departmentReport.findMany({ where, orderBy: REPORT_ORDER }),
+      { label: 'admin reports export' }
+    );
+    const csv = toCsv(rows, [
+      { label: 'Period Start',    value: (r) => fmtCsvDate(r.periodStart) },
+      { label: 'Period End',      value: (r) => fmtCsvDate(r.periodEnd) },
+      { label: 'Period Type',     value: (r) => r.periodType },
+      { label: 'Department',      value: (r) => r.department },
+      { label: 'Head of Dept',    value: (r) => r.hodName },
+      { label: 'Attendance',      value: (r) => r.attendanceTotal },
+      { label: 'Male',            value: (r) => r.attendanceMale },
+      { label: 'Female',          value: (r) => r.attendanceFemale },
+      { label: 'Children',        value: (r) => r.attendanceChildren },
+      { label: 'First Timers',    value: (r) => r.firstTimers },
+      { label: 'New Converts',    value: (r) => r.newConverts },
+      { label: 'Absentees',       value: (r) => r.absenteeCount },
+      { label: 'Absentee Names',  value: (r) => r.absenteeNames },
+      { label: 'Follow-up',       value: (r) => r.followUpNotes },
+      { label: 'Offering (GHS)',  value: (r) => r.offeringAmount },
+      { label: 'Activities',      value: (r) => r.activities },
+      { label: 'Achievements',    value: (r) => r.achievements },
+      { label: 'Issues Faced',    value: (r) => r.issues },
+      { label: 'Recommendations', value: (r) => r.recommendations },
+      { label: 'Prayer Requests', value: (r) => r.prayerRequests },
+      { label: 'Next Period',     value: (r) => r.nextPeriodPlans },
+      { label: 'Status',          value: (r) => r.status },
+      { label: 'Admin Notes',     value: (r) => r.adminNotes },
+      { label: 'Submitted',       value: (r) => fmtCsvDate(r.createdAt) },
+    ]);
+    sendCsv(res, `department-reports-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  } catch (err) {
+    console.error('Reports export error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
+  }
+});
+
+router.get('/reports/:id', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const report = await withDbRetry(
+      () => prisma.departmentReport.findUnique({ where: { id: req.params.id } }),
+      { label: 'admin report detail' }
+    );
+    if (!report) return res.status(404).json({ message: 'Report not found' });
+    res.json(report);
+  } catch (err) {
+    console.error('Report detail error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
+  }
+});
+
+const reviewSchema = z.object({
+  status: z.enum(REPORT_STATUSES),
+  adminNotes: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().max(5000).optional()
+  ),
+});
+
+// Marking a report reviewed is what closes it for the HoD — they can edit their
+// own submission right up until this point, and not after.
+router.put('/reports/:id/review', requireRole('SUPER_ADMIN'), validate(reviewSchema), async (req, res) => {
+  try {
+    const { status, adminNotes } = req.body;
+    const report = await prisma.departmentReport.update({
+      where: { id: req.params.id },
+      data:  {
+        status,
+        adminNotes: adminNotes ?? null,
+        reviewedAt: status === 'REVIEWED' ? new Date() : null,
+      },
+    });
+    res.json(report);
+  } catch (err) {
+    if (err?.code === 'P2025') return res.status(404).json({ message: 'Report not found' });
+    console.error('Report review error:', err);
+    res.status(dbStatus(err)).json({ message: dbMessage(err) });
   }
 });
 
