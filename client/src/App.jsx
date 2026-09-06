@@ -55,10 +55,39 @@ const AdminServices  = lazy(() => import('./pages/admin/AdminServices'));
 const AdminContact   = lazy(() => import('./pages/admin/AdminContact'));
 const AdminSettings  = lazy(() => import('./pages/admin/AdminSettings'));
 const AdminUsers     = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminReports   = lazy(() => import('./pages/admin/AdminReports'));
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/admin/login" replace />;
+// ─── Head-of-department portal (lazy) ─────────────────────────────────────────
+const HodReportForm  = lazy(() => import('./pages/hod/HodReportForm'));
+const HodReports     = lazy(() => import('./pages/hod/HodReports'));
+
+// Where an account belongs once signed in. HoDs share the admin login but have
+// no access to the content modules, so sending them to /admin would land them
+// on a dashboard whose every request the server rejects.
+const HOME_FOR_ROLE = { HOD: '/hod' };
+const homeFor = (user) => HOME_FOR_ROLE[user?.role] ?? '/admin';
+
+/**
+ * Gate a route on being signed in and, optionally, on holding one of `roles`.
+ * A signed-in account with the wrong role is redirected to its own home rather
+ * than to the login page — it is not an authentication problem.
+ */
+function ProtectedRoute({ children, roles }) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
+  if (roles && !roles.includes(user?.role)) return <Navigate to={homeFor(user)} replace />;
+  return children;
+}
+
+// Everything under /admin is for the content-admin roles only.
+const ADMIN_ROLES = ['SUPER_ADMIN', 'CONTENT_EDITOR', 'MEDIA_MANAGER'];
+
+function AdminRoute({ children }) {
+  return <ProtectedRoute roles={ADMIN_ROLES}>{children}</ProtectedRoute>;
+}
+
+function HodRoute({ children }) {
+  return <ProtectedRoute roles={['HOD']}>{children}</ProtectedRoute>;
 }
 
 function PublicLayout({ children }) {
@@ -102,28 +131,35 @@ export default function App() {
             <Route path="/admin/login"            element={<AdminLogin />} />
             <Route path="/admin/forgot-password"  element={<AdminForgotPassword />} />
             <Route path="/admin/reset-password"   element={<AdminResetPassword />} />
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/hero"       element={<ProtectedRoute><AdminHero /></ProtectedRoute>} />
-            <Route path="/admin/sermons"    element={<ProtectedRoute><AdminSermons /></ProtectedRoute>} />
-            <Route path="/admin/sermon-series" element={<ProtectedRoute><AdminSermonSeries /></ProtectedRoute>} />
-            <Route path="/admin/events"     element={<ProtectedRoute><AdminEvents /></ProtectedRoute>} />
-            <Route path="/admin/giving"     element={<ProtectedRoute><AdminGiving /></ProtectedRoute>} />
-            <Route path="/admin/prayer"     element={<ProtectedRoute><AdminPrayer /></ProtectedRoute>} />
-            <Route path="/admin/visitors"   element={<ProtectedRoute><AdminVisitors /></ProtectedRoute>} />
-            <Route path="/admin/blog"       element={<ProtectedRoute><AdminBlog /></ProtectedRoute>} />
-            <Route path="/admin/gallery"    element={<ProtectedRoute><AdminGallery /></ProtectedRoute>} />
-            <Route path="/admin/ministries" element={<ProtectedRoute><AdminMinistries /></ProtectedRoute>} />
-            <Route path="/admin/leadership" element={<ProtectedRoute><AdminLeadership /></ProtectedRoute>} />
-            <Route path="/admin/about"      element={<ProtectedRoute><AdminAbout /></ProtectedRoute>} />
-            <Route path="/admin/services"   element={<ProtectedRoute><AdminServices /></ProtectedRoute>} />
-            <Route path="/admin/settings"   element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-            <Route path="/admin/contact"    element={<ProtectedRoute><AdminContact /></ProtectedRoute>} />
-            <Route path="/admin/users"           element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-            <Route path="/admin/partners"        element={<ProtectedRoute><AdminPartners /></ProtectedRoute>} />
-            <Route path="/admin/zoom-schedules"    element={<ProtectedRoute><AdminZoomSchedules /></ProtectedRoute>} />
-            <Route path="/admin/partner-messages"  element={<ProtectedRoute><AdminPartnerMessages /></ProtectedRoute>} />
-            <Route path="/admin/partner-payments"  element={<ProtectedRoute><AdminPartnerPayments /></ProtectedRoute>} />
-            <Route path="/admin/appointments"      element={<ProtectedRoute><AdminAppointments /></ProtectedRoute>} />
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/hero"       element={<AdminRoute><AdminHero /></AdminRoute>} />
+            <Route path="/admin/sermons"    element={<AdminRoute><AdminSermons /></AdminRoute>} />
+            <Route path="/admin/sermon-series" element={<AdminRoute><AdminSermonSeries /></AdminRoute>} />
+            <Route path="/admin/events"     element={<AdminRoute><AdminEvents /></AdminRoute>} />
+            <Route path="/admin/giving"     element={<AdminRoute><AdminGiving /></AdminRoute>} />
+            <Route path="/admin/prayer"     element={<AdminRoute><AdminPrayer /></AdminRoute>} />
+            <Route path="/admin/visitors"   element={<AdminRoute><AdminVisitors /></AdminRoute>} />
+            <Route path="/admin/blog"       element={<AdminRoute><AdminBlog /></AdminRoute>} />
+            <Route path="/admin/gallery"    element={<AdminRoute><AdminGallery /></AdminRoute>} />
+            <Route path="/admin/ministries" element={<AdminRoute><AdminMinistries /></AdminRoute>} />
+            <Route path="/admin/leadership" element={<AdminRoute><AdminLeadership /></AdminRoute>} />
+            <Route path="/admin/about"      element={<AdminRoute><AdminAbout /></AdminRoute>} />
+            <Route path="/admin/services"   element={<AdminRoute><AdminServices /></AdminRoute>} />
+            <Route path="/admin/settings"   element={<AdminRoute><AdminSettings /></AdminRoute>} />
+            <Route path="/admin/contact"    element={<AdminRoute><AdminContact /></AdminRoute>} />
+            <Route path="/admin/users"           element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="/admin/partners"        element={<AdminRoute><AdminPartners /></AdminRoute>} />
+            <Route path="/admin/zoom-schedules"    element={<AdminRoute><AdminZoomSchedules /></AdminRoute>} />
+            <Route path="/admin/partner-messages"  element={<AdminRoute><AdminPartnerMessages /></AdminRoute>} />
+            <Route path="/admin/partner-payments"  element={<AdminRoute><AdminPartnerPayments /></AdminRoute>} />
+            <Route path="/admin/appointments"      element={<AdminRoute><AdminAppointments /></AdminRoute>} />
+
+            <Route path="/admin/reports"           element={<AdminRoute><AdminReports /></AdminRoute>} />
+
+            {/* ─── Head-of-department portal ─────────────────────────────── */}
+            <Route path="/hod"                      element={<HodRoute><HodReportForm /></HodRoute>} />
+            <Route path="/hod/reports"              element={<HodRoute><HodReports /></HodRoute>} />
+            <Route path="/hod/reports/:id/edit"     element={<HodRoute><HodReportForm /></HodRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

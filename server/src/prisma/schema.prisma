@@ -15,6 +15,9 @@ enum AdminRole {
   SUPER_ADMIN
   CONTENT_EDITOR
   MEDIA_MANAGER
+  // Heads of department. They sign in through the same admin login but reach
+  // only the reporting portal — see the allow-list at the top of routes/admin.js.
+  HOD
 }
 
 enum SlideType {
@@ -94,86 +97,89 @@ enum PaymentStatus {
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model AdminUser {
-  id           String    @id @default(uuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  role              AdminRole
-  createdAt         DateTime  @default(now())
-  lastLogin         DateTime?
+  id                  String             @id @default(uuid())
+  name                String
+  email               String             @unique
+  passwordHash        String
+  role                AdminRole
+  createdAt           DateTime           @default(now())
+  lastLogin           DateTime?
   passwordResetToken  String?
   passwordResetExpiry DateTime?
-  posts             BlogPost[]
+  posts               BlogPost[]
+  // Required for HOD accounts, unused by the other roles.
+  department          String?
+  reports             DepartmentReport[]
 }
 
 model SiteSettings {
-  id              String   @id @default("singleton")
-  churchName      String   @default("HPC Global")
-  tagline         String   @default("Where Hope Meets Destiny")
-  weeklyServices  Int      @default(3)
-  ministryStartYear Int    @default(0)
-  phone           String   @default("")
-  email           String   @default("")
-  whatsapp        String   @default("")
-  address         String   @default("Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana")
-  mapsLat         Float    @default(5.6656744)
-  mapsLng         Float    @default(-0.0471646)
-  zoomLink        String   @default("")
-  youtubeHandle   String   @default("@prophetclottey")
-  facebookUrl     String   @default("")
-  instagramUrl    String   @default("")
-  mtnMomoNumber   String   @default("")
-  telecelNumber   String   @default("")
-  airteltigo      String   @default("")
-  bankName        String   @default("")
-  bankAccount     String   @default("")
-  bankBranch      String   @default("")
-  bankSwift       String   @default("")
-  bankCode        String   @default("")
-  paystackPublicKey String @default("")
-  partnerMinAmount Float   @default(0)
-  appointmentReasons String @default("[]")
-  tickerMessages  String   @default("[]")
-  ministryVideoId String   @default("")
-  zelleAccount    String   @default("")
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default("singleton")
+  churchName         String   @default("HPC Global")
+  tagline            String   @default("Where Hope Meets Destiny")
+  weeklyServices     Int      @default(3)
+  ministryStartYear  Int      @default(0)
+  phone              String   @default("")
+  email              String   @default("")
+  whatsapp           String   @default("")
+  address            String   @default("Klagon Junction, Behind K. Ofori Enterprise, Accra, Ghana")
+  mapsLat            Float    @default(5.6656744)
+  mapsLng            Float    @default(-0.0471646)
+  zoomLink           String   @default("")
+  youtubeHandle      String   @default("@prophetclottey")
+  facebookUrl        String   @default("")
+  instagramUrl       String   @default("")
+  mtnMomoNumber      String   @default("")
+  telecelNumber      String   @default("")
+  airteltigo         String   @default("")
+  bankName           String   @default("")
+  bankAccount        String   @default("")
+  bankBranch         String   @default("")
+  bankSwift          String   @default("")
+  bankCode           String   @default("")
+  paystackPublicKey  String   @default("")
+  partnerMinAmount   Float    @default(0)
+  appointmentReasons String   @default("[]")
+  tickerMessages     String   @default("[]")
+  ministryVideoId    String   @default("")
+  zelleAccount       String   @default("")
+  updatedAt          DateTime @updatedAt
 }
 
 model HeroSlide {
-  id               String    @id @default(uuid())
-  type             SlideType
-  isActive         Boolean   @default(true)
-  order            Int
-  headline         String    @default("")
-  subheadline      String?
-  body             String?
-  ctaPrimary       String?
-  ctaPrimaryUrl    String?
-  ctaSecondary     String?
-  ctaSecondaryUrl  String?
-  imageUrl         String?
-  eventId          String?
-  youtubeMode      String?   // "auto" | "manual"
-  manualYoutubeId  String?
-  updatedAt        DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  type            SlideType
+  isActive        Boolean   @default(true)
+  order           Int
+  headline        String    @default("")
+  subheadline     String?
+  body            String?
+  ctaPrimary      String?
+  ctaPrimaryUrl   String?
+  ctaSecondary    String?
+  ctaSecondaryUrl String?
+  imageUrl        String?
+  eventId         String?
+  youtubeMode     String? // "auto" | "manual"
+  manualYoutubeId String?
+  updatedAt       DateTime  @updatedAt
 }
 
 model ServiceTime {
-  id          String  @id @default(uuid())
-  name        String
-  day         String
-  timeGmt     String
-  timeEst     String?
-  timeBst     String?
-  duration    String?
-  isOnline    Boolean @default(false)
-  platform    String?
-  joinLink    String?
-  isStreamed  Boolean @default(false)
-  youtubeUrl  String?
-  imageUrl    String?
-  order       Int
-  isActive    Boolean @default(true)
+  id         String  @id @default(uuid())
+  name       String
+  day        String
+  timeGmt    String
+  timeEst    String?
+  timeBst    String?
+  duration   String?
+  isOnline   Boolean @default(false)
+  platform   String?
+  joinLink   String?
+  isStreamed Boolean @default(false)
+  youtubeUrl String?
+  imageUrl   String?
+  order      Int
+  isActive   Boolean @default(true)
 }
 
 model Event {
@@ -193,7 +199,7 @@ model Event {
   category    EventCategory
   isFeatured  Boolean       @default(false)
   isPublished Boolean       @default(false)
-  speakers    String?       // JSON array: [{name, role}]
+  speakers    String? // JSON array: [{name, role}]
   rsvps       EventRsvp[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -267,12 +273,12 @@ model GalleryAlbum {
 }
 
 model GalleryPhoto {
-  id       String       @id @default(uuid())
-  album    GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  albumId  String
-  url      String
-  caption  String?
-  order    Int          @default(0)
+  id      String       @id @default(uuid())
+  album   GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  albumId String
+  url     String
+  caption String?
+  order   Int          @default(0)
 }
 
 model Ministry {
@@ -315,9 +321,9 @@ model AboutContent {
   mission     String   @default("")
   story       String   @default("")
   foundedYear Int?
-  coreValues  String   @default("[]")   // JSON
-  beliefs     String   @default("[]")   // JSON
-  milestones  String   @default("[]")   // JSON
+  coreValues  String   @default("[]") // JSON
+  beliefs     String   @default("[]") // JSON
+  milestones  String   @default("[]") // JSON
   updatedAt   DateTime @updatedAt
 }
 
@@ -393,26 +399,26 @@ enum CommitmentFrequency {
 }
 
 model Partner {
-  id                 String        @id @default(uuid())
+  id                 String               @id @default(uuid())
   firstName          String
   lastName           String
-  email              String        @unique
+  email              String               @unique
   phone              String?
   country            String?
   city               String?
   commitmentAmount   Float?
-  currency           String        @default("GHS")
+  currency           String               @default("GHS")
   frequency          CommitmentFrequency?
   commitmentSetAt    DateTime?
   motivation         String?
   adminNotes         String?
-  status             PartnerStatus @default(PENDING)
+  status             PartnerStatus        @default(PENDING)
   supabaseUserId     String?
   passwordHash       String?
   accountActivatedAt DateTime?
   lastLogin          DateTime?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model ZoomSchedule {
@@ -459,8 +465,8 @@ model Appointment {
   name      String
   email     String
   phone     String
-  date      DateTime          // the day of the appointment
-  time      String            // "HH:mm" start time of the slot
+  date      DateTime // the day of the appointment
+  time      String // "HH:mm" start time of the slot
   reason    String
   notes     String?
   status    AppointmentStatus @default(PENDING)
@@ -468,4 +474,68 @@ model Appointment {
   updatedAt DateTime          @updatedAt
 
   @@unique([date, time])
+}
+
+// ─── Department reporting ─────────────────────────────────────────────────────
+
+enum ReportPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  EVENT
+}
+
+enum ReportStatus {
+  SUBMITTED
+  REVIEWED
+}
+
+/// A head of department's report for one period.
+///
+/// `department` and `hodName` are snapshots taken at submission time: a report
+/// is a church record, so it has to stay readable and attributable after the
+/// department is renamed or the account is removed (hence the nullable hodId).
+model DepartmentReport {
+  id          String       @id @default(uuid())
+  hodId       String?
+  hod         AdminUser?   @relation(fields: [hodId], references: [id], onDelete: SetNull)
+  hodName     String
+  department  String
+  periodType  ReportPeriod @default(WEEKLY)
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Attendance
+  attendanceTotal    Int?
+  attendanceMale     Int?
+  attendanceFemale   Int?
+  attendanceChildren Int?
+  firstTimers        Int?
+  newConverts        Int?
+
+  // Absentees and follow-up
+  absenteeCount Int?
+  absenteeNames String?
+  followUpNotes String?
+
+  // Narrative
+  activities      String?
+  achievements    String?
+  issues          String?
+  recommendations String?
+  prayerRequests  String?
+  nextPeriodPlans String?
+
+  // Any offering or funds the department handled itself
+  offeringAmount Float?
+
+  status     ReportStatus @default(SUBMITTED)
+  adminNotes String?
+  reviewedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([department, periodStart])
+  @@index([hodId, periodStart])
+  @@index([status])
 }

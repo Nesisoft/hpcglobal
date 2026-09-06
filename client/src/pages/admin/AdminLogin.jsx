@@ -16,8 +16,9 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/admin');
+      const signedIn = await login(email, password);
+      // HoDs use this same form but belong in the reporting portal.
+      navigate(signedIn?.role === 'HOD' ? '/hod' : '/admin');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
@@ -31,7 +32,7 @@ export default function AdminLogin() {
         <div className="text-center mb-8">
           <img src={LOGO_URL} alt="HPC Global" className="h-16 w-auto mx-auto mb-3 object-contain" />
           <h1 className="font-display text-white text-2xl font-light">HPC Global Admin</h1>
-          <p className="text-white/40 font-body text-sm mt-1">Sign in to manage content</p>
+          <p className="text-white/40 font-body text-sm mt-1">Admins and heads of department</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-white/5 border border-white/10 rounded-xl p-8 space-y-4">
           {error && <div className="bg-red-500/10 border border-red-500/30 rounded p-3 text-red-400 text-sm font-body">{error}</div>}

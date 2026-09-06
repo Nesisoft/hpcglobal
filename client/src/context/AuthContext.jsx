@@ -14,7 +14,11 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const { data } = await adminApi.login({ email, password });
     saveTokens(data);
-    setUser(decodeToken(data.accessToken));
+    const signedIn = decodeToken(data.accessToken);
+    setUser(signedIn);
+    // Returned so the caller can route by role — state set here is not yet
+    // readable in the same tick.
+    return signedIn;
   }, []);
 
   const logout = useCallback(async () => {
