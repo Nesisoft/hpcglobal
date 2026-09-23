@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PartnerAuthProvider } from './context/PartnerAuthContext';
@@ -60,12 +60,18 @@ const AdminReports   = lazy(() => import('./pages/admin/AdminReports'));
 // ─── Head-of-department portal (lazy) ─────────────────────────────────────────
 const HodReportForm  = lazy(() => import('./pages/hod/HodReportForm'));
 const HodReports     = lazy(() => import('./pages/hod/HodReports'));
+const ChangePassword = lazy(() => import('./pages/ChangePassword'));
 
 // Where an account belongs once signed in. HoDs share the admin login but have
 // no access to the content modules, so sending them to /admin would land them
 // on a dashboard whose every request the server rejects.
 const HOME_FOR_ROLE = { HOD: '/hod' };
 const homeFor = (user) => HOME_FOR_ROLE[user?.role] ?? '/admin';
+
+// Each side of the app has its own change-password page so the surrounding
+// layout matches where the person actually works.
+const changePasswordPath = (user) =>
+  (user?.role === 'HOD' ? '/hod/change-password' : '/admin/change-password');
 
 /**
  * Gate a route on being signed in and, optionally, on holding one of `roles`.
@@ -74,8 +80,18 @@ const homeFor = (user) => HOME_FOR_ROLE[user?.role] ?? '/admin';
  */
 function ProtectedRoute({ children, roles }) {
   const { isAuthenticated, user } = useAuth();
+  const { pathname } = useLocation();
+
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
   if (roles && !roles.includes(user?.role)) return <Navigate to={homeFor(user)} replace />;
+
+  // An account still holding a password the office typed has exactly one place
+  // to go until it is replaced. The server enforces the same rule.
+  const changePath = changePasswordPath(user);
+  if (user?.mustChangePassword && pathname !== changePath) {
+    return <Navigate to={changePath} replace />;
+  }
+
   return children;
 }
 
@@ -160,6 +176,8 @@ export default function App() {
             <Route path="/hod"                      element={<HodRoute><HodReportForm /></HodRoute>} />
             <Route path="/hod/reports"              element={<HodRoute><HodReports /></HodRoute>} />
             <Route path="/hod/reports/:id/edit"     element={<HodRoute><HodReportForm /></HodRoute>} />
+            <Route path="/hod/change-password"      element={<HodRoute><ChangePassword /></HodRoute>} />
+            <Route path="/admin/change-password"    element={<AdminRoute><ChangePassword /></AdminRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

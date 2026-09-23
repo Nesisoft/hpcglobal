@@ -21,6 +21,15 @@ export function AuthProvider({ children }) {
     return signedIn;
   }, []);
 
+  // Used after a password change, which hands back fresh tokens — the old ones
+  // still claim a change is required.
+  const applyTokens = useCallback((tokens) => {
+    saveTokens(tokens);
+    const signedIn = decodeToken(tokens.accessToken);
+    setUser(signedIn);
+    return signedIn;
+  }, []);
+
   const logout = useCallback(async () => {
     try { await adminApi.logout(); } catch { /* ignore */ }
     clearTokens();
@@ -28,7 +37,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, applyTokens, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

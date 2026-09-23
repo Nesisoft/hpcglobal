@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { FilePlus2, FileText, Menu, X, LogOut, ExternalLink } from 'lucide-react';
+import { FilePlus2, FileText, KeyRound, Menu, X, LogOut, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LOGO_URL } from '../../config/brand';
 
@@ -11,10 +11,13 @@ const NAV = [
   { label: 'My Reports',  to: '/hod/reports', icon: FileText },
 ];
 
+const CHANGE_PASSWORD = { label: 'Change Password', to: '/hod/change-password', icon: KeyRound };
+
 export default function HodLayout({ children, title, department }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const mustChangePassword = Boolean(user?.mustChangePassword);
 
   async function handleLogout() {
     await logout();
@@ -45,24 +48,28 @@ export default function HodLayout({ children, title, department }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3">
-          {NAV.map(({ label, to, icon: Icon, exact }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={exact}
-              onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded text-sm font-body transition-all mb-0.5 ${
-                  isActive
-                    ? 'bg-gold/15 text-gold border border-gold/20'
-                    : 'text-white/55 hover:text-white hover:bg-white/5 border border-transparent'
-                }`
-              }
-            >
-              <Icon size={15} className="flex-shrink-0" />
-              {label}
-            </NavLink>
-          ))}
+          {/* Until a HoD has replaced the password the office set, the reporting
+              pages are closed to them — offering the links would only bounce. */}
+          {(mustChangePassword ? [CHANGE_PASSWORD] : [...NAV, CHANGE_PASSWORD]).map(
+            ({ label, to, icon: Icon, exact }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={exact}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded text-sm font-body transition-all mb-0.5 ${
+                    isActive
+                      ? 'bg-gold/15 text-gold border border-gold/20'
+                      : 'text-white/55 hover:text-white hover:bg-white/5 border border-transparent'
+                  }`
+                }
+              >
+                <Icon size={15} className="flex-shrink-0" />
+                {label}
+              </NavLink>
+            )
+          )}
         </nav>
 
         <div className="px-4 py-4 border-t border-white/8 flex-shrink-0 space-y-3">

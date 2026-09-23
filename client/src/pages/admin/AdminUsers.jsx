@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, Pencil, ShieldCheck, Eye, EyeOff, X, Check, Building2 } from 'lucide-react';
+import { Plus, Trash2, Pencil, ShieldCheck, Eye, EyeOff, X, Check, Building2, KeyRound } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
@@ -138,6 +138,12 @@ export default function AdminUsers() {
             <p className="text-ink/45 text-[11px] mt-1 flex items-center gap-1">
               <Building2 size={10} className="flex-shrink-0" />
               {row.department || <span className="text-red-500">No department set</span>}
+            </p>
+          )}
+          {row.mustChangePassword && (
+            <p className="text-gold text-[11px] mt-1 flex items-center gap-1" title="They will be asked to set their own password at next sign-in">
+              <KeyRound size={10} className="flex-shrink-0" />
+              Must set own password
             </p>
           )}
         </div>

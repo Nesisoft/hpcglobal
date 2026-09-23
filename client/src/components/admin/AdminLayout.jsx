@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Image, Mic2, Calendar, BookOpen, Images,
   Users, Church, FileText, Clock, Settings, Mail, Heart,
   HandHeart, UserPlus, Menu, X, LogOut, ExternalLink, ChevronDown, Library,
-  Video, MessageSquare, Banknote, CalendarCheck, ClipboardList,
+  Video, MessageSquare, Banknote, CalendarCheck, ClipboardList, KeyRound,
 } from 'lucide-react';
 
 const NAV = [
@@ -142,6 +142,20 @@ function Sidebar({ open, onClose, user, onLogout }) {
               </p>
             </div>
           </div>
+          <NavLink
+            to="/admin/change-password"
+            onClick={onClose}
+            className={({ isActive }) =>
+              `w-full flex items-center gap-2 px-3 py-2 rounded text-sm font-body border transition-all ${
+                isActive
+                  ? 'bg-gold/15 text-gold border-gold/20'
+                  : 'text-white/40 hover:text-white hover:bg-white/5 border-transparent'
+              }`
+            }
+          >
+            <KeyRound size={14} className="flex-shrink-0" />
+            Change Password
+          </NavLink>
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm font-body text-white/40 hover:text-red-400 hover:bg-white/5 border border-transparent transition-all"

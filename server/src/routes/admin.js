@@ -1228,7 +1228,7 @@ const userUpdateSchema = z
 
 const USER_SELECT = {
   id: true, name: true, email: true, role: true,
-  department: true, lastLogin: true, createdAt: true,
+  department: true, lastLogin: true, createdAt: true, mustChangePassword: true,
 };
 
 // A duplicate email is the caller's mistake, not a server fault.
@@ -1267,6 +1267,10 @@ router.post('/users', requireRole('SUPER_ADMIN'), validate(userCreateSchema), as
         passwordHash: await bcrypt.hash(password, 12),
         // Only HoDs carry a department; storing one on an admin would be noise.
         department: role === 'HOD' ? department : null,
+        // This password was chosen by an administrator, so the HoD is made to
+        // replace it at first sign-in. Admin roles set their own and are not
+        // put through it.
+        mustChangePassword: role === 'HOD',
       },
       select: USER_SELECT,
     });
@@ -1287,7 +1291,14 @@ router.put('/users/:id', requireRole('SUPER_ADMIN'), validate(userUpdateSchema),
     }
 
     const data = { name, email, role, department: role === 'HOD' ? department : null };
-    if (password) data.passwordHash = await bcrypt.hash(password, 12);
+    if (password) {
+      data.passwordHash = await bcrypt.hash(password, 12);
+      // Resetting a HoD's password puts them back through the same first-login
+      // change; for an admin role the flag is simply cleared.
+      data.mustChangePassword = role === 'HOD';
+    } else if (role !== 'HOD') {
+      data.mustChangePassword = false;
+    }
 
     const user = await prisma.adminUser.update({
       where: { id: req.params.id },
