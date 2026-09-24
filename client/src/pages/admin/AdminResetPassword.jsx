@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { LOGO_URL } from '../../config/brand';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { evaluatePassword, MIN_LENGTH } from '../../utils/passwordPolicy';
 
 export default function AdminResetPassword() {
   const [searchParams]      = useSearchParams();
@@ -15,7 +17,8 @@ export default function AdminResetPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (password.length < 8)  { setError('Password must be at least 8 characters.'); return; }
+    const { failed } = evaluatePassword(password);
+    if (failed.length)        { setError(`Your password still needs: ${failed[0].label.toLowerCase()}.`); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     setLoading(true);
     setError('');
@@ -67,11 +70,16 @@ export default function AdminResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={8}
+                  minLength={MIN_LENGTH}
                   className="w-full bg-white/10 border border-white/15 rounded px-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
-                  placeholder="Min. 8 characters"
+                  placeholder={`At least ${MIN_LENGTH} characters`}
                 />
               </div>
+
+              {/* notPersonal is left out here: this screen does not know whose
+                  account the token belongs to. The server checks it once it
+                  resolves the token. */}
+              <PasswordRequirements password={password} tone="dark" omit={['notPersonal']} />
               <div>
                 <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">Confirm Password</label>
                 <input

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, Pencil, ShieldCheck, Eye, EyeOff, X, Check, Building2, KeyRound } from 'lucide-react';
+import { Plus, Trash2, Pencil, ShieldCheck, Eye, EyeOff, X, Check, Building2, KeyRound, Wand2 } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,8 @@ import AdminTable from '../../components/admin/AdminTable';
 import AdminModal from '../../components/admin/AdminModal';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import FormField from '../../components/admin/FormField';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { evaluatePassword, generatePassword } from '../../utils/passwordPolicy';
 
 const ROLES = ['SUPER_ADMIN', 'CONTENT_EDITOR', 'MEDIA_MANAGER', 'HOD'];
 const ROLE_COLORS = {
@@ -69,7 +71,10 @@ export default function AdminUsers() {
     }
     if (!editTarget && !form.password) { setError('Password is required for new users.'); return; }
     if (form.password && form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
-    if (form.password && form.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (form.password) {
+      const { failed } = evaluatePassword(form.password, { name: form.name, email: form.email });
+      if (failed.length) { setError(`That password still needs: ${failed[0].label.toLowerCase()}.`); return; }
+    }
 
     setSaving(true); setError('');
     try {
@@ -286,6 +291,27 @@ export default function AdminUsers() {
               />
             </FormField>
           </div>
+
+          {/* The office has to read this password out to the person anyway, so
+              offer one that already satisfies the rules. */}
+          <button
+            type="button"
+            onClick={() => {
+              const generated = generatePassword();
+              setForm((f) => ({ ...f, password: generated, confirmPassword: generated }));
+              setShowPw(true);
+            }}
+            className="btn-outline text-xs px-3 py-1.5"
+          >
+            <Wand2 size={13} /> Suggest a strong password
+          </button>
+
+          {form.password && (
+            <PasswordRequirements
+              password={form.password}
+              context={{ name: form.name, email: form.email }}
+            />
+          )}
         </div>
 
         {error && <p className="text-red-500 text-xs font-body mt-3">{error}</p>}
