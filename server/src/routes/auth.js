@@ -9,6 +9,7 @@ const { verifyToken }  = require('../middleware/auth');
 const emailService     = require('../services/email');
 
 const prisma = require('../lib/prisma');
+const { policy: passwordPolicy, evaluatePassword, firstProblem } = require('../lib/passwordPolicy');
 
 const loginSchema = z.object({
   email:    z.string().email(),
@@ -95,7 +96,7 @@ router.post('/logout', verifyToken, (_req, res) => {
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, 'Enter your current password'),
-    newPassword:     z.string().min(8, 'New password must be at least 8 characters'),
+    newPassword:     z.string().max(passwordPolicy.maxLength, `Password must be at most ${passwordPolicy.maxLength} characters`),
   })
   .refine((v) => v.newPassword !== v.currentPassword, {
     message: 'Choose a password different from your current one',
@@ -111,6 +112,16 @@ router.post('/change-password', verifyToken, validate(changePasswordSchema), asy
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) return res.status(401).json({ message: 'Your current password is not correct' });
+
+    // The strength rules need the account's own name and email, so they run
+    // here rather than in the schema. The browser shows the same checklist.
+    const { ok, failed } = evaluatePassword(newPassword, { name: user.name, email: user.email });
+    if (!ok) {
+      return res.status(400).json({
+        message: firstProblem(newPassword, { name: user.name, email: user.email }),
+        errors:  { newPassword: failed.map((f) => f.label) },
+      });
+    }
 
     const updated = await prisma.adminUser.update({
       where: { id: user.id },
@@ -159,8 +170,8 @@ router.post('/forgot-password', async (req, res) => {
 // POST /api/auth/reset-password — public
 router.post('/reset-password', async (req, res) => {
   const { token, password } = req.body;
-  if (!token || !password || password.length < 8) {
-    return res.status(400).json({ message: 'Token and password (min 8 chars) are required.' });
+  if (!token || !password) {
+    return res.status(400).json({ message: 'Token and password are required.' });
   }
   try {
     const user = await prisma.adminUser.findFirst({
@@ -170,6 +181,17 @@ router.post('/reset-password', async (req, res) => {
       },
     });
     if (!user) return res.status(400).json({ message: 'Token is invalid or has expired.' });
+
+    // Checked only once the token is known good, so the rules cannot be used to
+    // probe for accounts.
+    const identity = { name: user.name, email: user.email };
+    const { ok, failed } = evaluatePassword(password, identity);
+    if (!ok) {
+      return res.status(400).json({
+        message: firstProblem(password, identity),
+        errors:  { password: failed.map((f) => f.label) },
+      });
+    }
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.adminUser.update({
       where: { id: user.id },

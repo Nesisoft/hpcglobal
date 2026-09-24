@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import AdminLayout from '../components/admin/AdminLayout';
 import HodLayout from '../components/hod/HodLayout';
 import FormField from '../components/admin/FormField';
-
-const MIN_LENGTH = 8;
+import PasswordRequirements from '../components/PasswordRequirements';
+import { evaluatePassword, MIN_LENGTH } from '../utils/passwordPolicy';
 
 /**
  * Change password, for any signed-in account.
@@ -28,6 +28,8 @@ export default function ChangePassword() {
   const [error, setError]     = useState('');
   const [done, setDone]       = useState(false);
 
+  const meetsPolicy = evaluatePassword(next, { name: user?.name, email: user?.email }).ok;
+
   const isHod  = user?.role === 'HOD';
   const forced = Boolean(user?.mustChangePassword);
   const Layout = isHod ? HodLayout : AdminLayout;
@@ -37,8 +39,9 @@ export default function ChangePassword() {
     e.preventDefault();
     setError('');
 
-    if (next.length < MIN_LENGTH) {
-      setError(`New password must be at least ${MIN_LENGTH} characters.`);
+    const { failed } = evaluatePassword(next, { name: user?.name, email: user?.email });
+    if (failed.length) {
+      setError(`Your new password still needs: ${failed[0].label.toLowerCase()}.`);
       return;
     }
     if (next !== confirm) {
@@ -116,16 +119,21 @@ export default function ChangePassword() {
             </div>
           </FormField>
 
-          <FormField label="New password" hint={`At least ${MIN_LENGTH} characters.`} required>
+          <FormField label="New password" required>
             <input
               type={show ? 'text' : 'password'}
               className="input"
               value={next}
               onChange={(e) => setNext(e.target.value)}
               autoComplete="new-password"
+              minLength={MIN_LENGTH}
               required
             />
           </FormField>
+
+          {/* Ticks through as they type, and shows the same rules the server
+              will apply when the form is submitted. */}
+          <PasswordRequirements password={next} context={{ name: user?.name, email: user?.email }} />
 
           <FormField label="Confirm new password" required>
             <input
@@ -151,7 +159,11 @@ export default function ChangePassword() {
                 Cancel
               </button>
             )}
-            <button type="submit" disabled={saving || done} className="btn-primary text-sm px-5 py-2.5 disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={saving || done || !meetsPolicy}
+              className="btn-primary text-sm px-5 py-2.5 disabled:opacity-50"
+            >
               {saving ? 'Saving…' : <><KeyRound size={14} /> Change Password</>}
             </button>
           </div>

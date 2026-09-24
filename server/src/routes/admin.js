@@ -8,6 +8,7 @@ const { validate }     = require('../middleware/validate');
 
 const prisma = require('../lib/prisma');
 const { withDbRetry, isRetryable } = require('../lib/dbRetry');
+const { policy: passwordPolicy, evaluatePassword, firstProblem } = require('../lib/passwordPolicy');
 
 // All admin routes require auth
 router.use(verifyToken);
@@ -1211,20 +1212,38 @@ const userFields = {
   ),
 };
 
-const userCreateSchema = z
-  .object({ ...userFields, password: z.string().min(8, 'Password must be at least 8 characters') })
-  .refine(departmentRequiredForHod, departmentMessage);
+// A password an administrator types for someone else is a real password until
+// that person replaces it, so it meets the same rules. Checked with the new
+// account's own name and email as context.
+const strongPassword = (value, ctx, path) => {
+  const { ok, failed } = evaluatePassword(value, { name: ctx.name, email: ctx.email });
+  return ok ? null : { message: firstProblem(value, { name: ctx.name, email: ctx.email }), path, failed };
+};
 
-const userUpdateSchema = z
-  .object({
+const withStrongPassword = (schema) =>
+  schema.superRefine((v, ctx) => {
+    if (!v.password) return;
+    const problem = strongPassword(v.password, v, ['password']);
+    if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem.message, path: problem.path });
+  });
+
+const userCreateSchema = withStrongPassword(
+  z.object({
+    ...userFields,
+    password: z.string().max(passwordPolicy.maxLength, `Password must be at most ${passwordPolicy.maxLength} characters`),
+  })
+).refine(departmentRequiredForHod, departmentMessage);
+
+const userUpdateSchema = withStrongPassword(
+  z.object({
     ...userFields,
     // Blank means "keep the current password".
     password: z.preprocess(
       (v) => (typeof v === 'string' && v === '' ? undefined : v),
-      z.string().min(8, 'Password must be at least 8 characters').optional()
+      z.string().max(passwordPolicy.maxLength, `Password must be at most ${passwordPolicy.maxLength} characters`).optional()
     ),
   })
-  .refine(departmentRequiredForHod, departmentMessage);
+).refine(departmentRequiredForHod, departmentMessage);
 
 const USER_SELECT = {
   id: true, name: true, email: true, role: true,
