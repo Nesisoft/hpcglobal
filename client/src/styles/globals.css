@@ -37,6 +37,12 @@
     @apply inline-flex items-center gap-2 text-gold font-body font-medium text-sm tracking-wide transition-colors duration-200 hover:text-gold-light;
   }
 
+  /* For type sitting directly on a photograph. Lets the scrims stay light
+     enough to show the image while keeping the words legible. */
+  .text-on-photo {
+    text-shadow: 0 2px 16px rgba(33, 10, 74, 0.75), 0 1px 4px rgba(33, 10, 74, 0.55);
+  }
+
   .section-label {
     @apply text-xs font-body font-semibold tracking-[0.2em] uppercase text-gold;
   }
