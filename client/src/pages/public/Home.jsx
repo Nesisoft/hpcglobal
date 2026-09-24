@@ -80,8 +80,16 @@ function HeroCarousel({ slides }) {
       <div className="absolute inset-0 bg-hero-gradient" />
       {slide.imageUrl && (
         <div className="absolute inset-0">
-          <img src={slide.imageUrl} alt="" className="w-full h-full object-cover opacity-20" />
-          <div className="absolute inset-0 bg-purple-deep/60" />
+          <img src={slide.imageUrl} alt="" className="w-full h-full object-cover" />
+          {/* Scrims rather than a flat veil: the photograph used to sit at 20%
+              opacity under a 60% wash, which left almost none of it visible.
+              A light overall tint keeps the brand colour, a vertical gradient
+              holds the navbar and the carousel dots legible, and a soft pool
+              sits behind the centred headline — so the open parts of the
+              picture stay bright. */}
+          <div className="absolute inset-0 bg-purple-deep/30" />
+          <div className="absolute inset-0 bg-gradient-to-b from-purple-deep/55 via-purple-deep/10 to-purple-deep/65" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_50%,rgba(33,10,74,0.40),transparent_75%)]" />
         </div>
       )}
       <div className="absolute inset-0 opacity-5" style={{
@@ -89,17 +97,17 @@ function HeroCarousel({ slides }) {
       }} />
 
       <div className="container-page relative z-10 text-center py-32">
-        <p className="section-label text-gold mb-6">Welcome to HPC Global</p>
+        <p className="section-label text-gold mb-6 text-on-photo">Welcome to HPC Global</p>
 
-        <h1 className="font-display text-display text-white font-light leading-tight mb-6 max-w-4xl mx-auto">
+        <h1 className="font-display text-display text-white font-light leading-tight mb-6 max-w-4xl mx-auto text-on-photo">
           {slide.headline || 'Where Hope Meets Destiny'}
         </h1>
 
         {slide.subheadline && (
-          <p className="text-white/70 font-body text-lg mb-4">{slide.subheadline}</p>
+          <p className="text-white/85 font-body text-lg mb-4 text-on-photo">{slide.subheadline}</p>
         )}
         {slide.body && (
-          <p className="text-white/55 font-body text-base max-w-2xl mx-auto mb-10 leading-relaxed">{slide.body}</p>
+          <p className="text-white/75 font-body text-base max-w-2xl mx-auto mb-10 leading-relaxed text-on-photo">{slide.body}</p>
         )}
 
         {(slide.ctaPrimary || slide.ctaSecondary) && (

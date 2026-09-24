@@ -62,7 +62,7 @@ export default function BlogPost() {
       {/* Hero image */}
       {post.featuredImage ? (
         <div className="h-64 sm:h-80 lg:h-96 relative overflow-hidden bg-purple-deep">
-          <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover opacity-70" />
+          <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-purple-deep/80 to-transparent" />
         </div>
       ) : (

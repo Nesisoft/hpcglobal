@@ -124,7 +124,11 @@ export default function EventDetail() {
         <div className="absolute inset-0 bg-hero-gradient" />
         {event.imageUrl && (
           <div className="absolute inset-0">
-            <img src={event.imageUrl} alt="" className="w-full h-full object-cover opacity-15" />
+            <img src={event.imageUrl} alt="" className="w-full h-full object-cover" />
+            {/* The event's own photograph, no longer at 15% opacity. The scrim
+                is weighted to the bottom, where the title and details sit. */}
+            <div className="absolute inset-0 bg-purple-deep/25" />
+            <div className="absolute inset-0 bg-gradient-to-t from-purple-deep/85 via-purple-deep/48 to-purple-deep/65" />
           </div>
         )}
         <div className="container-page relative z-10 max-w-4xl mx-auto pb-12">
