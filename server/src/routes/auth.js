@@ -113,12 +113,11 @@ router.post('/change-password', verifyToken, validate(changePasswordSchema), asy
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) return res.status(401).json({ message: 'Your current password is not correct' });
 
-    // The strength rules need the account's own name and email, so they run
-    // here rather than in the schema. The browser shows the same checklist.
-    const { ok, failed } = evaluatePassword(newPassword, { name: user.name, email: user.email });
+    // The browser shows this same checklist as they type.
+    const { ok, failed } = evaluatePassword(newPassword);
     if (!ok) {
       return res.status(400).json({
-        message: firstProblem(newPassword, { name: user.name, email: user.email }),
+        message: firstProblem(newPassword),
         errors:  { newPassword: failed.map((f) => f.label) },
       });
     }
@@ -182,13 +181,10 @@ router.post('/reset-password', async (req, res) => {
     });
     if (!user) return res.status(400).json({ message: 'Token is invalid or has expired.' });
 
-    // Checked only once the token is known good, so the rules cannot be used to
-    // probe for accounts.
-    const identity = { name: user.name, email: user.email };
-    const { ok, failed } = evaluatePassword(password, identity);
+    const { ok, failed } = evaluatePassword(password);
     if (!ok) {
       return res.status(400).json({
-        message: firstProblem(password, identity),
+        message: firstProblem(password),
         errors:  { password: failed.map((f) => f.label) },
       });
     }

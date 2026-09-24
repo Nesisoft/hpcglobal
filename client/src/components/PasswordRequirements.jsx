@@ -10,14 +10,10 @@ import { evaluatePassword, passwordStrength } from '../utils/passwordPolicy';
  *
  * Props:
  *   password  – the value being typed
- *   context   – { name, email } of the account, for the "not your name" rule
- *   omit      – rule ids to leave out, for a screen that cannot judge them
  *   tone      – 'light' (default) or 'dark', to sit on the deep purple pages
  *   showMeter – include the strength bar (default true)
  */
-export default function PasswordRequirements({
-  password, context, omit = [], tone = 'light', showMeter = true,
-}) {
+export default function PasswordRequirements({ password, tone = 'light', showMeter = true }) {
   const dark = tone === 'dark';
   const skin = dark
     ? {
@@ -41,10 +37,7 @@ export default function PasswordRequirements({
         neutral: 'text-ink/20',
       };
 
-  // The reset-password screen has no account to compare against — the server
-  // still applies the omitted rule when it knows who the token belongs to.
-  const { rules: allRules } = evaluatePassword(password, context);
-  const rules = allRules.filter((r) => !omit.includes(r.id));
+  const { rules } = evaluatePassword(password);
   const strength  = passwordStrength(password);
   const touched   = Boolean(password);
   const met       = rules.filter((r) => r.ok).length;

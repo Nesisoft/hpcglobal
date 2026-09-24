@@ -9,22 +9,7 @@ import policy from '../../../shared/passwordPolicy.json';
  * the JSON, so only the handling of a rule *type* appears in both.
  */
 
-const lettersOnly = (s) => s.replace(/[^a-z]+$/, '');
-
-/** Words from a person's name and email that must not appear in their password. */
-export function identityTokens({ name, email } = {}) {
-  const parts = [];
-  if (name)  parts.push(...String(name).toLowerCase().split(/[^a-z]+/i));
-  if (email) {
-    const local = String(email).toLowerCase().split('@')[0];
-    parts.push(local, ...local.split(/[^a-z0-9]+/i));
-  }
-  // Anything shorter than four characters would fire on too many innocent
-  // passwords to be worth flagging.
-  return [...new Set(parts.filter((p) => p && p.length >= 4))];
-}
-
-function ruleHolds(rule, password, context) {
+function ruleHolds(rule, password) {
   switch (rule.type) {
     case 'minLength':
       return password.length >= rule.value;
@@ -32,27 +17,17 @@ function ruleHolds(rule, password, context) {
       return new RegExp(rule.value).test(password);
     case 'minDistinct':
       return new Set(password).size >= rule.value;
-    case 'notCommon': {
-      const lower   = password.toLowerCase();
-      const trimmed = lettersOnly(lower);
-      return !policy.commonPasswords.includes(lower)
-        && !(trimmed.length >= 4 && policy.commonPasswords.includes(trimmed));
-    }
-    case 'notPersonal': {
-      const lower = password.toLowerCase();
-      return !identityTokens(context).some((t) => lower.includes(t));
-    }
     default:
       return false;
   }
 }
 
-export function evaluatePassword(password, context = {}) {
+export function evaluatePassword(password) {
   const value = typeof password === 'string' ? password : '';
   const rules = policy.rules.map((rule) => ({
     id:    rule.id,
     label: rule.label,
-    ok:    value.length > 0 && ruleHolds(rule, value, context),
+    ok:    value.length > 0 && ruleHolds(rule, value),
   }));
   const failed = rules.filter((r) => !r.ok).map(({ id, label }) => ({ id, label }));
   return { rules, failed, ok: value.length > 0 && failed.length === 0 && value.length <= policy.maxLength };
