@@ -28,7 +28,7 @@ export default function ChangePassword() {
   const [error, setError]     = useState('');
   const [done, setDone]       = useState(false);
 
-  const meetsPolicy = evaluatePassword(next, { name: user?.name, email: user?.email }).ok;
+  const meetsPolicy = evaluatePassword(next).ok;
 
   const isHod  = user?.role === 'HOD';
   const forced = Boolean(user?.mustChangePassword);
@@ -39,7 +39,7 @@ export default function ChangePassword() {
     e.preventDefault();
     setError('');
 
-    const { failed } = evaluatePassword(next, { name: user?.name, email: user?.email });
+    const { failed } = evaluatePassword(next);
     if (failed.length) {
       setError(`Your new password still needs: ${failed[0].label.toLowerCase()}.`);
       return;
@@ -133,7 +133,7 @@ export default function ChangePassword() {
 
           {/* Ticks through as they type, and shows the same rules the server
               will apply when the form is submitted. */}
-          <PasswordRequirements password={next} context={{ name: user?.name, email: user?.email }} />
+          <PasswordRequirements password={next} />
 
           <FormField label="Confirm new password" required>
             <input

@@ -76,10 +76,7 @@ export default function AdminResetPassword() {
                 />
               </div>
 
-              {/* notPersonal is left out here: this screen does not know whose
-                  account the token belongs to. The server checks it once it
-                  resolves the token. */}
-              <PasswordRequirements password={password} tone="dark" omit={['notPersonal']} />
+              <PasswordRequirements password={password} tone="dark" />
               <div>
                 <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">Confirm Password</label>
                 <input

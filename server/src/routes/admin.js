@@ -1213,18 +1213,15 @@ const userFields = {
 };
 
 // A password an administrator types for someone else is a real password until
-// that person replaces it, so it meets the same rules. Checked with the new
-// account's own name and email as context.
-const strongPassword = (value, ctx, path) => {
-  const { ok, failed } = evaluatePassword(value, { name: ctx.name, email: ctx.email });
-  return ok ? null : { message: firstProblem(value, { name: ctx.name, email: ctx.email }), path, failed };
-};
-
+// that person replaces it, so it meets the same rules.
 const withStrongPassword = (schema) =>
   schema.superRefine((v, ctx) => {
-    if (!v.password) return;
-    const problem = strongPassword(v.password, v, ['password']);
-    if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem.message, path: problem.path });
+    if (!v.password || evaluatePassword(v.password).ok) return;
+    ctx.addIssue({
+      code:    z.ZodIssueCode.custom,
+      message: firstProblem(v.password),
+      path:    ['password'],
+    });
   });
 
 const userCreateSchema = withStrongPassword(

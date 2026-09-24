@@ -72,7 +72,7 @@ export default function AdminUsers() {
     if (!editTarget && !form.password) { setError('Password is required for new users.'); return; }
     if (form.password && form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
     if (form.password) {
-      const { failed } = evaluatePassword(form.password, { name: form.name, email: form.email });
+      const { failed } = evaluatePassword(form.password);
       if (failed.length) { setError(`That password still needs: ${failed[0].label.toLowerCase()}.`); return; }
     }
 
@@ -307,10 +307,7 @@ export default function AdminUsers() {
           </button>
 
           {form.password && (
-            <PasswordRequirements
-              password={form.password}
-              context={{ name: form.name, email: form.email }}
-            />
+            <PasswordRequirements password={form.password} />
           )}
         </div>
 
