@@ -14,6 +14,19 @@ const { withDbRetry, isRetryable } = require('../lib/dbRetry');
 router.use(verifyToken);
 router.use(requireRole('HOD'));
 
+// A HoD whose password was set for them by the office has to replace it before
+// the portal will do anything. Enforced here and not only in the browser, so
+// the rule holds however the request is made. The client recognises the code.
+router.use((req, res, next) => {
+  if (req.user?.mustChangePassword) {
+    return res.status(403).json({
+      code:    'PASSWORD_CHANGE_REQUIRED',
+      message: 'Please choose your own password before filing reports.',
+    });
+  }
+  next();
+});
+
 const dbStatus  = (err) => (isRetryable(err) ? 503 : 500);
 const dbMessage = (err) =>
   (isRetryable(err)

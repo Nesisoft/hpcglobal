@@ -17,7 +17,16 @@ const loginSchema = z.object({
 
 function signAccess(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name },
+    {
+      id:    user.id,
+      email: user.email,
+      role:  user.role,
+      name:  user.name,
+      // Gates the portal both here and in the browser. A refresh re-reads it
+      // from the database, so a flag an administrator sets takes effect within
+      // the access token's lifetime at the latest.
+      mustChangePassword: Boolean(user.mustChangePassword),
+    },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
@@ -77,6 +86,54 @@ router.post('/logout', verifyToken, (_req, res) => {
   res.json({ message: 'Logged out' });
 });
 
+// POST /api/auth/change-password — any signed-in account
+//
+// Serves two cases at once: the first sign-in of an account whose password was
+// typed by an administrator (mustChangePassword), and a routine change later.
+// Fresh tokens come back so the caller is not left holding one that still says
+// a change is required.
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password'),
+    newPassword:     z.string().min(8, 'New password must be at least 8 characters'),
+  })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    message: 'Choose a password different from your current one',
+    path: ['newPassword'],
+  });
+
+router.post('/change-password', verifyToken, validate(changePasswordSchema), async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await prisma.adminUser.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ message: 'Account not found' });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ message: 'Your current password is not correct' });
+
+    const updated = await prisma.adminUser.update({
+      where: { id: user.id },
+      data:  {
+        passwordHash:        await bcrypt.hash(newPassword, 12),
+        mustChangePassword:  false,
+        // Any outstanding reset link is void now that the password has changed.
+        passwordResetToken:  null,
+        passwordResetExpiry: null,
+      },
+    });
+
+    res.json({
+      message:      'Password updated',
+      accessToken:  signAccess(updated),
+      refreshToken: signRefresh(updated),
+    });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // POST /api/auth/forgot-password — public, rate-limit in production
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
@@ -116,7 +173,13 @@ router.post('/reset-password', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.adminUser.update({
       where: { id: user.id },
-      data:  { passwordHash, passwordResetToken: null, passwordResetExpiry: null },
+      data:  {
+        passwordHash,
+        passwordResetToken:  null,
+        passwordResetExpiry: null,
+        // They have just chosen this one themselves.
+        mustChangePassword:  false,
+      },
     });
     res.json({ message: 'Password updated. You can now log in.' });
   } catch (err) {

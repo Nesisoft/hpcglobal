@@ -90,6 +90,7 @@ export const adminApi = {
   login:   (data) => api.post('/auth/login', data),
   refresh: (data) => api.post('/auth/refresh', data),
   logout:  () => api.post('/auth/logout'),
+  changePassword: (d) => api.post('/auth/change-password', d),
 
   getDashboard: () => api.get('/admin/dashboard'),
 

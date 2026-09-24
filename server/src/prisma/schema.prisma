@@ -109,6 +109,10 @@ model AdminUser {
   posts               BlogPost[]
   // Required for HOD accounts, unused by the other roles.
   department          String?
+  // Set when an administrator sets the password on a HoD account. Cleared the
+  // moment that person chooses their own, so a password the office typed is
+  // never one they keep using.
+  mustChangePassword  Boolean            @default(false)
   reports             DepartmentReport[]
 }
 
