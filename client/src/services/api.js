@@ -123,6 +123,10 @@ export const adminApi = {
   getEventRsvps:  (id)   => api.get(`/admin/events/${id}/rsvps`),
   exportEventRsvps: (id) => api.get(`/admin/events/${id}/rsvps/export`, { responseType: 'blob' }),
   eventShareLink: (id, opts) => api.post(`/admin/events/${id}/share-link`, opts || {}),
+  getEventAudience:   (id, audience) => api.get(`/admin/events/${id}/audience`, { params: { audience } }),
+  getEventMessages:   (id)   => api.get(`/admin/events/${id}/messages`),
+  sendEventMessage:   (id,d) => api.post(`/admin/events/${id}/messages`, d),
+  resumeEventMessage: (id,m) => api.post(`/admin/events/${id}/messages/${m}/resume`),
 
   getGiving:     (p)   => api.get('/admin/giving', { params: p }),
   givingSummary: ()    => api.get('/admin/giving/summary'),

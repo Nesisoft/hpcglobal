@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download, Link2, Loader2 } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download, Link2, Loader2, Megaphone } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -11,6 +11,7 @@ import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
 import RichTextEditor from '../../components/admin/RichTextEditor';
 import EventCalendar from '../../components/admin/EventCalendar';
+import EventMessageComposer from '../../components/admin/EventMessageComposer';
 import Toggle from '../../components/admin/Toggle';
 import { List, CalendarDays } from 'lucide-react';
 import { downloadBlob } from '../../utils/download';
@@ -236,6 +237,7 @@ export default function AdminEvents() {
   const [error, setError]               = useState('');
   const [linkBusyId, setLinkBusyId]     = useState(null);
   const [linkCopiedId, setLinkCopiedId] = useState(null);
+  const [messageEvent, setMessageEvent] = useState(null);
 
   const fetchFn = useCallback(() => adminApi.getEvents(), []);
   const { data: rawEvents, loading, refetch } = useApi(fetchFn);
@@ -427,7 +429,7 @@ export default function AdminEvents() {
     {
       key: '_actions',
       label: '',
-      width: '150px',
+      width: '180px',
       render: (row) => (
         <div className="flex items-center gap-1">
           <button
@@ -448,6 +450,13 @@ export default function AdminEvents() {
             title="View RSVPs"
           >
             <Users size={14} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setMessageEvent(row); }}
+            className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors"
+            title="Message registrants"
+          >
+            <Megaphone size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openEdit(row); }}
@@ -542,6 +551,16 @@ export default function AdminEvents() {
             {saving ? 'Saving…' : <><Check size={14} /> {editTarget ? 'Save Changes' : 'Add Event'}</>}
           </button>
         </div>
+      </AdminModal>
+
+      {/* Message registrants */}
+      <AdminModal
+        open={!!messageEvent}
+        onClose={() => setMessageEvent(null)}
+        title={`Message registrants — ${messageEvent?.title ?? ''}`}
+        size="lg"
+      >
+        {messageEvent && <EventMessageComposer event={messageEvent} />}
       </AdminModal>
 
       {/* RSVPs viewer */}

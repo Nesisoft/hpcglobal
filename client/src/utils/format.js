@@ -31,3 +31,25 @@ export function withGmt(time) {
   if (!value) return '';
   return /\bgmt\b/i.test(value) ? value : `${value} GMT`;
 }
+
+/**
+ * How many SMS a message will be billed as.
+ *
+ * Mirrors smsSegments in server/src/services/sms.js so the count shown while
+ * typing matches what is actually sent. GSM-7 fits 160 characters in one
+ * segment; a single character outside it — a curly quote pasted from Word is
+ * the usual culprit — drops every segment to 70.
+ */
+export function smsSegments(text) {
+  const value = String(text ?? '');
+  if (!value) return 0;
+  const unicode = /[^\u0000-\u007F£¥èéùìòÇØøÅåÆæßÉ¤¡ÄÖÑÜ§¿äöñüà]/.test(value);
+  const per = unicode ? 70 : 160;
+  const perConcat = unicode ? 67 : 153;
+  return value.length <= per ? 1 : Math.ceil(value.length / perConcat);
+}
+
+/** True when the text contains a character that forces the 70-per-segment limit. */
+export function hasUnicodeSms(text) {
+  return /[^\u0000-\u007F£¥èéùìòÇØøÅåÆæßÉ¤¡ÄÖÑÜ§¿äöñüà]/.test(String(text ?? ''));
+}

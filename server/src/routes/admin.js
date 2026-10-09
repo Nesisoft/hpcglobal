@@ -10,6 +10,10 @@ const prisma = require('../lib/prisma');
 const { withDbRetry, isRetryable } = require('../lib/dbRetry');
 const { policy: passwordPolicy, evaluatePassword, firstProblem } = require('../lib/passwordPolicy');
 const { shorten, shareUrl } = require('../services/shortlink');
+const {
+  resolveRecipients, runCampaign, safeParseFailures,
+  smsTransportName, emailTransportName,
+} = require('../services/eventCampaign');
 
 // The origin a shared link should carry. APP_URL wins when set so links minted
 // from a preview deployment still point at the live site; otherwise the
@@ -392,6 +396,135 @@ router.post('/events/:id/share-link', async (req, res) => {
       await prisma.event.update({ where: { id: event.id }, data: { shortUrl: result.url } });
     }
     res.json({ ...result, longUrl, cached: false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─── Admin: bulk messages to an event's registrants ───────────────────────────
+
+const campaignSchema = z.object({
+  channel:  z.enum(['EMAIL', 'SMS', 'BOTH']),
+  audience: z.enum(['ALL', 'IN_PERSON', 'ONLINE']).default('ALL'),
+  subject:  z.string().trim().max(200).optional(),
+  bodyHtml: z.string().optional(),
+  bodySms:  z.string().trim().max(1600).optional(),
+}).superRefine((v, ctx) => {
+  const wantsEmail = v.channel === 'EMAIL' || v.channel === 'BOTH';
+  const wantsSms   = v.channel === 'SMS'   || v.channel === 'BOTH';
+  if (wantsEmail && !v.subject) {
+    ctx.addIssue({ code: 'custom', path: ['subject'], message: 'Please enter a subject for the email' });
+  }
+  if (wantsEmail && !plainLength(v.bodyHtml)) {
+    ctx.addIssue({ code: 'custom', path: ['bodyHtml'], message: 'Please write the email message' });
+  }
+  if (wantsSms && !v.bodySms) {
+    ctx.addIssue({ code: 'custom', path: ['bodySms'], message: 'Please write the SMS message' });
+  }
+});
+
+// A rich text editor leaves "<p><br></p>" behind when its content is deleted,
+// so an empty body is not an empty string.
+function plainLength(html) {
+  return String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length;
+}
+
+const withParsedFailures = (m) => ({ ...m, failures: safeParseFailures(m.failures) });
+
+// Who a message would reach, for the confirmation shown before sending. The
+// counts come from the same resolver the send uses, so the number quoted is
+// the number messaged.
+router.get('/events/:id/audience', async (req, res) => {
+  try {
+    const audience = ['ALL', 'IN_PERSON', 'ONLINE'].includes(req.query.audience)
+      ? req.query.audience
+      : 'ALL';
+    const { emails, phones, registrants } = await resolveRecipients(req.params.id, audience);
+    res.json({
+      registrants,
+      email: emails.length,
+      sms:   phones.length,
+      transports: { email: emailTransportName(), sms: smsTransportName() },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/events/:id/messages', async (req, res) => {
+  try {
+    const messages = await prisma.eventMessage.findMany({
+      where:   { eventId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+      take:    50,
+    });
+    res.json(messages.map(withParsedFailures));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * Send a bulk message to an event's registrants.
+ *
+ * The row is written before anything is sent, so a send that dies halfway
+ * still leaves a record of having been attempted. Everything after that is
+ * runCampaign's problem, including running out of time.
+ */
+router.post('/events/:id/messages', validate(campaignSchema), async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id }, select: { id: true },
+    });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    const { channel, audience, subject, bodyHtml, bodySms } = req.body;
+    const created = await prisma.eventMessage.create({
+      data: {
+        eventId:    event.id,
+        channel,
+        audience,
+        subject:    subject  || null,
+        bodyHtml:   bodyHtml || null,
+        bodySms:    bodySms  || null,
+        sentByName: req.user?.name || req.user?.email || null,
+      },
+    });
+
+    const result = await runCampaign(created.id);
+    res.status(201).json(withParsedFailures(result));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * Carry on a send that did not finish.
+ *
+ * Resuming picks up from the stored cursor, so nobody already messaged is
+ * messaged again. Two states qualify. PARTIAL is a run that stopped cleanly —
+ * out of time, or the provider was down. SENDING is a run the platform killed
+ * before it could record anything, which would otherwise be stranded with no
+ * way out; its cursor is still whatever the last finished chunk wrote, so
+ * resuming it is just as safe. A finished campaign is refused: re-running one
+ * would message the whole congregation twice.
+ */
+router.post('/events/:id/messages/:messageId/resume', async (req, res) => {
+  try {
+    const message = await prisma.eventMessage.findFirst({
+      where:  { id: req.params.messageId, eventId: req.params.id },
+      select: { id: true, status: true },
+    });
+    if (!message) return res.status(404).json({ message: 'Message not found' });
+    if (message.status !== 'PARTIAL' && message.status !== 'SENDING') {
+      return res.status(409).json({ message: 'This message has already finished sending.' });
+    }
+    const result = await runCampaign(message.id);
+    res.json(withParsedFailures(result));
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
