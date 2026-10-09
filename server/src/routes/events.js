@@ -3,34 +3,18 @@ const { z }   = require('zod');
 
 const { verifyToken }  = require('../middleware/auth');
 const { validate }     = require('../middleware/validate');
-const emailService     = require('../services/email');
-const { sendSms }      = require('../services/sms');
+const { notifyRegistrant } = require('../services/eventNotify');
 
 const prisma = require('../lib/prisma');
 
-const eventSchema = z.object({
-  title:       z.string().min(1),
-  description: z.string().min(1),
-  startDate:   z.string(),
-  endDate:     z.string().optional(),
-  timeGmt:     z.string(),
-  timeEst:     z.string().optional(),
-  timeBst:     z.string().optional(),
-  venue:       z.string().optional(),
-  isOnline:    z.boolean().default(false),
-  joinLink:    z.string().optional(),
-  imageUrl:    z.string().optional(),
-  category:    z.enum(['SERVICE','CONFERENCE','YOUTH','WOMENS','MENS','ONLINE','OTHER']),
-  isFeatured:  z.boolean().default(false),
-  isPublished: z.boolean().default(false),
-  speakers:    z.string().optional(),
-});
+const blankToUndefined = (v) =>
+  (typeof v === 'string' && v.trim() === '' ? undefined : v);
 
 const rsvpSchema = z.object({
-  name:       z.string().min(1),
-  email:      z.string().email().optional(),
-  phone:      z.string().min(1),
-  attendance: z.enum(['in-person', 'online']),
+  name:       z.string().trim().min(1, 'Please enter your name'),
+  email:      z.preprocess(blankToUndefined, z.string().trim().email('Please enter a valid email address').optional()),
+  phone:      z.preprocess(blankToUndefined, z.string().trim().min(1).optional()),
+  attendance: z.enum(['in-person', 'online']).default('in-person'),
 });
 
 // GET /api/events — public upcoming
@@ -71,32 +55,52 @@ router.get('/:slug', async (req, res) => {
 // POST /api/events/:id/rsvp — public
 router.post('/:id/rsvp', validate(rsvpSchema), async (req, res) => {
   try {
-    const rsvp = await prisma.eventRsvp.create({
-      data: { ...req.body, eventId: req.params.id },
-    });
-    res.status(201).json(rsvp);
+    const { name, email, phone, attendance } = req.body;
 
-    // Confirm to the attendee — non-fatal
-    try {
-      const event = await prisma.event.findUnique({
-        where: { id: req.params.id },
-        select: { title: true },
-      });
-      const title = event?.title || 'our event';
-      if (req.body.email) {
-        await emailService.sendEventRsvpConfirmation(req.body.email, req.body.name, title, req.body.attendance);
-      }
-      if (req.body.phone) {
-        await sendSms(
-          req.body.phone,
-          `HPC Global: Hi ${req.body.name}, your seat for "${title}" is reserved. See you there! God bless you.`
-        );
-      }
-    } catch (notifyErr) {
-      console.error('RSVP notify error (non-fatal):', notifyErr.message);
+    const event = await prisma.event.findUnique({
+      where:  { id: req.params.id },
+      select: {
+        id: true, title: true, slug: true, startDate: true, timeGmt: true,
+        venue: true, isOnline: true, joinLink: true,
+        requireEmail: true, requirePhone: true, isPublished: true,
+      },
+    });
+    if (!event || !event.isPublished) {
+      return res.status(404).json({ message: 'Event not found' });
     }
+
+    // Which details this event insists on is the admin's choice per event.
+    if (event.requireEmail && !email) {
+      return res.status(400).json({ message: 'An email address is required to register for this event' });
+    }
+    if (event.requirePhone && !phone) {
+      return res.status(400).json({ message: 'A phone number is required to register for this event' });
+    }
+    // Even when both are optional, we need one way to send the confirmation
+    // and anything the church sends later.
+    if (!email && !phone) {
+      return res.status(400).json({ message: 'Please give us either an email address or a phone number' });
+    }
+
+    const rsvp = await prisma.eventRsvp.create({
+      data: {
+        eventId:    event.id,
+        name,
+        email:      email ?? null,
+        phone:      phone ?? null,
+        attendance: event.isOnline ? attendance : 'in-person',
+      },
+    });
+
+    // Confirmations are awaited rather than fired after the response: this runs
+    // on a serverless function, which may freeze the moment the response is
+    // sent, and work left in flight simply never happens. Bounded and
+    // non-fatal — the registration is already saved either way.
+    const delivery = await notifyRegistrant(event, rsvp);
+
+    res.status(201).json({ ...rsvp, delivery });
   } catch (err) {
-    console.error(err);
+    console.error('RSVP error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

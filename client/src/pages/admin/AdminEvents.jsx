@@ -52,6 +52,8 @@ const EMPTY_FORM = {
   category:    'SERVICE',
   isFeatured:  false,
   isPublished: false,
+  requireEmail: false,
+  requirePhone: true,
 };
 
 function EventForm({ form, setForm }) {
@@ -161,6 +163,36 @@ function EventForm({ form, setForm }) {
         />
       </div>
 
+      {/* What the public registration form will insist on. Whatever is
+          collected is also how the church can message registrants later, so
+          at least one of the two always has to come through. */}
+      <div className="pt-2 border-t border-purple-brand/8">
+        <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-ink/50 mb-2">
+          Registration form
+        </p>
+        <div className="flex items-center gap-6 flex-wrap">
+          <Toggle
+            checked={form.requirePhone}
+            onChange={(v) => setForm((f) => ({ ...f, requirePhone: v }))}
+            label="Phone number required"
+          />
+          <Toggle
+            checked={form.requireEmail}
+            onChange={(v) => setForm((f) => ({ ...f, requireEmail: v }))}
+            label="Email address required"
+          />
+        </div>
+        <p className="text-[11px] text-ink/40 font-body mt-2">
+          {form.requireEmail && form.requirePhone
+            ? 'Registrants must give both — you can reach everyone by email and SMS.'
+            : form.requireEmail
+              ? 'Email is required; phone is optional.'
+              : form.requirePhone
+                ? 'Phone is required; email is optional.'
+                : 'Both optional — registrants must still give one of the two.'}
+        </p>
+      </div>
+
       <div className="flex items-center gap-6 pt-1">
         <Toggle
           checked={form.isPublished}
@@ -179,7 +211,7 @@ function EventForm({ form, setForm }) {
 
 const RSVP_COLUMNS = [
   { key: 'name',       label: 'Name'       },
-  { key: 'phone',      label: 'Phone'      },
+  { key: 'phone',      label: 'Phone', render: (r) => r.phone || '—' },
   { key: 'email',      label: 'Email'      },
   { key: 'attendance', label: 'Attendance' },
   {
@@ -253,6 +285,8 @@ export default function AdminEvents() {
       category:    row.category,
       isFeatured:  row.isFeatured,
       isPublished: row.isPublished,
+      requireEmail: row.requireEmail ?? false,
+      requirePhone: row.requirePhone ?? true,
     });
     setError('');
     setModalOpen(true);

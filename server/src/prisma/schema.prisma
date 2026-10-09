@@ -204,9 +204,16 @@ model Event {
   isFeatured  Boolean       @default(false)
   isPublished Boolean       @default(false)
   speakers    String? // JSON array: [{name, role}]
-  rsvps       EventRsvp[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+
+  // Which contact details this event's registration form insists on. Phone
+  // defaults true because that was the hard-coded behaviour before these
+  // existed; email defaults false because its label already said optional.
+  requireEmail Boolean @default(false)
+  requirePhone Boolean @default(true)
+
+  rsvps     EventRsvp[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 model EventRsvp {
@@ -215,9 +222,13 @@ model EventRsvp {
   eventId    String
   name       String
   email      String?
-  phone      String
+  // Nullable now that an event may ask for email only. The route still insists
+  // on at least one way to reach the person.
+  phone      String?
   attendance String
   createdAt  DateTime @default(now())
+
+  @@index([eventId, createdAt])
 }
 
 model Sermon {

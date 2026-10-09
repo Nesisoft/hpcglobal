@@ -1,24 +1,137 @@
 const nodemailer = require('nodemailer');
+const axios      = require('axios');
 require('dotenv').config();
+
+/**
+ * Outgoing email.
+ *
+ * Every message goes through sendMail(), which picks a transport at call time:
+ * Resend when RESEND_API_KEY is configured, otherwise the SMTP account. Having
+ * one primitive is what lets the bulk sender reuse exactly the path a single
+ * confirmation takes, and what keeps the choice of provider out of the dozen
+ * message templates below.
+ */
 
 const SMTP_PORT = Number(process.env.SMTP_PORT) || 587;
 
-const transporter = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST,
-  port:   SMTP_PORT,
-  secure: SMTP_PORT === 465,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: { rejectUnauthorized: false },
-});
+let smtpTransport = null;
+function smtp() {
+  if (!smtpTransport) {
+    smtpTransport = nodemailer.createTransport({
+      host:   process.env.SMTP_HOST,
+      port:   SMTP_PORT,
+      secure: SMTP_PORT === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      tls: { rejectUnauthorized: false },
+    });
+  }
+  return smtpTransport;
+}
 
-const FROM = process.env.SMTP_FROM || 'noreply@hpcglobal.org';
+const FROM      = process.env.SMTP_FROM || 'noreply@hpcglobal.org';
+const FROM_NAME = process.env.EMAIL_FROM_NAME || 'HPC Global';
+const fromHeader = () => `${FROM_NAME} <${FROM}>`;
+
+/** Which transport is live, for the admin to see without exposing keys. */
+function emailTransportName() {
+  return process.env.RESEND_API_KEY ? 'resend' : (process.env.SMTP_HOST ? 'smtp' : 'none');
+}
+
+const RESEND_ENDPOINT       = 'https://api.resend.com/emails';
+const RESEND_BATCH_ENDPOINT = 'https://api.resend.com/emails/batch';
+/** Resend's batch endpoint caps a single request; we chunk to stay under it. */
+const RESEND_BATCH_MAX = 100;
+
+function resendHeaders(extra = {}) {
+  return {
+    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+    'Content-Type': 'application/json',
+    // A request without a User-Agent is reported to be refused outright.
+    'User-Agent': 'hpcglobal-server',
+    ...extra,
+  };
+}
+
+/** Resend reports failures in the body, so a 2xx alone is not success. */
+function resendError(err) {
+  const data = err?.response?.data;
+  const detail = data?.message || data?.name || err?.message || 'unknown error';
+  // Never let the key reach a log line.
+  return new Error(`Resend: ${detail}`);
+}
+
+async function sendViaResend({ to, subject, html, text, replyTo, idempotencyKey }) {
+  try {
+    const { data } = await axios.post(
+      RESEND_ENDPOINT,
+      {
+        from:    fromHeader(),
+        to:      Array.isArray(to) ? to : [to],
+        subject,
+        html,
+        ...(text ? { text } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
+      },
+      {
+        // Keyed to the thing being confirmed, so a retry or a double submit
+        // cannot send the same person the same message twice.
+        headers: resendHeaders(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+        timeout: 15000,
+      },
+    );
+    return data;
+  } catch (err) {
+    throw resendError(err);
+  }
+}
+
+/**
+ * Send many distinct messages in one call. Each recipient gets their own
+ * message — nobody can see who else was written to.
+ * @param {Array<{to: string, subject: string, html: string}>} messages
+ */
+async function sendBatchViaResend(messages) {
+  const payload = messages.map((m) => ({
+    from:    fromHeader(),
+    to:      [m.to],
+    subject: m.subject,
+    html:    m.html,
+    ...(m.text ? { text: m.text } : {}),
+  }));
+  try {
+    const { data } = await axios.post(RESEND_BATCH_ENDPOINT, payload, {
+      // Strict validation is the default and fails the WHOLE batch over one
+      // malformed address. These addresses were typed by the public into a
+      // registration form, so permissive is the only workable setting: the bad
+      // ones come back in errors[] and the rest still go out.
+      headers: resendHeaders({ 'x-batch-validation': 'permissive' }),
+      timeout: 20000,
+    });
+    return data;
+  } catch (err) {
+    throw resendError(err);
+  }
+}
+
+/**
+ * Send one message. The single path every template and the bulk sender use.
+ * @param {{to: string, subject: string, html: string, text?: string, replyTo?: string}} msg
+ */
+async function sendMail({ to, subject, html, text, replyTo, idempotencyKey }) {
+  if (!to) throw new Error('sendMail: no recipient');
+
+  const transport = emailTransportName();
+  if (transport === 'none') {
+    console.warn(`No email transport configured — skipping "${subject}" to ${to}`);
+    return { skipped: true };
+  }
+  if (transport === 'resend') return sendViaResend({ to, subject, html, text, replyTo, idempotencyKey });
+
+  return smtp().sendMail({ from: fromHeader(), to, subject, html, text, replyTo });
+}
 
 async function sendAutoReply(toEmail, toName) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: 'We received your message — HPC Global',
     html: `
@@ -33,8 +146,7 @@ async function sendAutoReply(toEmail, toName) {
 
 async function notifyOffice(msg) {
   const to = process.env.OFFICE_EMAIL || FROM;
-  await transporter.sendMail({
-    from:    `HPC Website <${FROM}>`,
+  await sendMail({
     to,
     subject: `New contact message: ${msg.type} — ${msg.name}`,
     html: `
@@ -48,8 +160,7 @@ async function notifyOffice(msg) {
 }
 
 async function sendPasswordReset(toEmail, resetUrl) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: 'Reset your admin password — HPC Global',
     html: `
@@ -62,8 +173,7 @@ async function sendPasswordReset(toEmail, resetUrl) {
 }
 
 async function sendPartnerApplicationConfirmation(toEmail, firstName) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: 'Your Partnership Application — HPC Global',
     html: `
@@ -78,8 +188,7 @@ async function sendPartnerApplicationConfirmation(toEmail, firstName) {
 
 async function sendPartnerActivation(toEmail, firstName, password) {
   const appUrl = process.env.APP_URL || 'https://www.hpcglobal.org';
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: 'Your HPC Global Partner Account is Ready',
     html: `
@@ -103,24 +212,16 @@ async function sendPartnerActivation(toEmail, firstName, password) {
   });
 }
 
-async function sendEventRsvpConfirmation(toEmail, name, eventTitle, attendance) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
-    to:      toEmail,
-    subject: `Your seat is reserved — ${eventTitle}`,
-    html: `
-      <p>Dear ${name},</p>
-      <p>Your seat for <strong>${eventTitle}</strong> has been reserved${attendance ? ` (${attendance})` : ''}. We look forward to seeing you there.</p>
-      <p>If your plans change, simply reply to this email to let us know.</p>
-      <p>God bless you.</p>
-      <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
-    `,
-  });
+/**
+ * The event RSVP confirmation. The message body is composed in
+ * services/eventNotify.js, which owns what the church says about an event.
+ */
+async function sendEventRsvpConfirmation({ to, subject, html, idempotencyKey }) {
+  return sendMail({ to, subject, html, idempotencyKey });
 }
 
 async function sendPrayerConfirmation(toEmail, name) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: 'We are praying with you — HPC Global',
     html: `
@@ -133,8 +234,7 @@ async function sendPrayerConfirmation(toEmail, name) {
 }
 
 async function sendAppointmentConfirmation(toEmail, name, whenLabel, reason) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: 'Your Appointment Request — HPC Global',
     html: `
@@ -149,8 +249,7 @@ async function sendAppointmentConfirmation(toEmail, name, whenLabel, reason) {
 }
 
 async function sendAppointmentStatus(toEmail, name, whenLabel, statusWord) {
-  await transporter.sendMail({
-    from:    `HPC Global <${FROM}>`,
+  await sendMail({
     to:      toEmail,
     subject: `Your Appointment is ${statusWord === 'confirmed' ? 'Confirmed' : 'Cancelled'} — HPC Global`,
     html: `
@@ -167,8 +266,7 @@ async function sendAppointmentStatus(toEmail, name, whenLabel, statusWord) {
 
 async function notifyPrayerRequest(prayer) {
   const to = process.env.OFFICE_EMAIL || FROM;
-  await transporter.sendMail({
-    from:    `HPC Website <${FROM}>`,
+  await sendMail({
     to,
     subject: `New prayer request: ${prayer.category}`,
     html: `
@@ -181,4 +279,4 @@ async function notifyPrayerRequest(prayer) {
   });
 }
 
-module.exports = { sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation, sendEventRsvpConfirmation, sendPrayerConfirmation, sendAppointmentConfirmation, sendAppointmentStatus };
+module.exports = { sendMail, sendBatchViaResend, emailTransportName, RESEND_BATCH_MAX, sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendPartnerActivation, sendEventRsvpConfirmation, sendPrayerConfirmation, sendAppointmentConfirmation, sendAppointmentStatus };

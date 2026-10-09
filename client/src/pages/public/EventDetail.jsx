@@ -4,15 +4,19 @@ import { Calendar, MapPin, Wifi, Clock, ChevronLeft, CheckCircle, ExternalLink }
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import RichContent from '../../components/ui/RichContent';
+import { withGmt } from '../../utils/format';
 
+// These badges sit on top of the event photograph, not on a white card, so they
+// need an opaque pill. The earlier tinted set (bg-gold/10 text-gold and friends)
+// measured 1.5:1 against a bright poster — effectively invisible.
 const CATEGORY_COLORS = {
-  SERVICE:    'bg-purple-brand/10 text-purple-brand',
-  CONFERENCE: 'bg-gold/10 text-gold',
-  YOUTH:      'bg-blue-50 text-blue-600',
-  WOMENS:     'bg-pink-50 text-pink-600',
-  MENS:       'bg-slate-100 text-slate-600',
-  ONLINE:     'bg-emerald-50 text-emerald-600',
-  OTHER:      'bg-cream text-ink/60',
+  SERVICE:    'bg-white text-purple-brand',
+  CONFERENCE: 'bg-gold text-purple-deep',
+  YOUTH:      'bg-white text-blue-700',
+  WOMENS:     'bg-white text-pink-700',
+  MENS:       'bg-white text-slate-700',
+  ONLINE:     'bg-white text-emerald-700',
+  OTHER:      'bg-white text-ink/80',
 };
 const CATEGORY_LABELS = {
   SERVICE:'Service', CONFERENCE:'Conference', YOUTH:'Youth',
@@ -77,7 +81,15 @@ export default function EventDetail() {
 
   async function handleRsvp(e) {
     e.preventDefault();
-    if (!form.name || !form.phone) { setRsvpError('Name and phone are required.'); return; }
+    if (!form.name.trim()) { setRsvpError('Please enter your name.'); return; }
+    if (event.requirePhone && !form.phone.trim()) { setRsvpError('A phone number is required for this event.'); return; }
+    if (event.requireEmail && !form.email.trim()) { setRsvpError('An email address is required for this event.'); return; }
+    // Whatever the event asks for, we need one way to send the confirmation
+    // and anything the church sends later.
+    if (!form.phone.trim() && !form.email.trim()) {
+      setRsvpError('Please give us either a phone number or an email address.');
+      return;
+    }
     setSubmitting(true);
     setRsvpError('');
     try {
@@ -136,7 +148,7 @@ export default function EventDetail() {
             <ChevronLeft size={14} /> All Events
           </Link>
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <span className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${CATEGORY_COLORS[event.category] ?? 'bg-white/10 text-white/60'}`}>
+            <span className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full shadow-sm ${CATEGORY_COLORS[event.category] ?? 'bg-white text-ink/80'}`}>
               {CATEGORY_LABELS[event.category] ?? event.category}
             </span>
             {event.isFeatured && (
@@ -154,7 +166,7 @@ export default function EventDetail() {
               <Calendar size={14} /> {fmtDate(event.startDate)}
             </span>
             <span className="flex items-center gap-1.5">
-              <Clock size={14} /> {event.timeGmt} GMT
+              <Clock size={14} /> {withGmt(event.timeGmt)}
               {event.timeEst && ` · ${event.timeEst} EST`}
               {event.timeBst && ` · ${event.timeBst} BST`}
             </span>
@@ -248,15 +260,33 @@ export default function EventDetail() {
                     <form onSubmit={handleRsvp} className="space-y-3">
                       <div>
                         <label className="section-label block mb-1.5">Full Name *</label>
-                        <input className="input" value={form.name} onChange={set('name')} placeholder="Your name" />
+                        <input className="input" value={form.name} onChange={set('name')} placeholder="Your name" required />
                       </div>
                       <div>
-                        <label className="section-label block mb-1.5">Phone *</label>
-                        <input type="tel" className="input" value={form.phone} onChange={set('phone')} placeholder="+233..." />
+                        <label className="section-label block mb-1.5">
+                          Phone {event.requirePhone ? '*' : '(optional)'}
+                        </label>
+                        <input
+                          type="tel"
+                          className="input"
+                          value={form.phone}
+                          onChange={set('phone')}
+                          placeholder="+233..."
+                          required={event.requirePhone}
+                        />
                       </div>
                       <div>
-                        <label className="section-label block mb-1.5">Email (optional)</label>
-                        <input type="email" className="input" value={form.email} onChange={set('email')} placeholder="you@example.com" />
+                        <label className="section-label block mb-1.5">
+                          Email {event.requireEmail ? '*' : '(optional)'}
+                        </label>
+                        <input
+                          type="email"
+                          className="input"
+                          value={form.email}
+                          onChange={set('email')}
+                          placeholder="you@example.com"
+                          required={event.requireEmail}
+                        />
                       </div>
                       {event.isOnline && (
                         <div>

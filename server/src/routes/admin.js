@@ -292,6 +292,7 @@ function sanitizeEvent(body) {
   const {
     title, description, startDate, endDate, timeGmt, timeEst, timeBst,
     venue, isOnline, joinLink, imageUrl, category, isFeatured, isPublished,
+    requireEmail, requirePhone,
   } = body;
   return {
     title,
@@ -308,6 +309,9 @@ function sanitizeEvent(body) {
     category,
     isFeatured:  Boolean(isFeatured),
     isPublished: Boolean(isPublished),
+    // Which contact details this event's registration form insists on.
+    requireEmail: Boolean(requireEmail),
+    requirePhone: Boolean(requirePhone),
   };
 }
 
