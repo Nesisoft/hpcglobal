@@ -211,6 +211,11 @@ model Event {
   requireEmail Boolean @default(false)
   requirePhone Boolean @default(true)
 
+  // The shareable link, minted once and reused. Stored because every mint
+  // spends a shortener quota, and because a link already sent out must keep
+  // pointing at the same place.
+  shortUrl String?
+
   rsvps     EventRsvp[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt

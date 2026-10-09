@@ -9,6 +9,16 @@ const { validate }     = require('../middleware/validate');
 const prisma = require('../lib/prisma');
 const { withDbRetry, isRetryable } = require('../lib/dbRetry');
 const { policy: passwordPolicy, evaluatePassword, firstProblem } = require('../lib/passwordPolicy');
+const { shorten, shareUrl } = require('../services/shortlink');
+
+// The origin a shared link should carry. APP_URL wins when set so links minted
+// from a preview deployment still point at the live site; otherwise the
+// request's own host keeps local development working.
+function shareOrigin(req) {
+  if (process.env.APP_URL) return process.env.APP_URL;
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+  return `${proto}://${req.get('host')}`;
+}
 
 // All admin routes require auth
 router.use(verifyToken);
@@ -346,6 +356,42 @@ router.delete('/events/:id', async (req, res) => {
   try {
     await prisma.event.delete({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * Mint — or return — the shareable link for an event.
+ *
+ * The link is stored on the event rather than built fresh each time. Two
+ * reasons: every mint spends a slot of the shortener's monthly quota, and a
+ * link already sent to a WhatsApp group must keep working and keep pointing
+ * at the same place. Pass { refresh: true } to deliberately mint a new one.
+ *
+ * The long URL is always returned alongside, because it is the one carrying
+ * the preview tags and it works whether or not a shortener is configured.
+ */
+router.post('/events/:id/share-link', async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where:  { id: req.params.id },
+      select: { id: true, slug: true, shortUrl: true },
+    });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    const longUrl = shareUrl(event.slug, shareOrigin(req));
+
+    if (event.shortUrl && !req.body?.refresh) {
+      return res.json({ url: event.shortUrl, longUrl, shortened: event.shortUrl !== longUrl, cached: true });
+    }
+
+    const result = await shorten(longUrl, { alias: event.slug });
+    if (result.shortened) {
+      await prisma.event.update({ where: { id: event.id }, data: { shortUrl: result.url } });
+    }
+    res.json({ ...result, longUrl, cached: false });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

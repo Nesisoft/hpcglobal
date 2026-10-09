@@ -122,6 +122,7 @@ export const adminApi = {
   deleteEvent:    (id)   => api.delete(`/admin/events/${id}`),
   getEventRsvps:  (id)   => api.get(`/admin/events/${id}/rsvps`),
   exportEventRsvps: (id) => api.get(`/admin/events/${id}/rsvps/export`, { responseType: 'blob' }),
+  eventShareLink: (id, opts) => api.post(`/admin/events/${id}/share-link`, opts || {}),
 
   getGiving:     (p)   => api.get('/admin/giving', { params: p }),
   givingSummary: ()    => api.get('/admin/giving/summary'),

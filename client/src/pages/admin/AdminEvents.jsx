@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download, Link2, Loader2 } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -14,6 +14,7 @@ import EventCalendar from '../../components/admin/EventCalendar';
 import Toggle from '../../components/admin/Toggle';
 import { List, CalendarDays } from 'lucide-react';
 import { downloadBlob } from '../../utils/download';
+import { copyText } from '../../utils/clipboard';
 
 const CATEGORIES = ['SERVICE', 'CONFERENCE', 'YOUTH', 'WOMENS', 'MENS', 'ONLINE', 'OTHER'];
 
@@ -233,6 +234,8 @@ export default function AdminEvents() {
   const [rsvpEvent, setRsvpEvent]       = useState(null);
   const [viewMode, setViewMode]         = useState('list');
   const [error, setError]               = useState('');
+  const [linkBusyId, setLinkBusyId]     = useState(null);
+  const [linkCopiedId, setLinkCopiedId] = useState(null);
 
   const fetchFn = useCallback(() => adminApi.getEvents(), []);
   const { data: rawEvents, loading, refetch } = useApi(fetchFn);
@@ -244,6 +247,40 @@ export default function AdminEvents() {
   );
   const { data: rsvpData, loading: rsvpsLoading } = useApi(fetchRsvpsFn, [rsvpEvent]);
   const rsvps = Array.isArray(rsvpData) ? rsvpData : (rsvpData?.data ?? []);
+
+  /**
+   * Fetch the event's shareable link and put it on the clipboard.
+   *
+   * The server mints the link once and remembers it, so pressing this twice
+   * gives the same link rather than burning a second one. An unpublished event
+   * is caught here: its share page deliberately 404s, so a link to it would be
+   * broken the moment it was pasted anywhere.
+   */
+  async function handleCopyLink(row) {
+    if (!row.isPublished) {
+      alert('Publish this event first — until then its share page is not public.');
+      return;
+    }
+    setLinkBusyId(row.id);
+    try {
+      const { data } = await adminApi.eventShareLink(row.id);
+      const link = data?.url || data?.longUrl;
+      if (!link) throw new Error('no link');
+      const copied = await copyText(link);
+      if (copied) {
+        setLinkCopiedId(row.id);
+        setTimeout(() => setLinkCopiedId((id) => (id === row.id ? null : id)), 2000);
+      } else {
+        // Copying can be blocked; showing the link still lets them use it.
+        window.prompt('Copy this link:', link);
+      }
+      refetch();
+    } catch {
+      alert('Could not create the share link. Please try again.');
+    } finally {
+      setLinkBusyId(null);
+    }
+  }
 
   async function handleExportRsvps() {
     try {
@@ -390,9 +427,21 @@ export default function AdminEvents() {
     {
       key: '_actions',
       label: '',
-      width: '120px',
+      width: '150px',
       render: (row) => (
         <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleCopyLink(row); }}
+            disabled={linkBusyId === row.id}
+            className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors disabled:opacity-50"
+            title={linkCopiedId === row.id ? 'Link copied' : 'Copy share link'}
+          >
+            {linkBusyId === row.id
+              ? <Loader2 size={14} className="animate-spin" />
+              : linkCopiedId === row.id
+                ? <Check size={14} className="text-emerald-600" />
+                : <Link2 size={14} />}
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); setRsvpEvent(row); }}
             className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors"
