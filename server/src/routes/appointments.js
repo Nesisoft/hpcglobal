@@ -7,6 +7,7 @@ const emailService    = require('../services/email');
 const { sendSms }     = require('../services/sms');
 
 const prisma = require('../lib/prisma');
+const { sendNotifications } = require('../lib/notify');
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_AHEAD = 21; // how far into the future bookings are offered
@@ -67,18 +68,48 @@ router.get('/slots', async (_req, res) => {
 
 // ─── Public: book an appointment ──────────────────────────────────────────────
 const bookSchema = z.object({
-  name:   z.string().min(1),
+  name:   z.string().min(1).max(100),
   email:  z.string().email(),
-  phone:  z.string().min(1),
-  date:   z.string(),  // YYYY-MM-DD
-  time:   z.string(),  // HH:mm
-  reason: z.string().min(1),
-  notes:  z.string().optional(),
+  phone:  z.string().min(1).max(30),
+  date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),  // YYYY-MM-DD
+  time:   z.string().regex(/^\d{2}:\d{2}$/),         // HH:mm
+  reason: z.string().min(1).max(200),
+  notes:  z.string().max(2000).optional(),
 });
+
+/**
+ * Whether `date` at `time` is one of the slots GET /slots offers: inside the
+ * booking horizon, on an active availability window for that weekday, and on
+ * that window's slot grid. Taken slots are left to the unique index.
+ *
+ * Without this the date and time are whatever the request says, so a script
+ * could create endless distinct bookings — each one emailing and texting the
+ * contact details it supplied.
+ */
+async function isOfferedSlot(date, time) {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const horizon = [];
+  for (let i = 1; i <= DAYS_AHEAD; i++) {
+    const day = new Date(start); day.setDate(day.getDate() + i);
+    horizon.push(ymd(day));
+  }
+  if (!horizon.includes(date)) return false;
+
+  const dow  = new Date(`${date}T00:00:00.000Z`).getUTCDay();
+  const wins = await prisma.appointmentAvailability.findMany({ where: { isActive: true, dayOfWeek: dow } });
+  const t = toMin(time);
+  return wins.some((w) => {
+    const from = toMin(w.startTime);
+    return t >= from && t + w.slotMinutes <= toMin(w.endTime) && (t - from) % w.slotMinutes === 0;
+  });
+}
 
 router.post('/', validate(bookSchema), async (req, res) => {
   try {
     const { name, email, phone, date, time, reason, notes } = req.body;
+    if (!(await isOfferedSlot(date, time))) {
+      return res.status(409).json({ message: 'Sorry, that time is not available. Please choose another slot.' });
+    }
     const day = new Date(`${date}T00:00:00.000Z`);
 
     let appt;
@@ -93,19 +124,16 @@ router.post('/', validate(bookSchema), async (req, res) => {
       throw e;
     }
 
-    res.status(201).json({ message: 'Your appointment request has been received.', id: appt.id });
-
-    // Notify the requester + office — non-fatal
+    // Notify the requester + office — non-fatal, and sent before responding
+    // because Vercel may freeze the function once it has responded.
     const whenLabel = `${day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${time} GMT`;
-    try {
-      await emailService.sendAppointmentConfirmation(email, name, whenLabel, reason);
-      await sendSms(phone, `HPC Global: Hi ${name}, your appointment request for ${whenLabel} has been received. We will confirm shortly. God bless you.`);
-      if (process.env.OFFICE_PHONE) {
-        await sendSms(process.env.OFFICE_PHONE, `HPC Appointment: ${name} requested ${whenLabel}. Reason: ${reason}. Phone: ${phone}`);
-      }
-    } catch (notifyErr) {
-      console.error('Appointment notify error (non-fatal):', notifyErr.message);
-    }
+    await sendNotifications('Appointment request', [
+      ['confirmation email', () => emailService.sendAppointmentConfirmation(email, name, whenLabel, reason)],
+      ['confirmation SMS',   () => sendSms(phone, `HPC Global: Hi ${name}, your appointment request for ${whenLabel} has been received. We will confirm shortly. God bless you.`)],
+      process.env.OFFICE_PHONE && ['office SMS', () => sendSms(process.env.OFFICE_PHONE, `HPC Appointment: ${name} requested ${whenLabel}. Reason: ${reason}. Phone: ${phone}`)],
+    ]);
+
+    res.status(201).json({ message: 'Your appointment request has been received.', id: appt.id });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -142,17 +170,17 @@ router.put('/:id', verifyToken, async (req, res) => {
     });
 
     // Notify the requester when confirmed/cancelled — non-fatal
-    try {
-      const whenLabel = `${new Date(updated.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${updated.time} GMT`;
-      if (updated.status === 'CONFIRMED') {
-        await emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'confirmed');
-        await sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} is CONFIRMED. See you then. God bless you.`);
-      } else if (updated.status === 'CANCELLED') {
-        await emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'cancelled');
-        await sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} has been cancelled. Please contact us to reschedule.`);
-      }
-    } catch (notifyErr) {
-      console.error('Appointment status notify error (non-fatal):', notifyErr.message);
+    const whenLabel = `${new Date(updated.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${updated.time} GMT`;
+    if (updated.status === 'CONFIRMED') {
+      await sendNotifications('Appointment confirmed', [
+        ['requester email', () => emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'confirmed')],
+        ['requester SMS',   () => sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} is CONFIRMED. See you then. God bless you.`)],
+      ]);
+    } else if (updated.status === 'CANCELLED') {
+      await sendNotifications('Appointment cancelled', [
+        ['requester email', () => emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'cancelled')],
+        ['requester SMS',   () => sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} has been cancelled. Please contact us to reschedule.`)],
+      ]);
     }
 
     res.json(updated);

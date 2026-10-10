@@ -21,6 +21,7 @@
         "@hookform/resolvers": "^5.2.2",
         "@prisma/client": "^5.14.0",
         "@supabase/supabase-js": "^2.107.0",
+        "@vercel/functions": "^3.9.11",
         "axios": "^1.7.2",
         "bcryptjs": "^2.4.3",
         "cloudinary": "^2.3.1",
