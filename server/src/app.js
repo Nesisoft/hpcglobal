@@ -56,6 +56,12 @@ app.use('/api/reports',       require('./routes/reports'));
 app.use('/api/partner',       require('./routes/partner'));
 app.use('/api/appointments',  require('./routes/appointments'));
 
+// ─── Shareable event pages ────────────────────────────────────────────────────
+// Outside /api on purpose: this is an HTML page crawlers fetch, and the URL
+// people paste into WhatsApp. See routes/share.js for why it cannot be done
+// in the SPA.
+app.use('/e', require('./routes/share'));
+
 // ─── Health check ────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 

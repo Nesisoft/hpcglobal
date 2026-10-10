@@ -2,8 +2,12 @@
   "version": 2,
   "buildCommand": "npm install --include=dev && npm run build",
   "outputDirectory": "client/dist",
+  "functions": {
+    "api/index.js": { "maxDuration": 60 }
+  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/e/:path*",   "destination": "/api" },
     { "source": "/:path*",     "destination": "/index.html" }
   ]
 }

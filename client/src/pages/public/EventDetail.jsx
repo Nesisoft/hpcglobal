@@ -1,18 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, MapPin, Wifi, Clock, ChevronLeft, CheckCircle, ExternalLink } from 'lucide-react';
+import { Calendar, MapPin, Wifi, Clock, ChevronLeft, CheckCircle, ExternalLink, Share2, Link2, Check } from 'lucide-react';
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import RichContent from '../../components/ui/RichContent';
+import { withGmt } from '../../utils/format';
+import { copyText } from '../../utils/clipboard';
 
+// These badges sit on top of the event photograph, not on a white card, so they
+// need an opaque pill. The earlier tinted set (bg-gold/10 text-gold and friends)
+// measured 1.5:1 against a bright poster — effectively invisible.
 const CATEGORY_COLORS = {
-  SERVICE:    'bg-purple-brand/10 text-purple-brand',
-  CONFERENCE: 'bg-gold/10 text-gold',
-  YOUTH:      'bg-blue-50 text-blue-600',
-  WOMENS:     'bg-pink-50 text-pink-600',
-  MENS:       'bg-slate-100 text-slate-600',
-  ONLINE:     'bg-emerald-50 text-emerald-600',
-  OTHER:      'bg-cream text-ink/60',
+  SERVICE:    'bg-white text-purple-brand',
+  CONFERENCE: 'bg-gold text-purple-deep',
+  YOUTH:      'bg-white text-blue-700',
+  WOMENS:     'bg-white text-pink-700',
+  MENS:       'bg-white text-slate-700',
+  ONLINE:     'bg-white text-emerald-700',
+  OTHER:      'bg-white text-ink/80',
 };
 const CATEGORY_LABELS = {
   SERVICE:'Service', CONFERENCE:'Conference', YOUTH:'Youth',
@@ -59,6 +64,70 @@ function CountdownBlock({ label, value }) {
 
 const RSVP_EMPTY = { name: '', email: '', phone: '', attendance: 'in-person' };
 
+/**
+ * Share controls for one event.
+ *
+ * Every button points at /e/<slug> rather than this page. That route is
+ * server-rendered with Open Graph tags, so WhatsApp, Facebook and the rest can
+ * build a card with the event's image, title and time — they do not run
+ * JavaScript, so a link to this React page previews as a blank shell. The
+ * route redirects a human straight back here, so nothing is lost.
+ *
+ * shortUrl is used when the admin has minted one; otherwise the /e/ link is
+ * already short enough to paste into a chat.
+ */
+function EventShare({ event }) {
+  const [copied, setCopied] = useState(false);
+
+  const link = event.shortUrl || `${window.location.origin}/e/${event.slug}`;
+  const message = `${event.title} — ${fmtDate(event.startDate)}${event.timeGmt ? `, ${withGmt(event.timeGmt)}` : ''}`;
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: event.title, text: message, url: link });
+        return;
+      } catch {
+        // Cancelling the share sheet lands here too; WhatsApp is still a fine
+        // next step, so fall through rather than showing an error.
+      }
+    }
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`${message}\n${link}`)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  }
+
+  async function handleCopy() {
+    const ok = await copyText(link);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      window.prompt('Copy this link:', link);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-5">
+      <button
+        onClick={handleShare}
+        className="inline-flex items-center gap-1.5 text-xs font-body text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-3 py-1.5 transition-colors"
+      >
+        <Share2 size={13} /> Share
+      </button>
+      <button
+        onClick={handleCopy}
+        className="inline-flex items-center gap-1.5 text-xs font-body text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-3 py-1.5 transition-colors"
+      >
+        {copied ? <Check size={13} className="text-emerald-300" /> : <Link2 size={13} />}
+        {copied ? 'Link copied' : 'Copy link'}
+      </button>
+    </div>
+  );
+}
+
 export default function EventDetail() {
   const { slug } = useParams();
   const fetchFn = useCallback(() => publicApi.getEvent(slug), [slug]);
@@ -77,7 +146,15 @@ export default function EventDetail() {
 
   async function handleRsvp(e) {
     e.preventDefault();
-    if (!form.name || !form.phone) { setRsvpError('Name and phone are required.'); return; }
+    if (!form.name.trim()) { setRsvpError('Please enter your name.'); return; }
+    if (event.requirePhone && !form.phone.trim()) { setRsvpError('A phone number is required for this event.'); return; }
+    if (event.requireEmail && !form.email.trim()) { setRsvpError('An email address is required for this event.'); return; }
+    // Whatever the event asks for, we need one way to send the confirmation
+    // and anything the church sends later.
+    if (!form.phone.trim() && !form.email.trim()) {
+      setRsvpError('Please give us either a phone number or an email address.');
+      return;
+    }
     setSubmitting(true);
     setRsvpError('');
     try {
@@ -136,7 +213,7 @@ export default function EventDetail() {
             <ChevronLeft size={14} /> All Events
           </Link>
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <span className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full ${CATEGORY_COLORS[event.category] ?? 'bg-white/10 text-white/60'}`}>
+            <span className={`text-[11px] font-body font-medium px-2.5 py-1 rounded-full shadow-sm ${CATEGORY_COLORS[event.category] ?? 'bg-white text-ink/80'}`}>
               {CATEGORY_LABELS[event.category] ?? event.category}
             </span>
             {event.isFeatured && (
@@ -154,7 +231,7 @@ export default function EventDetail() {
               <Calendar size={14} /> {fmtDate(event.startDate)}
             </span>
             <span className="flex items-center gap-1.5">
-              <Clock size={14} /> {event.timeGmt} GMT
+              <Clock size={14} /> {withGmt(event.timeGmt)}
               {event.timeEst && ` · ${event.timeEst} EST`}
               {event.timeBst && ` · ${event.timeBst} BST`}
             </span>
@@ -169,6 +246,8 @@ export default function EventDetail() {
               </span>
             )}
           </div>
+
+          <EventShare event={event} />
         </div>
 
         {/* Countdown */}
@@ -248,15 +327,33 @@ export default function EventDetail() {
                     <form onSubmit={handleRsvp} className="space-y-3">
                       <div>
                         <label className="section-label block mb-1.5">Full Name *</label>
-                        <input className="input" value={form.name} onChange={set('name')} placeholder="Your name" />
+                        <input className="input" value={form.name} onChange={set('name')} placeholder="Your name" required />
                       </div>
                       <div>
-                        <label className="section-label block mb-1.5">Phone *</label>
-                        <input type="tel" className="input" value={form.phone} onChange={set('phone')} placeholder="+233..." />
+                        <label className="section-label block mb-1.5">
+                          Phone {event.requirePhone ? '*' : '(optional)'}
+                        </label>
+                        <input
+                          type="tel"
+                          className="input"
+                          value={form.phone}
+                          onChange={set('phone')}
+                          placeholder="+233..."
+                          required={event.requirePhone}
+                        />
                       </div>
                       <div>
-                        <label className="section-label block mb-1.5">Email (optional)</label>
-                        <input type="email" className="input" value={form.email} onChange={set('email')} placeholder="you@example.com" />
+                        <label className="section-label block mb-1.5">
+                          Email {event.requireEmail ? '*' : '(optional)'}
+                        </label>
+                        <input
+                          type="email"
+                          className="input"
+                          value={form.email}
+                          onChange={set('email')}
+                          placeholder="you@example.com"
+                          required={event.requireEmail}
+                        />
                       </div>
                       {event.isOnline && (
                         <div>

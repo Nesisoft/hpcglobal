@@ -204,9 +204,83 @@ model Event {
   isFeatured  Boolean       @default(false)
   isPublished Boolean       @default(false)
   speakers    String? // JSON array: [{name, role}]
-  rsvps       EventRsvp[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+
+  // Which contact details this event's registration form insists on. Phone
+  // defaults true because that was the hard-coded behaviour before these
+  // existed; email defaults false because its label already said optional.
+  requireEmail Boolean @default(false)
+  requirePhone Boolean @default(true)
+
+  // The shareable link, minted once and reused. Stored because every mint
+  // spends a shortener quota, and because a link already sent out must keep
+  // pointing at the same place.
+  shortUrl String?
+
+  rsvps     EventRsvp[]
+  messages  EventMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+enum EventMessageChannel {
+  EMAIL
+  SMS
+  BOTH
+}
+
+enum EventMessageAudience {
+  ALL
+  IN_PERSON
+  ONLINE
+}
+
+enum EventMessageStatus {
+  SENDING
+  SENT
+  PARTIAL
+  FAILED
+}
+
+/// One bulk message sent to an event's registrants.
+///
+/// Kept as a record rather than fired and forgotten so the office can see what
+/// was already said to whom — the main cause of a congregation being messaged
+/// twice is nobody being able to tell whether it went out the first time.
+model EventMessage {
+  id       String               @id @default(uuid())
+  eventId  String
+  event    Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  channel  EventMessageChannel
+  audience EventMessageAudience @default(ALL)
+  status   EventMessageStatus   @default(SENDING)
+
+  subject  String?
+  bodyHtml String?
+  bodySms  String?
+
+  emailTotal Int @default(0)
+  emailSent  Int @default(0)
+  smsTotal   Int @default(0)
+  smsSent    Int @default(0)
+
+  /// How far the send got, so an interrupted run resumes instead of restarting.
+  /// Restarting would message everyone who already received it a second time.
+  emailCursor Int @default(0)
+  smsCursor   Int @default(0)
+
+  /// Addresses and numbers that could not be delivered to, with the reason,
+  /// as a JSON array. Held on the campaign rather than one row per registrant:
+  /// the failures are the only part anyone reads back, so a row per registrant
+  /// per message would multiply without ever being queried.
+  failures String?
+
+  /// Denormalised on purpose — the name is what the history shows, and it
+  /// should survive the staff account being removed.
+  sentByName  String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([eventId, createdAt])
 }
 
 model EventRsvp {
@@ -215,9 +289,13 @@ model EventRsvp {
   eventId    String
   name       String
   email      String?
-  phone      String
+  // Nullable now that an event may ask for email only. The route still insists
+  // on at least one way to reach the person.
+  phone      String?
   attendance String
   createdAt  DateTime @default(now())
+
+  @@index([eventId, createdAt])
 }
 
 model Sermon {

@@ -5,6 +5,7 @@ import { Calendar, MapPin, Wifi, ChevronRight, Clock, Bell } from 'lucide-react'
 import { publicApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import SectionHero from '../../components/ui/SectionHero';
+import { plainText, withGmt } from '../../utils/format';
 
 const CATEGORY_TABS = [
   { value: '',            label: 'All Events' },
@@ -17,14 +18,17 @@ const CATEGORY_TABS = [
   { value: 'OTHER',       label: 'Other' },
 ];
 
+// These badges sit on top of the event photograph, not on a white card, so they
+// need an opaque pill. The earlier tinted set (bg-gold/10 text-gold and friends)
+// measured 1.5:1 against a bright poster — effectively invisible.
 const CATEGORY_COLORS = {
-  SERVICE:    'bg-purple-brand/10 text-purple-brand',
-  CONFERENCE: 'bg-gold/10 text-gold',
-  YOUTH:      'bg-blue-50 text-blue-600',
-  WOMENS:     'bg-pink-50 text-pink-600',
-  MENS:       'bg-slate-100 text-slate-600',
-  ONLINE:     'bg-emerald-50 text-emerald-600',
-  OTHER:      'bg-cream text-ink/60',
+  SERVICE:    'bg-white text-purple-brand',
+  CONFERENCE: 'bg-gold text-purple-deep',
+  YOUTH:      'bg-white text-blue-700',
+  WOMENS:     'bg-white text-pink-700',
+  MENS:       'bg-white text-slate-700',
+  ONLINE:     'bg-white text-emerald-700',
+  OTHER:      'bg-white text-ink/80',
 };
 
 const CATEGORY_LABELS = {
@@ -74,7 +78,7 @@ function EventCard({ event, featured }) {
           </p>
         </div>
         <div className="absolute top-3 right-3">
-          <span className={`text-[10px] font-body font-medium px-2 py-0.5 rounded-full ${CATEGORY_COLORS[event.category] ?? 'bg-white/20 text-white'}`}>
+          <span className={`text-[10px] font-body font-medium px-2 py-0.5 rounded-full shadow-sm ${CATEGORY_COLORS[event.category] ?? 'bg-white text-ink/80'}`}>
             {CATEGORY_LABELS[event.category] ?? event.category}
           </span>
         </div>
@@ -92,13 +96,13 @@ function EventCard({ event, featured }) {
           {event.title}
         </h3>
         <p className={`text-ink/55 font-body leading-relaxed mb-4 ${featured ? 'text-base line-clamp-3' : 'text-sm line-clamp-2'}`}>
-          {event.description?.replace(/<[^>]*>/g, ' ').trim()}
+          {plainText(event.description)}
         </p>
 
         <div className="space-y-1.5 mb-4">
           <div className="flex items-center gap-2 text-ink/50 text-xs font-body">
             <Clock size={12} className="flex-shrink-0" />
-            <span>{fmtDate(event.startDate)} · {event.timeGmt} GMT</span>
+            <span>{fmtDate(event.startDate)} · {withGmt(event.timeGmt)}</span>
           </div>
           {event.venue && (
             <div className="flex items-center gap-2 text-ink/50 text-xs font-body">

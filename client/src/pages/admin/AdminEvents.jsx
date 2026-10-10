@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Users, MapPin, Video, X, Check, Download, Link2, Loader2, Megaphone } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -11,9 +11,11 @@ import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
 import RichTextEditor from '../../components/admin/RichTextEditor';
 import EventCalendar from '../../components/admin/EventCalendar';
+import EventMessageComposer from '../../components/admin/EventMessageComposer';
 import Toggle from '../../components/admin/Toggle';
 import { List, CalendarDays } from 'lucide-react';
 import { downloadBlob } from '../../utils/download';
+import { copyText } from '../../utils/clipboard';
 
 const CATEGORIES = ['SERVICE', 'CONFERENCE', 'YOUTH', 'WOMENS', 'MENS', 'ONLINE', 'OTHER'];
 
@@ -52,6 +54,8 @@ const EMPTY_FORM = {
   category:    'SERVICE',
   isFeatured:  false,
   isPublished: false,
+  requireEmail: false,
+  requirePhone: true,
 };
 
 function EventForm({ form, setForm }) {
@@ -161,6 +165,36 @@ function EventForm({ form, setForm }) {
         />
       </div>
 
+      {/* What the public registration form will insist on. Whatever is
+          collected is also how the church can message registrants later, so
+          at least one of the two always has to come through. */}
+      <div className="pt-2 border-t border-purple-brand/8">
+        <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-ink/50 mb-2">
+          Registration form
+        </p>
+        <div className="flex items-center gap-6 flex-wrap">
+          <Toggle
+            checked={form.requirePhone}
+            onChange={(v) => setForm((f) => ({ ...f, requirePhone: v }))}
+            label="Phone number required"
+          />
+          <Toggle
+            checked={form.requireEmail}
+            onChange={(v) => setForm((f) => ({ ...f, requireEmail: v }))}
+            label="Email address required"
+          />
+        </div>
+        <p className="text-[11px] text-ink/40 font-body mt-2">
+          {form.requireEmail && form.requirePhone
+            ? 'Registrants must give both — you can reach everyone by email and SMS.'
+            : form.requireEmail
+              ? 'Email is required; phone is optional.'
+              : form.requirePhone
+                ? 'Phone is required; email is optional.'
+                : 'Both optional — registrants must still give one of the two.'}
+        </p>
+      </div>
+
       <div className="flex items-center gap-6 pt-1">
         <Toggle
           checked={form.isPublished}
@@ -179,7 +213,7 @@ function EventForm({ form, setForm }) {
 
 const RSVP_COLUMNS = [
   { key: 'name',       label: 'Name'       },
-  { key: 'phone',      label: 'Phone'      },
+  { key: 'phone',      label: 'Phone', render: (r) => r.phone || '—' },
   { key: 'email',      label: 'Email'      },
   { key: 'attendance', label: 'Attendance' },
   {
@@ -201,6 +235,9 @@ export default function AdminEvents() {
   const [rsvpEvent, setRsvpEvent]       = useState(null);
   const [viewMode, setViewMode]         = useState('list');
   const [error, setError]               = useState('');
+  const [linkBusyId, setLinkBusyId]     = useState(null);
+  const [linkCopiedId, setLinkCopiedId] = useState(null);
+  const [messageEvent, setMessageEvent] = useState(null);
 
   const fetchFn = useCallback(() => adminApi.getEvents(), []);
   const { data: rawEvents, loading, refetch } = useApi(fetchFn);
@@ -212,6 +249,40 @@ export default function AdminEvents() {
   );
   const { data: rsvpData, loading: rsvpsLoading } = useApi(fetchRsvpsFn, [rsvpEvent]);
   const rsvps = Array.isArray(rsvpData) ? rsvpData : (rsvpData?.data ?? []);
+
+  /**
+   * Fetch the event's shareable link and put it on the clipboard.
+   *
+   * The server mints the link once and remembers it, so pressing this twice
+   * gives the same link rather than burning a second one. An unpublished event
+   * is caught here: its share page deliberately 404s, so a link to it would be
+   * broken the moment it was pasted anywhere.
+   */
+  async function handleCopyLink(row) {
+    if (!row.isPublished) {
+      alert('Publish this event first — until then its share page is not public.');
+      return;
+    }
+    setLinkBusyId(row.id);
+    try {
+      const { data } = await adminApi.eventShareLink(row.id);
+      const link = data?.url || data?.longUrl;
+      if (!link) throw new Error('no link');
+      const copied = await copyText(link);
+      if (copied) {
+        setLinkCopiedId(row.id);
+        setTimeout(() => setLinkCopiedId((id) => (id === row.id ? null : id)), 2000);
+      } else {
+        // Copying can be blocked; showing the link still lets them use it.
+        window.prompt('Copy this link:', link);
+      }
+      refetch();
+    } catch {
+      alert('Could not create the share link. Please try again.');
+    } finally {
+      setLinkBusyId(null);
+    }
+  }
 
   async function handleExportRsvps() {
     try {
@@ -253,6 +324,8 @@ export default function AdminEvents() {
       category:    row.category,
       isFeatured:  row.isFeatured,
       isPublished: row.isPublished,
+      requireEmail: row.requireEmail ?? false,
+      requirePhone: row.requirePhone ?? true,
     });
     setError('');
     setModalOpen(true);
@@ -356,15 +429,34 @@ export default function AdminEvents() {
     {
       key: '_actions',
       label: '',
-      width: '120px',
+      width: '180px',
       render: (row) => (
         <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleCopyLink(row); }}
+            disabled={linkBusyId === row.id}
+            className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors disabled:opacity-50"
+            title={linkCopiedId === row.id ? 'Link copied' : 'Copy share link'}
+          >
+            {linkBusyId === row.id
+              ? <Loader2 size={14} className="animate-spin" />
+              : linkCopiedId === row.id
+                ? <Check size={14} className="text-emerald-600" />
+                : <Link2 size={14} />}
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); setRsvpEvent(row); }}
             className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors"
             title="View RSVPs"
           >
             <Users size={14} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setMessageEvent(row); }}
+            className="p-1.5 text-ink/30 hover:text-purple-brand rounded transition-colors"
+            title="Message registrants"
+          >
+            <Megaphone size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openEdit(row); }}
@@ -459,6 +551,16 @@ export default function AdminEvents() {
             {saving ? 'Saving…' : <><Check size={14} /> {editTarget ? 'Save Changes' : 'Add Event'}</>}
           </button>
         </div>
+      </AdminModal>
+
+      {/* Message registrants */}
+      <AdminModal
+        open={!!messageEvent}
+        onClose={() => setMessageEvent(null)}
+        title={`Message registrants — ${messageEvent?.title ?? ''}`}
+        size="lg"
+      >
+        {messageEvent && <EventMessageComposer event={messageEvent} />}
       </AdminModal>
 
       {/* RSVPs viewer */}

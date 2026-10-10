@@ -12,6 +12,7 @@ import FormField from '../../components/admin/FormField';
 import ImageUpload from '../../components/admin/ImageUpload';
 import RichTextEditor from '../../components/admin/RichTextEditor';
 import Toggle from '../../components/admin/Toggle';
+import { plainText } from '../../utils/format';
 
 const CATEGORIES = [
   'DEVOTIONAL', 'PROPHETIC_WORD', 'SERMON_NOTES', 'TEACHING',
@@ -50,7 +51,7 @@ const EMPTY_FORM = {
 };
 
 function PostForm({ form, setForm }) {
-  const plainContent = form.content.replace(/<[^>]*>/g, ' ').trim();
+  const plainContent = plainText(form.content);
   const wordCount = plainContent ? plainContent.split(/\s+/).length : 0;
   const readTime  = Math.max(1, Math.round(wordCount / 200));
 
