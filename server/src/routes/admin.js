@@ -482,6 +482,17 @@ router.post('/events/:id/messages', validate(campaignSchema), async (req, res) =
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
     const { channel, audience, subject, bodyHtml, bodySms } = req.body;
+
+    // Refuse a channel with no provider before anything is recorded. The
+    // senders would skip it, and a BOTH send with one channel off would then
+    // finish looking fully sent while that half reached nobody.
+    if (channel !== 'SMS' && emailTransportName() === 'none') {
+      return res.status(409).json({ message: 'No email service is configured, so this cannot go out by email. Set RESEND_API_KEY or the SMTP settings first, or send by SMS only.' });
+    }
+    if (channel !== 'EMAIL' && smsTransportName() === 'none') {
+      return res.status(409).json({ message: 'No SMS service is configured, so this cannot go out by SMS. Set the Hubtel credentials first, or send by email only.' });
+    }
+
     const created = await prisma.eventMessage.create({
       data: {
         eventId:    event.id,
