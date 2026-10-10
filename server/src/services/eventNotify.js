@@ -1,6 +1,7 @@
 const emailService = require('./email');
 const { sendSms }  = require('./sms');
 const { escapeHtml } = require('../lib/html');
+const { withTimeout } = require('../lib/notify');
 
 /**
  * Composes and delivers the messages an event sends to a registrant.
@@ -9,19 +10,6 @@ const { escapeHtml } = require('../lib/html');
  * actually says and the rules around delivery — bounded, never fatal, and
  * reported back so the caller can tell what reached whom.
  */
-
-// Long enough for a slow provider, short enough that a hanging call does not
-// burn the serverless function's whole budget.
-const SEND_TIMEOUT_MS = 8000;
-
-function withTimeout(promise, label, ms = SEND_TIMEOUT_MS) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms).unref?.()
-    ),
-  ]);
-}
 
 /**
  * Event times are free text and admins are told to type "9:00 AM GMT", so the

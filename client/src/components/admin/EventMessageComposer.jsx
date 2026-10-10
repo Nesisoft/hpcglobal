@@ -20,6 +20,13 @@ const STATUS_STYLE = {
   SENDING: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
+// Background of the banner shown right after a send.
+const RESULT_TONE = {
+  SENT:    'bg-emerald-50 border-emerald-200',
+  PARTIAL: 'bg-amber-50 border-amber-200',
+  FAILED:  'bg-red-50 border-red-200',
+};
+
 const STATUS_LABEL = {
   SENT:    'Sent',
   PARTIAL: 'Partly sent',
@@ -170,6 +177,8 @@ export default function EventMessageComposer({ event, onSent }) {
 
   const emailOff = audience?.transports?.email === 'none';
   const smsOff   = audience?.transports?.sms   === 'none';
+  // The server refuses a channel with no provider, so don't offer the send.
+  const channelOff = (form.email && emailOff) || (form.sms && smsOff);
 
   function validate() {
     if (!form.email && !form.sms) return 'Choose email, SMS, or both.';
@@ -223,12 +232,12 @@ export default function EventMessageComposer({ event, onSent }) {
     <div className="space-y-5">
       {/* What was just sent */}
       {result && (
-        <div className={`rounded-lg border p-3 ${result.status === 'SENT' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+        <div className={`rounded-lg border p-3 ${RESULT_TONE[result.status] ?? RESULT_TONE.PARTIAL}`}>
           <p className="flex items-center gap-1.5 font-body text-sm text-ink">
             {result.status === 'SENT'
               ? <CheckCircle2 size={14} className="text-emerald-600" />
-              : <AlertTriangle size={14} className="text-amber-600" />}
-            {result.status === 'SENT' ? 'Message sent.' : 'Message partly sent.'}
+              : <AlertTriangle size={14} className={result.status === 'FAILED' ? 'text-red-600' : 'text-amber-600'} />}
+            {result.status === 'SENT' ? 'Message sent.' : result.status === 'FAILED' ? 'Message not sent.' : 'Message partly sent.'}
             {' '}
             {[
               result.emailTotal ? `${result.emailSent} of ${result.emailTotal} emails` : null,
@@ -350,7 +359,7 @@ export default function EventMessageComposer({ event, onSent }) {
         </p>
         <button
           onClick={handleSend}
-          disabled={sending || reach === 0}
+          disabled={sending || reach === 0 || channelOff}
           className="btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}

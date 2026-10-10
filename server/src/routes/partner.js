@@ -4,6 +4,7 @@ const { z }     = require('zod');
 const { validate }   = require('../middleware/validate');
 const emailService   = require('../services/email');
 const { sendSms }    = require('../services/sms');
+const { sendNotifications } = require('../lib/notify');
 const supabaseAdmin  = require('../lib/supabaseAdmin');
 const paystack       = require('../services/paystack');
 const prisma         = require('../lib/prisma');
@@ -30,8 +31,8 @@ async function verifyPartner(req, res, next) {
 
 // ─── Apply (no commitment at this stage) ──────────────────────────────────────
 const applySchema = z.object({
-  firstName:  z.string().min(1),
-  lastName:   z.string().min(1),
+  firstName:  z.string().min(1).max(100),
+  lastName:   z.string().min(1).max(100),
   email:      z.string().email(),
   phone:      z.string().optional(),
   country:    z.string().optional(),
@@ -45,17 +46,13 @@ router.post('/apply', validate(applySchema), async (req, res) => {
     const existing = await prisma.partner.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ message: 'An application with this email already exists.' });
     const partner = await prisma.partner.create({ data: { ...req.body, email } });
-    try {
-      await emailService.sendPartnerApplicationConfirmation(partner.email, partner.firstName);
-      if (partner.phone) {
-        await sendSms(
-          partner.phone,
-          `HPC Global: Hi ${partner.firstName}, we have received your partnership application. We will email you to activate your account after verification. God bless you.`
-        );
-      }
-    } catch (e) {
-      console.error('Partner confirmation notify error (non-fatal):', e.message);
-    }
+    await sendNotifications('Partner application', [
+      ['confirmation email', () => emailService.sendPartnerApplicationConfirmation(partner.email, partner.firstName)],
+      partner.phone && ['confirmation SMS', () => sendSms(
+        partner.phone,
+        `HPC Global: Hi ${partner.firstName}, we have received your partnership application. We will email you to activate your account after verification. God bless you.`
+      )],
+    ]);
     res.status(201).json({ message: 'Application received. You will receive an email to activate your account after verification.' });
   } catch (err) {
     console.error(err);

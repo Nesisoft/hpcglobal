@@ -7,10 +7,16 @@ const emailService     = require('../services/email');
 const { sendSms }      = require('../services/sms');
 
 const prisma = require('../lib/prisma');
+const { sendNotifications } = require('../lib/notify');
 
 const optionalString = z.preprocess(
   (v) => (v === '' || v === null ? undefined : v),
   z.string().optional(),
+);
+// The name goes into the confirmation email and SMS, so keep it to a name.
+const optionalName = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.string().max(100).optional(),
 );
 const optionalEmail = z.preprocess(
   (v) => (v === '' || v === null ? undefined : v),
@@ -18,7 +24,7 @@ const optionalEmail = z.preprocess(
 );
 
 const prayerSchema = z.object({
-  name:      optionalString,
+  name:      optionalName,
   phone:     optionalString,
   email:     optionalEmail,
   category:  z.enum(['HEALTH','FAMILY','FINANCE','CAREER','SPIRITUAL','RELATIONSHIPS','OTHER']),
@@ -31,31 +37,25 @@ const prayerSchema = z.object({
 router.post('/', validate(prayerSchema), async (req, res) => {
   try {
     const prayer = await prisma.prayerRequest.create({ data: req.body });
-    res.status(201).json({ message: 'Prayer request received', id: prayer.id });
 
-    // Notify office + confirm to the requester — non-fatal
-    try {
-      await emailService.notifyPrayerRequest(prayer);
-      if (prayer.wantsCall && process.env.OFFICE_PHONE) {
-        const who = prayer.name ? `${prayer.name}` : 'Anonymous';
-        await sendSms(
-          process.env.OFFICE_PHONE,
-          `HPC Prayer: ${who} requests a call. Category: ${prayer.category}. Phone: ${prayer.phone || 'N/A'}`
-        );
-      }
+    // Notify office + confirm to the requester — non-fatal, and sent before
+    // responding because Vercel may freeze the function once it has responded.
+    const who = prayer.name ? `${prayer.name}` : 'Anonymous';
+    await sendNotifications('Prayer request', [
+      ['office email', () => emailService.notifyPrayerRequest(prayer)],
+      prayer.wantsCall && process.env.OFFICE_PHONE && ['office call SMS', () => sendSms(
+        process.env.OFFICE_PHONE,
+        `HPC Prayer: ${who} requests a call. Category: ${prayer.category}. Phone: ${prayer.phone || 'N/A'}`
+      )],
       // Confirmation to the requester (if they shared contact details)
-      if (prayer.email) {
-        await emailService.sendPrayerConfirmation(prayer.email, prayer.name);
-      }
-      if (prayer.phone) {
-        await sendSms(
-          prayer.phone,
-          `HPC Global: ${prayer.name ? `Hi ${prayer.name}, ` : ''}we have received your prayer request and our team is praying with you. God bless you.`
-        );
-      }
-    } catch (notifyErr) {
-      console.error('Prayer notify error (non-fatal):', notifyErr.message);
-    }
+      prayer.email && ['confirmation email', () => emailService.sendPrayerConfirmation(prayer.email, prayer.name)],
+      prayer.phone && ['confirmation SMS', () => sendSms(
+        prayer.phone,
+        `HPC Global: ${prayer.name ? `Hi ${prayer.name}, ` : ''}we have received your prayer request and our team is praying with you. God bless you.`
+      )],
+    ]);
+
+    res.status(201).json({ message: 'Prayer request received', id: prayer.id });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

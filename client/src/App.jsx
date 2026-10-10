@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PartnerAuthProvider } from './context/PartnerAuthContext';
 import PageWrapper from './components/layout/PageWrapper';
+import PartnerAuthLinkRedirect from './components/partner/PartnerAuthLinkRedirect';
 import Spinner from './components/ui/Spinner';
 
 // ─── Public pages (lazy) ──────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ const AdminAppointments      = lazy(() => import('./pages/admin/AdminAppointment
 const Partner                = lazy(() => import('./pages/public/Partner'));
 const PartnerLogin           = lazy(() => import('./pages/public/PartnerLogin'));
 const PartnerSetPassword     = lazy(() => import('./pages/public/PartnerSetPassword'));
+const PartnerForgotPassword  = lazy(() => import('./pages/public/PartnerForgotPassword'));
 const PartnerPortal          = lazy(() => import('./pages/public/PartnerPortal'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminHero      = lazy(() => import('./pages/admin/AdminHero'));
@@ -115,6 +117,7 @@ export default function App() {
     <PartnerAuthProvider>
     <AuthProvider>
       <BrowserRouter>
+        <PartnerAuthLinkRedirect />
         <Suspense fallback={<div className="min-h-screen bg-purple-deep flex items-center justify-center"><Spinner /></div>}>
           <Routes>
 
@@ -122,6 +125,7 @@ export default function App() {
             <Route path="/partner"               element={<PublicLayout><Partner /></PublicLayout>} />
             <Route path="/partner/login"         element={<PartnerLogin />} />
             <Route path="/partner/set-password"  element={<PartnerSetPassword />} />
+            <Route path="/partner/forgot-password" element={<PartnerForgotPassword />} />
             <Route path="/partner/portal"        element={<PartnerPortal />} />
 
             {/* ── Public routes ── */}

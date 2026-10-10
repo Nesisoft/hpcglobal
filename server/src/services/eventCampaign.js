@@ -162,6 +162,27 @@ function batchFailures(response, batch) {
   });
 }
 
+// Worded as the composer words its own warning, since these are read there.
+const NO_EMAIL_SERVICE = 'No email service is configured';
+const NO_SMS_SERVICE   = 'No SMS service is configured';
+
+/**
+ * Finish a channel whose provider is not set up.
+ *
+ * Without credentials the senders skip quietly instead of throwing — right for
+ * a one-off confirmation, wrong here, where it would read as everyone having
+ * been messaged. Nobody was, and no retry will change that until someone sets
+ * the provider up, so everyone still waiting is recorded as failed and the
+ * channel counts as finished. Leaving it unfinished would park the campaign as
+ * PARTIAL, and every "Continue sending" would fail the same way again. One
+ * line covers them all, so a single cause does not use up the failures cap.
+ */
+function noTransport({ channel, reason, recipients, at, sent, failures }) {
+  const left = recipients.length - at;
+  failures.push({ channel, to: `${left} ${left === 1 ? 'recipient' : 'recipients'}`, reason });
+  return { sent, cursor: recipients.length, failures, finished: true };
+}
+
 /**
  * Email every recipient from `cursor` onwards, until done or out of time.
  * @returns {{sent: number, cursor: number, failures: Array, finished: boolean}}
@@ -174,7 +195,12 @@ async function deliverEmail({ event, subject, bodyHtml, recipients, cursor, dead
   let sent = 0;
   let at = cursor;
 
-  const viaResend = emailTransportName() === 'resend';
+  const transport = emailTransportName();
+  if (transport === 'none') {
+    return noTransport({ channel: 'email', reason: NO_EMAIL_SERVICE, recipients, at, sent, failures });
+  }
+
+  const viaResend = transport === 'resend';
   // SMTP opens a connection per message, so it gets much smaller chunks — the
   // deadline check between chunks is only useful if chunks are short.
   const size = viaResend ? RESEND_BATCH_MAX : 10;
@@ -195,8 +221,15 @@ async function deliverEmail({ event, subject, bodyHtml, recipients, cursor, dead
         // address, not a reason to abandon the rest.
         const results = await Promise.allSettled(batch.map((m) => sendMail(m)));
         results.forEach((res, i) => {
-          if (res.status === 'fulfilled') sent += 1;
-          else failures.push({ channel: 'email', to: batch[i].to, reason: res.reason?.message || 'send failed' });
+          if (res.status === 'rejected') {
+            failures.push({ channel: 'email', to: batch[i].to, reason: res.reason?.message || 'send failed' });
+          } else if (res.value?.skipped) {
+            // sendMail resolves rather than throws when it has no transport,
+            // so fulfilled is not the same as sent.
+            failures.push({ channel: 'email', to: batch[i].to, reason: NO_EMAIL_SERVICE });
+          } else {
+            sent += 1;
+          }
         });
       }
     } catch (err) {
@@ -224,12 +257,7 @@ async function deliverSms({ body, recipients, cursor, deadline }) {
     try {
       const result = await sendBulkSms(group.map((r) => r.normalized), body);
       if (result.skipped) {
-        return {
-          sent,
-          cursor: at,
-          failures: [{ channel: 'sms', to: `${group.length} recipients`, reason: 'SMS is not configured' }],
-          finished: false,
-        };
+        return noTransport({ channel: 'sms', reason: NO_SMS_SERVICE, recipients, at, sent, failures });
       }
       for (const bad of result.invalid || []) {
         failures.push({ channel: 'sms', to: bad, reason: 'not a usable phone number' });
@@ -250,6 +278,8 @@ async function deliverSms({ body, recipients, cursor, deadline }) {
 function statusFor({ wantsEmail, wantsSms, emailDone, smsDone, failures, emailSent, smsSent }) {
   const allDone = (!wantsEmail || emailDone) && (!wantsSms || smsDone);
   if (!allDone) return 'PARTIAL';
+  // A channel with no provider finishes with nobody sent and a failure on
+  // record, so a campaign that reached no one lands here rather than as SENT.
   if (failures.length && emailSent + smsSent === 0) return 'FAILED';
   return 'SENT';
 }

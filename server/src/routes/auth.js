@@ -3,6 +3,7 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const crypto  = require('crypto');
 const { z }   = require('zod');
+const { waitUntil } = require('@vercel/functions');
 
 const { validate }     = require('../middleware/validate');
 const { verifyToken }  = require('../middleware/auth');
@@ -145,25 +146,31 @@ router.post('/change-password', verifyToken, validate(changePasswordSchema), asy
 });
 
 // POST /api/auth/forgot-password — public, rate-limit in production
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', (req, res) => {
   const { email } = req.body;
   // Always return 200 to avoid user enumeration
   res.json({ message: 'If that email exists, a reset link has been sent.' });
-  try {
-    const user = await prisma.adminUser.findUnique({ where: { email } });
-    if (!user) return;
-    const token  = crypto.randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await prisma.adminUser.update({
-      where: { id: user.id },
-      data:  { passwordResetToken: token, passwordResetExpiry: expiry },
-    });
-    const appUrl  = process.env.APP_URL || 'https://www.hpcglobal.org';
-    const resetUrl = `${appUrl}/admin/reset-password?token=${token}`;
-    await emailService.sendPasswordReset(user.email, resetUrl);
-  } catch (err) {
-    console.error('Password reset error (non-fatal):', err.message);
-  }
+
+  // Not awaited: the token write and email only happen for a real admin, so
+  // making the response wait for them would let its timing reveal which emails
+  // exist. waitUntil keeps the Vercel function alive until they finish instead.
+  waitUntil((async () => {
+    try {
+      const user = await prisma.adminUser.findUnique({ where: { email } });
+      if (!user) return;
+      const token  = crypto.randomBytes(32).toString('hex');
+      const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await prisma.adminUser.update({
+        where: { id: user.id },
+        data:  { passwordResetToken: token, passwordResetExpiry: expiry },
+      });
+      const appUrl  = process.env.APP_URL || 'https://www.hpcglobal.org';
+      const resetUrl = `${appUrl}/admin/reset-password?token=${token}`;
+      await emailService.sendPasswordReset(user.email, resetUrl);
+    } catch (err) {
+      console.error('Password reset error (non-fatal):', err.message);
+    }
+  })());
 });
 
 // POST /api/auth/reset-password — public
