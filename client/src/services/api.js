@@ -198,10 +198,11 @@ export const adminApi = {
   partnerPaymentsSummary:    ()  => api.get('/admin/partner-payments/summary'),
   exportPartnerPayments:     (p) => api.get('/admin/partner-payments/export', { params: p, responseType: 'blob' }),
 
-  getPartners:    (p)   => api.get('/admin/partners', { params: p }),
-  updatePartner:  (id,d)=> api.put(`/admin/partners/${id}`, d),
-  activatePartner:(id)  => api.put(`/admin/partners/${id}/activate`),
-  deletePartner:  (id)  => api.delete(`/admin/partners/${id}`),
+  getPartners:             (p)   => api.get('/admin/partners', { params: p }),
+  updatePartner:           (id,d)=> api.put(`/admin/partners/${id}`, d),
+  activatePartner:         (id)  => api.put(`/admin/partners/${id}/activate`),
+  resendPartnerActivation: (id)  => api.put(`/admin/partners/${id}/resend-activation`),
+  deletePartner:           (id)  => api.delete(`/admin/partners/${id}`),
 
   getZoomSchedules:     ()      => api.get('/admin/zoom-schedules'),
   createZoomSchedule:   (d)     => api.post('/admin/zoom-schedules', d),
