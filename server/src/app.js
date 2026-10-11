@@ -6,6 +6,11 @@ require('dotenv').config();
 
 const app = express();
 
+// Vercel's edge sits in front of the function and sets X-Forwarded-For to the
+// visitor's address. Trusting that one hop is what lets the rate limits below
+// count per visitor instead of per proxy.
+app.set('trust proxy', 1);
+
 // ─── Security ────────────────────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
@@ -33,6 +38,22 @@ const strictLimiter = rateLimit({
 });
 app.use('/api/auth/login', strictLimiter);
 app.use('/api/give',        strictLimiter);
+
+// Public forms that email and text whatever address and number they are given.
+// They now always finish sending, so without a tighter cap a script could use
+// the church's domain and SMS sender to message anyone it likes. POST only —
+// the admin listings share these paths. Its own counter, so a visitor filling
+// in forms doesn't use up their sign-in or giving attempts.
+const formLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: 'Too many requests, please try again later.' },
+});
+app.post('/api/contact/message',      formLimiter);
+app.post('/api/prayer',               formLimiter);
+app.post('/api/appointments',         formLimiter);
+app.post('/api/partner/apply',        formLimiter);
+app.post('/api/auth/forgot-password', formLimiter);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth',          require('./routes/auth'));

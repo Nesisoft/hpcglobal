@@ -7,9 +7,10 @@ const email        = require('../services/email');
 const { sendSms }  = require('../services/sms');
 
 const prisma = require('../lib/prisma');
+const { sendNotifications } = require('../lib/notify');
 
 const messageSchema = z.object({
-  name:    z.string().min(1),
+  name:    z.string().min(1).max(100),
   email:   z.string().email(),
   phone:   z.string().optional(),
   type:    z.string(),
@@ -25,25 +26,19 @@ router.post('/message', validate(messageSchema), async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 
-  try {
-    await email.sendAutoReply(req.body.email, req.body.name);
-    await email.notifyOffice(req.body);
-    if (process.env.OFFICE_PHONE) {
-      await sendSms(
-        process.env.OFFICE_PHONE,
-        `HPC Contact: ${req.body.name} (${req.body.type}). Phone: ${req.body.phone || 'N/A'}. Check your email for details.`
-      );
-    }
+  await sendNotifications('Contact message', [
+    ['auto-reply email', () => email.sendAutoReply(req.body.email, req.body.name)],
+    ['office email',     () => email.notifyOffice(req.body)],
+    process.env.OFFICE_PHONE && ['office SMS', () => sendSms(
+      process.env.OFFICE_PHONE,
+      `HPC Contact: ${req.body.name} (${req.body.type}). Phone: ${req.body.phone || 'N/A'}. Check your email for details.`
+    )],
     // Confirm to the sender by SMS if they shared a phone number
-    if (req.body.phone) {
-      await sendSms(
-        req.body.phone,
-        `HPC Global: Hi ${req.body.name}, we have received your message and will respond within 24 hours. God bless you.`
-      );
-    }
-  } catch (emailErr) {
-    console.error('Contact notify error (non-fatal):', emailErr.message);
-  }
+    req.body.phone && ['confirmation SMS', () => sendSms(
+      req.body.phone,
+      `HPC Global: Hi ${req.body.name}, we have received your message and will respond within 24 hours. God bless you.`
+    )],
+  ]);
 
   res.status(201).json({ message: 'Message received. We will respond within 24 hours.' });
 });

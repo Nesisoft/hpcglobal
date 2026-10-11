@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const axios      = require('axios');
 require('dotenv').config();
+const { escapeHtml } = require('../lib/html');
 
 /**
  * Outgoing email.
@@ -131,11 +132,11 @@ async function sendMail({ to, subject, html, text, replyTo, idempotencyKey }) {
 }
 
 async function sendAutoReply(toEmail, toName) {
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: 'We received your message — HPC Global',
     html: `
-      <p>Dear ${toName},</p>
+      <p>Dear ${escapeHtml(toName)},</p>
       <p>Thank you for reaching out to HPC Global. We have received your message and will respond within 24 hours.</p>
       <p>God bless you.</p>
       <p><strong>HPC Global — Hopepress Chapel</strong><br>
@@ -146,21 +147,21 @@ async function sendAutoReply(toEmail, toName) {
 
 async function notifyOffice(msg) {
   const to = process.env.OFFICE_EMAIL || FROM;
-  await sendMail({
+  return sendMail({
     to,
     subject: `New contact message: ${msg.type} — ${msg.name}`,
     html: `
-      <p><strong>From:</strong> ${msg.name} (${msg.email})</p>
-      <p><strong>Phone:</strong> ${msg.phone || 'N/A'}</p>
-      <p><strong>Type:</strong> ${msg.type}</p>
+      <p><strong>From:</strong> ${escapeHtml(msg.name)} (${escapeHtml(msg.email)})</p>
+      <p><strong>Phone:</strong> ${escapeHtml(msg.phone || 'N/A')}</p>
+      <p><strong>Type:</strong> ${escapeHtml(msg.type)}</p>
       <p><strong>Message:</strong></p>
-      <p>${msg.message}</p>
+      <p>${escapeHtml(msg.message)}</p>
     `,
   });
 }
 
 async function sendPasswordReset(toEmail, resetUrl) {
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: 'Reset your admin password — HPC Global',
     html: `
@@ -173,11 +174,11 @@ async function sendPasswordReset(toEmail, resetUrl) {
 }
 
 async function sendPartnerApplicationConfirmation(toEmail, firstName) {
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: 'Your Partnership Application — HPC Global',
     html: `
-      <p>Dear ${firstName},</p>
+      <p>Dear ${escapeHtml(firstName)},</p>
       <p>Thank you for applying to partner with Prophet Clottey and HPC Global.</p>
       <p>Your application is under review. Once verified, we will create your partner account and send your login credentials to this email address.</p>
       <p>God bless you for your commitment to the ministry.</p>
@@ -188,11 +189,11 @@ async function sendPartnerApplicationConfirmation(toEmail, firstName) {
 
 async function sendPartnerActivation(toEmail, firstName, password) {
   const appUrl = process.env.APP_URL || 'https://www.hpcglobal.org';
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: 'Your HPC Global Partner Account is Ready',
     html: `
-      <p>Dear ${firstName},</p>
+      <p>Dear ${escapeHtml(firstName)},</p>
       <p>Your HPC Global partner account has been activated. You can now log in to the partner portal.</p>
       <p>
         <strong>Login URL:</strong> <a href="${appUrl}/partner/login">${appUrl}/partner/login</a><br>
@@ -221,11 +222,11 @@ async function sendEventRsvpConfirmation({ to, subject, html, idempotencyKey }) 
 }
 
 async function sendPrayerConfirmation(toEmail, name) {
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: 'We are praying with you — HPC Global',
     html: `
-      <p>Dear ${name || 'Beloved'},</p>
+      <p>Dear ${escapeHtml(name || 'Beloved')},</p>
       <p>We have received your prayer request and our prayer team is standing with you in agreement.</p>
       <p>Be encouraged — God hears and answers prayer.</p>
       <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
@@ -234,13 +235,13 @@ async function sendPrayerConfirmation(toEmail, name) {
 }
 
 async function sendAppointmentConfirmation(toEmail, name, whenLabel, reason) {
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: 'Your Appointment Request — HPC Global',
     html: `
-      <p>Dear ${name},</p>
-      <p>We have received your request to book an appointment with the Prophet for <strong>${whenLabel}</strong>.</p>
-      <p><strong>Reason:</strong> ${reason}</p>
+      <p>Dear ${escapeHtml(name)},</p>
+      <p>We have received your request to book an appointment with the Prophet for <strong>${escapeHtml(whenLabel)}</strong>.</p>
+      <p><strong>Reason:</strong> ${escapeHtml(reason)}</p>
       <p>Your request is pending confirmation. We will notify you once it is confirmed.</p>
       <p>God bless you.</p>
       <p><strong>HPC Global — Hopepress Chapel</strong><br>Klagon Junction, Accra, Ghana</p>
@@ -249,12 +250,12 @@ async function sendAppointmentConfirmation(toEmail, name, whenLabel, reason) {
 }
 
 async function sendAppointmentStatus(toEmail, name, whenLabel, statusWord) {
-  await sendMail({
+  return sendMail({
     to:      toEmail,
     subject: `Your Appointment is ${statusWord === 'confirmed' ? 'Confirmed' : 'Cancelled'} — HPC Global`,
     html: `
-      <p>Dear ${name},</p>
-      <p>Your appointment with the Prophet for <strong>${whenLabel}</strong> has been <strong>${statusWord}</strong>.</p>
+      <p>Dear ${escapeHtml(name)},</p>
+      <p>Your appointment with the Prophet for <strong>${escapeHtml(whenLabel)}</strong> has been <strong>${statusWord}</strong>.</p>
       ${statusWord === 'confirmed'
         ? '<p>We look forward to seeing you. Please arrive a few minutes early.</p>'
         : '<p>If you would like to reschedule, please book another slot or contact the office.</p>'}
@@ -266,15 +267,15 @@ async function sendAppointmentStatus(toEmail, name, whenLabel, statusWord) {
 
 async function notifyPrayerRequest(prayer) {
   const to = process.env.OFFICE_EMAIL || FROM;
-  await sendMail({
+  return sendMail({
     to,
     subject: `New prayer request: ${prayer.category}`,
     html: `
-      <p><strong>Category:</strong> ${prayer.category}</p>
-      ${prayer.name ? `<p><strong>From:</strong> ${prayer.name}</p>` : '<p><em>Anonymous</em></p>'}
-      ${prayer.phone ? `<p><strong>Phone:</strong> ${prayer.phone}${prayer.wantsCall ? ' (wants a call)' : ''}</p>` : ''}
+      <p><strong>Category:</strong> ${escapeHtml(prayer.category)}</p>
+      ${prayer.name ? `<p><strong>From:</strong> ${escapeHtml(prayer.name)}</p>` : '<p><em>Anonymous</em></p>'}
+      ${prayer.phone ? `<p><strong>Phone:</strong> ${escapeHtml(prayer.phone)}${prayer.wantsCall ? ' (wants a call)' : ''}</p>` : ''}
       <p><strong>Request:</strong></p>
-      <p>${prayer.request}</p>
+      <p>${escapeHtml(prayer.request)}</p>
     `,
   });
 }

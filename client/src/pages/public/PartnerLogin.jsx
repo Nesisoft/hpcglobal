@@ -52,6 +52,11 @@ export default function PartnerLogin() {
               className="w-full bg-white/10 border border-white/15 rounded px-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
               placeholder="••••••••"
             />
+            <div className="text-right mt-2">
+              <Link to="/partner/forgot-password" className="text-gold hover:text-gold-light text-xs font-body transition-colors">
+                Forgot password?
+              </Link>
+            </div>
           </div>
           <button
             type="submit" disabled={loading}

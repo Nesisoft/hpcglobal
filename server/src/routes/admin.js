@@ -482,6 +482,17 @@ router.post('/events/:id/messages', validate(campaignSchema), async (req, res) =
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
     const { channel, audience, subject, bodyHtml, bodySms } = req.body;
+
+    // Refuse a channel with no provider before anything is recorded. The
+    // senders would skip it, and a BOTH send with one channel off would then
+    // finish looking fully sent while that half reached nobody.
+    if (channel !== 'SMS' && emailTransportName() === 'none') {
+      return res.status(409).json({ message: 'No email service is configured, so this cannot go out by email. Set RESEND_API_KEY or the SMTP settings first, or send by SMS only.' });
+    }
+    if (channel !== 'EMAIL' && smsTransportName() === 'none') {
+      return res.status(409).json({ message: 'No SMS service is configured, so this cannot go out by SMS. Set the Hubtel credentials first, or send by email only.' });
+    }
+
     const created = await prisma.eventMessage.create({
       data: {
         eventId:    event.id,
@@ -1774,41 +1785,93 @@ router.get('/partners', async (req, res) => {
   }
 });
 
+// Email a partner the link that lands them on the set-password page. Someone
+// whose address Supabase hasn't confirmed yet gets an invite (re-inviting a
+// user who never opened their link simply sends a fresh one). Once any link
+// has been opened Supabase counts the address as confirmed and refuses the
+// invite — whether or not a password was ever set — so a password-recovery
+// link to the same page stands in.
+// Resolves to { sent: 'invite' | 'recovery', supabaseUserId? } or { error }.
+async function sendPartnerActivationEmail(partner) {
+  const appUrl     = process.env.APP_URL || 'https://www.hpcglobal.org';
+  const redirectTo = `${appUrl}/partner/set-password`;
+
+  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(partner.email, {
+    redirectTo,
+    data: { partnerId: partner.id, firstName: partner.firstName, lastName: partner.lastName },
+  });
+  if (!error) return { sent: 'invite', supabaseUserId: data?.user?.id };
+
+  // If the user already exists in Supabase, fall back to a password-recovery link
+  if (!/already.*registered|exists/i.test(error.message)) return { error };
+  const { error: linkErr } = await supabaseAdmin.auth.resetPasswordForEmail(partner.email, { redirectTo });
+  if (linkErr) return { error: linkErr };
+  return { sent: 'recovery' };
+}
+
+// Supabase throttles auth emails per address ("For security purposes, you can
+// only request this after 42 seconds") and per project ("email rate limit
+// exceeded"). Both come back as 429s whose message already says what to do.
+const isAuthRateLimit = (err) =>
+  err.status === 429 || /for security purposes|rate limit/i.test(err.message);
+
 router.put('/partners/:id/activate', async (req, res) => {
   try {
     const partner = await prisma.partner.findUnique({ where: { id: req.params.id } });
     if (!partner) return res.status(404).json({ message: 'Partner not found' });
     if (partner.status === 'APPROVED') return res.status(400).json({ message: 'Account already activated.' });
 
-    const appUrl = process.env.APP_URL || 'https://www.hpcglobal.org';
     // Supabase sends an invite email; the link lands the partner on the
     // set-password page where they create their own password.
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(partner.email, {
-      redirectTo: `${appUrl}/partner/set-password`,
-      data: { partnerId: partner.id, firstName: partner.firstName, lastName: partner.lastName },
-    });
-
-    if (error) {
-      // If the user already exists in Supabase, fall back to a password-recovery link
-      if (/already.*registered|exists/i.test(error.message)) {
-        const { error: linkErr } = await supabaseAdmin.auth.resetPasswordForEmail(partner.email, {
-          redirectTo: `${appUrl}/partner/set-password`,
-        });
-        if (linkErr) return res.status(502).json({ message: `Could not send activation email: ${linkErr.message}` });
-      } else {
-        return res.status(502).json({ message: `Could not send activation email: ${error.message}` });
-      }
-    }
+    const { supabaseUserId, error } = await sendPartnerActivationEmail(partner);
+    if (error) return res.status(502).json({ message: `Could not send activation email: ${error.message}` });
 
     await prisma.partner.update({
       where: { id: req.params.id },
       data:  {
         status: 'APPROVED',
         accountActivatedAt: new Date(),
-        ...(data?.user?.id && { supabaseUserId: data.user.id }),
+        ...(supabaseUserId && { supabaseUserId }),
       },
     });
     res.json({ message: 'Account approved. An activation email has been sent to the partner.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// For an approved partner whose activation link expired, went to spam, or who
+// lost their password before ever signing in — instead of setting them back to
+// PENDING just to approve them again.
+router.put('/partners/:id/resend-activation', async (req, res) => {
+  try {
+    const partner = await prisma.partner.findUnique({ where: { id: req.params.id } });
+    if (!partner) return res.status(404).json({ message: 'Partner not found' });
+    if (partner.status !== 'APPROVED') {
+      return res.status(400).json({ message: 'Only approved partners can be re-sent an activation email. Approve this partner first — approving sends it.' });
+    }
+
+    const { sent, supabaseUserId, error } = await sendPartnerActivationEmail(partner);
+    if (error) {
+      if (isAuthRateLimit(error)) return res.status(429).json({ message: error.message });
+      return res.status(502).json({ message: `Could not send activation email: ${error.message}` });
+    }
+
+    // A partner approved through the status dropdown never got the first email,
+    // so stamp accountActivatedAt the first time one goes out.
+    const data = {
+      ...(supabaseUserId && supabaseUserId !== partner.supabaseUserId && { supabaseUserId }),
+      ...(!partner.accountActivatedAt && { accountActivatedAt: new Date() }),
+    };
+    if (Object.keys(data).length) {
+      await prisma.partner.update({ where: { id: partner.id }, data });
+    }
+    res.json({
+      message: sent === 'invite'
+        ? `A fresh activation email has been sent to ${partner.email}.`
+        : `${partner.firstName}'s earlier link was already opened, so a password-reset email has been sent to ${partner.email} instead. It opens the same page, where they can set their password.`,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

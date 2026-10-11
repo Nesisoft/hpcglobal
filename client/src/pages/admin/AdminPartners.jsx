@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Users, CheckCircle, X, UserPlus, Pencil, Trash2, Check, Globe, Phone, Mail, DollarSign } from 'lucide-react';
+import { Users, CheckCircle, X, UserPlus, Pencil, Trash2, Check, Globe, Phone, Mail, DollarSign, Send } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -27,6 +27,7 @@ export default function AdminPartners() {
   const [editForm, setEditForm]         = useState({ status: '', adminNotes: '' });
   const [saving, setSaving]             = useState(false);
   const [activating, setActivating]     = useState(false);
+  const [resending, setResending]       = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]         = useState(false);
 
@@ -63,6 +64,19 @@ export default function AdminPartners() {
     } catch (err) {
       alert(err.response?.data?.message || 'Activation failed.');
     } finally { setActivating(false); }
+  }
+
+  async function handleResend() {
+    if (!selected) return;
+    setResending(true);
+    try {
+      const { data } = await adminApi.resendPartnerActivation(selected.id);
+      alert(data?.message || `Activation email re-sent to ${selected.email}`);
+      setSelected(null);
+      refetch();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Could not resend the activation email.');
+    } finally { setResending(false); }
   }
 
   async function handleDelete() {
@@ -205,6 +219,15 @@ export default function AdminPartners() {
                   className="btn-primary text-sm px-5 py-2 disabled:opacity-60"
                 >
                   {activating ? 'Sending…' : <><CheckCircle size={14} /> Approve & Send Activation Email</>}
+                </button>
+              )}
+              {selected.status === 'APPROVED' && (
+                <button
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="btn-primary text-sm px-5 py-2 disabled:opacity-60"
+                >
+                  {resending ? 'Sending…' : <><Send size={14} /> Resend Activation Email</>}
                 </button>
               )}
               <button onClick={handleSave} disabled={saving} className="btn-outline text-sm px-4 py-2 disabled:opacity-60">
