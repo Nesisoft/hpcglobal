@@ -25,9 +25,10 @@
  * Without DB_SCHEMA_SYNC=apply it only reports, so the first run against a
  * database built partly by hand shows what it would do before it does anything.
  *
- * Needs DIRECT_URL to be a connection that can run DDL and that Vercel's build
- * servers can reach over IPv4: Supabase's Session pooler (port 5432), not the
- * Transaction pooler (6543) and not db.<ref>.supabase.co, which is IPv6-only.
+ * It needs a connection that can run DDL and that Vercel's build servers can
+ * reach over IPv4: Supabase's Session pooler (port 5432) — not the Transaction
+ * pooler the app uses (6543), and not db.<ref>.supabase.co, which is IPv6-only.
+ * See syncUrl() for where that comes from.
  *
  * To roll back a bad deploy, prefer Vercel's Instant Rollback: it reuses the
  * old build, so nothing here runs. A revert commit also deploys — the columns
@@ -41,8 +42,37 @@ const path = require('path');
 const SCHEMA = path.join(__dirname, 'schema.prisma');
 const PRISMA = require.resolve('prisma/build/index.js');
 const apply  = process.env.DB_SCHEMA_SYNC === 'apply';
-const url    = process.env.DIRECT_URL;
 const log    = (msg) => console.log(`[db-sync] ${msg}`);
+
+/**
+ * The connection to change the schema through.
+ *
+ * When DATABASE_URL is Supabase's Transaction pooler (port 6543), the Session
+ * pooler is the same host and login on port 5432 — so it is derived from it,
+ * and the database password lives in one variable instead of two. Otherwise
+ * DIRECT_URL is used as it is. DB_SYNC_URL overrides both.
+ */
+function syncUrl(env = process.env) {
+  if (env.DB_SYNC_URL) return { url: env.DB_SYNC_URL, from: 'DB_SYNC_URL' };
+  if (env.DATABASE_URL) {
+    try {
+      const u = new URL(env.DATABASE_URL);
+      if (/\.pooler\.supabase\.com$/i.test(u.hostname) && u.port === '6543') {
+        u.port   = '5432';
+        u.search = '';   // pgbouncer=true and friends are for transaction mode
+        return { url: u.toString(), from: 'DATABASE_URL, Session pooler port' };
+      }
+    } catch { /* not a URL we understand — fall through */ }
+  }
+  return { url: env.DIRECT_URL, from: 'DIRECT_URL' };
+}
+
+// Where a connection points, for the log — never the credentials.
+function describe(raw) {
+  try { const u = new URL(raw); return `${u.hostname}:${u.port || 5432}`; } catch { return 'an unreadable URL'; }
+}
+
+const { url, from } = syncUrl();
 
 function prisma(args) {
   return spawnSync(process.execPath, [PRISMA, ...args], { encoding: 'utf8', env: process.env });
@@ -139,7 +169,7 @@ function diff() {
     // Prisma's message names the host and the problem, never the password.
     log('could not read the database schema:');
     console.log((result.stderr || result.stdout || '').trim());
-    log('Check DIRECT_URL is the Supabase Session pooler string (port 5432, reachable over IPv4).');
+    log(`That connection came from ${from}; it must be a Session pooler connection (port 5432, reachable over IPv4).`);
     process.exit(apply ? 1 : 0);
   }
   // An empty diff is printed as a comment and nothing else.
@@ -168,12 +198,13 @@ function main() {
 
   if (!url) {
     if (apply) {
-      log('DIRECT_URL is not set, so the database cannot be checked. Set it to the Supabase Session pooler connection string.');
+      log('no database connection to check against: set DATABASE_URL (or DIRECT_URL) for this environment.');
       process.exit(1);
     }
-    log('skipped: DIRECT_URL is not set');
+    log('skipped: no DATABASE_URL or DIRECT_URL');
     process.exit(0);
   }
+  log(`checking ${describe(url)} (from ${from})`);
 
   const script = diff();
   if (!script) {
@@ -260,6 +291,6 @@ END $$;`,
   log('applied — database now matches schema.prisma');
 }
 
-module.exports = { review, decide };
+module.exports = { review, decide, syncUrl };
 
 if (require.main === module) main();
