@@ -12,7 +12,8 @@
         "db:generate": "prisma generate --schema=server/src/prisma/schema.prisma",
         "db:migrate": "prisma migrate dev --schema=server/src/prisma/schema.prisma",
         "db:studio": "prisma studio --schema=server/src/prisma/schema.prisma",
-        "db:seed": "node server/src/prisma/seed.js"
+        "db:seed": "node server/src/prisma/seed.js",
+        "db:sync": "node server/src/prisma/sync.js"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
