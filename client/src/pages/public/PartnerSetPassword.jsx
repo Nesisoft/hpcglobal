@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Lock, CheckCircle } from 'lucide-react';
 import { supabase, authLink } from '../../lib/supabase';
 import { LOGO_URL } from '../../config/brand';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { evaluatePassword, MIN_LENGTH } from '../../utils/passwordPolicy';
 
 // A recovery link resets an existing password; anything else (an invite, or a
 // visit with no link) is first-time activation. A link Supabase refused doesn't
@@ -80,7 +82,8 @@ export default function PartnerSetPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (password.length < 8)  { setError('Password must be at least 8 characters.'); return; }
+    const { failed } = evaluatePassword(password);
+    if (failed.length)        { setError(`Your password still needs: ${failed[0].label.toLowerCase()}.`); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     setSaving(true);
     setError('');
@@ -92,7 +95,11 @@ export default function PartnerSetPassword() {
       setDone(true);
       setTimeout(() => navigate('/partner/login'), 2500);
     } catch (err) {
-      setError(err.message || 'Could not set your password. The link may have expired.');
+      // Supabase applies its own password rules too; say so plainly rather
+      // than showing its list of character classes.
+      setError(err.code === 'weak_password'
+        ? 'That password is not strong enough. Please meet every requirement listed above.'
+        : err.message || 'Could not set your password. The link may have expired.');
     } finally {
       setSaving(false);
     }
@@ -144,12 +151,14 @@ export default function PartnerSetPassword() {
                 <div className="relative">
                   <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
                   <input
-                    type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8}
+                    type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={MIN_LENGTH}
                     className="w-full bg-white/10 border border-white/15 rounded pl-9 pr-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
-                    placeholder="At least 8 characters"
+                    placeholder={`At least ${MIN_LENGTH} characters`}
                   />
                 </div>
               </div>
+
+              <PasswordRequirements password={password} tone="dark" />
               <div>
                 <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">Confirm Password</label>
                 <div className="relative">
