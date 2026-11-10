@@ -53,6 +53,7 @@ app.post('/api/contact/message',      formLimiter);
 app.post('/api/prayer',               formLimiter);
 app.post('/api/appointments',         formLimiter);
 app.post('/api/partner/apply',        formLimiter);
+app.post('/api/events/:id/rsvp',      formLimiter);
 app.post('/api/auth/forgot-password', formLimiter);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
