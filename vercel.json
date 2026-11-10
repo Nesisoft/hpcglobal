@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm install --include=dev && npm run build",
+  "buildCommand": "npm install --include=dev && npm run build && npm run db:sync",
   "outputDirectory": "client/dist",
   "functions": {
     "api/index.js": { "maxDuration": 60 }
