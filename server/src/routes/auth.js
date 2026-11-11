@@ -14,8 +14,8 @@ const prisma = require('../lib/prisma');
 const { policy: passwordPolicy, evaluatePassword, firstProblem } = require('../lib/passwordPolicy');
 
 const loginSchema = z.object({
-  email:    z.string().trim().email(),
-  password: z.string().min(6),
+  email:    z.string({ error: 'Please enter a valid email address' }).trim().email('Please enter a valid email address'),
+  password: z.string({ error: 'Invalid credentials' }).min(6, 'Invalid credentials'),
 });
 
 function signAccess(user) {

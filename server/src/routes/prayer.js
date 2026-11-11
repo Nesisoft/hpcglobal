@@ -16,7 +16,7 @@ const optionalString = z.preprocess(
 // The name goes into the confirmation email and SMS, so keep it to a name.
 const optionalName = z.preprocess(
   (v) => (v === '' || v === null ? undefined : v),
-  z.string().max(100).optional(),
+  z.string().max(100, 'Please keep your name under 100 characters').optional(),
 );
 const optionalEmail = z.preprocess(
   (v) => (v === '' || v === null ? undefined : v),
