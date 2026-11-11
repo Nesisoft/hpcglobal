@@ -1,0 +1,45 @@
+# Runs the server tests on every pull request (and on main after a merge),
+# against a throwaway Postgres, so a change that weakens one of the site's
+# safeguards — the deploy-time schema sync's rules, sign-in matching, rate
+# limits, delivery-failure recording — is caught before it is merged.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate --schema=server/src/prisma/schema.prisma
+
+      - run: npm test
