@@ -468,6 +468,27 @@ model ContactMessage {
   createdAt DateTime @default(now())
 }
 
+enum DeliveryChannel {
+  EMAIL
+  SMS
+}
+
+/// A confirmation, alert or reset the site tried to send and couldn't.
+/// Recorded by lib/notify.js so the office sees it under Delivery Problems
+/// instead of it living only in Vercel's logs. Pruned after 90 days.
+model DeliveryFailure {
+  id         String          @id @default(uuid())
+  channel    DeliveryChannel
+  context    String          // what it was about, e.g. "Prayer request from Ama"
+  label      String          // which message, e.g. "confirmation SMS"
+  recipient  String?         // the address or number it was for
+  error      String
+  resolvedAt DateTime?
+  createdAt  DateTime        @default(now())
+
+  @@index([resolvedAt, createdAt])
+}
+
 enum PartnerStatus {
   PENDING
   APPROVED

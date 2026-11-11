@@ -41,18 +41,18 @@ router.post('/', validate(prayerSchema), async (req, res) => {
     // Notify office + confirm to the requester — non-fatal, and sent before
     // responding because Vercel may freeze the function once it has responded.
     const who = prayer.name ? `${prayer.name}` : 'Anonymous';
-    await sendNotifications('Prayer request', [
-      ['office email', () => emailService.notifyPrayerRequest(prayer)],
+    await sendNotifications(`Prayer request from ${who}`, [
+      ['office email', () => emailService.notifyPrayerRequest(prayer), emailService.officeEmail()],
       prayer.wantsCall && process.env.OFFICE_PHONE && ['office call SMS', () => sendSms(
         process.env.OFFICE_PHONE,
         `HPC Prayer: ${who} requests a call. Category: ${prayer.category}. Phone: ${prayer.phone || 'N/A'}`
-      )],
+      ), process.env.OFFICE_PHONE],
       // Confirmation to the requester (if they shared contact details)
-      prayer.email && ['confirmation email', () => emailService.sendPrayerConfirmation(prayer.email, prayer.name)],
+      prayer.email && ['confirmation email', () => emailService.sendPrayerConfirmation(prayer.email, prayer.name), prayer.email],
       prayer.phone && ['confirmation SMS', () => sendSms(
         prayer.phone,
         `HPC Global: ${prayer.name ? `Hi ${prayer.name}, ` : ''}we have received your prayer request and our team is praying with you. God bless you.`
-      )],
+      ), prayer.phone],
     ]);
 
     res.status(201).json({ message: 'Prayer request received', id: prayer.id });

@@ -1,7 +1,7 @@
 const emailService = require('./email');
 const { sendSms }  = require('./sms');
 const { escapeHtml } = require('../lib/html');
-const { withTimeout } = require('../lib/notify');
+const { withTimeout, recordFailure } = require('../lib/notify');
 
 /**
  * Composes and delivers the messages an event sends to a registrant.
@@ -110,6 +110,10 @@ async function notifyRegistrant(event, rsvp) {
         .catch((err) => {
           result.email = 'failed';
           console.error('RSVP confirmation email failed:', err.message);
+          return recordFailure({
+            channel: 'EMAIL', context: `Registration for ${event.title} by ${rsvp.name}`,
+            label: 'confirmation email', to: rsvp.email, error: err,
+          });
         })
     );
   }
@@ -121,6 +125,10 @@ async function notifyRegistrant(event, rsvp) {
         .catch((err) => {
           result.sms = 'failed';
           console.error('RSVP confirmation SMS failed:', err.message);
+          return recordFailure({
+            channel: 'SMS', context: `Registration for ${event.title} by ${rsvp.name}`,
+            label: 'confirmation SMS', to: rsvp.phone, error: err,
+          });
         })
     );
   }

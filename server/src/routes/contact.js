@@ -26,18 +26,18 @@ router.post('/message', validate(messageSchema), async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 
-  await sendNotifications('Contact message', [
-    ['auto-reply email', () => email.sendAutoReply(req.body.email, req.body.name)],
-    ['office email',     () => email.notifyOffice(req.body)],
+  await sendNotifications(`Contact message from ${req.body.name}`, [
+    ['auto-reply email', () => email.sendAutoReply(req.body.email, req.body.name), req.body.email],
+    ['office email',     () => email.notifyOffice(req.body), email.officeEmail()],
     process.env.OFFICE_PHONE && ['office SMS', () => sendSms(
       process.env.OFFICE_PHONE,
       `HPC Contact: ${req.body.name} (${req.body.type}). Phone: ${req.body.phone || 'N/A'}. Check your email for details.`
-    )],
+    ), process.env.OFFICE_PHONE],
     // Confirm to the sender by SMS if they shared a phone number
     req.body.phone && ['confirmation SMS', () => sendSms(
       req.body.phone,
       `HPC Global: Hi ${req.body.name}, we have received your message and will respond within 24 hours. God bless you.`
-    )],
+    ), req.body.phone],
   ]);
 
   res.status(201).json({ message: 'Message received. We will respond within 24 hours.' });

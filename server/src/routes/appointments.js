@@ -127,10 +127,10 @@ router.post('/', validate(bookSchema), async (req, res) => {
     // Notify the requester + office — non-fatal, and sent before responding
     // because Vercel may freeze the function once it has responded.
     const whenLabel = `${day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${time} GMT`;
-    await sendNotifications('Appointment request', [
-      ['confirmation email', () => emailService.sendAppointmentConfirmation(email, name, whenLabel, reason)],
-      ['confirmation SMS',   () => sendSms(phone, `HPC Global: Hi ${name}, your appointment request for ${whenLabel} has been received. We will confirm shortly. God bless you.`)],
-      process.env.OFFICE_PHONE && ['office SMS', () => sendSms(process.env.OFFICE_PHONE, `HPC Appointment: ${name} requested ${whenLabel}. Reason: ${reason}. Phone: ${phone}`)],
+    await sendNotifications(`Appointment request from ${name}`, [
+      ['confirmation email', () => emailService.sendAppointmentConfirmation(email, name, whenLabel, reason), email],
+      ['confirmation SMS',   () => sendSms(phone, `HPC Global: Hi ${name}, your appointment request for ${whenLabel} has been received. We will confirm shortly. God bless you.`), phone],
+      process.env.OFFICE_PHONE && ['office SMS', () => sendSms(process.env.OFFICE_PHONE, `HPC Appointment: ${name} requested ${whenLabel}. Reason: ${reason}. Phone: ${phone}`), process.env.OFFICE_PHONE],
     ]);
 
     res.status(201).json({ message: 'Your appointment request has been received.', id: appt.id });
@@ -172,14 +172,14 @@ router.put('/:id', verifyToken, async (req, res) => {
     // Notify the requester when confirmed/cancelled — non-fatal
     const whenLabel = `${new Date(updated.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${updated.time} GMT`;
     if (updated.status === 'CONFIRMED') {
-      await sendNotifications('Appointment confirmed', [
-        ['requester email', () => emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'confirmed')],
-        ['requester SMS',   () => sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} is CONFIRMED. See you then. God bless you.`)],
+      await sendNotifications(`Appointment confirmed for ${updated.name}`, [
+        ['requester email', () => emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'confirmed'), updated.email],
+        ['requester SMS',   () => sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} is CONFIRMED. See you then. God bless you.`), updated.phone],
       ]);
     } else if (updated.status === 'CANCELLED') {
-      await sendNotifications('Appointment cancelled', [
-        ['requester email', () => emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'cancelled')],
-        ['requester SMS',   () => sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} has been cancelled. Please contact us to reschedule.`)],
+      await sendNotifications(`Appointment cancelled for ${updated.name}`, [
+        ['requester email', () => emailService.sendAppointmentStatus(updated.email, updated.name, whenLabel, 'cancelled'), updated.email],
+        ['requester SMS',   () => sendSms(updated.phone, `HPC Global: Hi ${updated.name}, your appointment for ${whenLabel} has been cancelled. Please contact us to reschedule.`), updated.phone],
       ]);
     }
 

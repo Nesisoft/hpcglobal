@@ -55,6 +55,7 @@ const AdminLeadership = lazy(() => import('./pages/admin/AdminLeadership'));
 const AdminAbout     = lazy(() => import('./pages/admin/AdminAbout'));
 const AdminServices  = lazy(() => import('./pages/admin/AdminServices'));
 const AdminContact   = lazy(() => import('./pages/admin/AdminContact'));
+const AdminDeliveryProblems = lazy(() => import('./pages/admin/AdminDeliveryProblems'));
 const AdminSettings  = lazy(() => import('./pages/admin/AdminSettings'));
 const AdminUsers     = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminReports   = lazy(() => import('./pages/admin/AdminReports'));
@@ -167,6 +168,7 @@ export default function App() {
             <Route path="/admin/services"   element={<AdminRoute><AdminServices /></AdminRoute>} />
             <Route path="/admin/settings"   element={<AdminRoute><AdminSettings /></AdminRoute>} />
             <Route path="/admin/contact"    element={<AdminRoute><AdminContact /></AdminRoute>} />
+            <Route path="/admin/delivery-problems" element={<AdminRoute><AdminDeliveryProblems /></AdminRoute>} />
             <Route path="/admin/users"           element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/partners"        element={<AdminRoute><AdminPartners /></AdminRoute>} />
             <Route path="/admin/zoom-schedules"    element={<AdminRoute><AdminZoomSchedules /></AdminRoute>} />

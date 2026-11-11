@@ -145,8 +145,13 @@ async function sendAutoReply(toEmail, toName) {
   });
 }
 
+/** Where office notifications go. */
+function officeEmail() {
+  return process.env.OFFICE_EMAIL || FROM;
+}
+
 async function notifyOffice(msg) {
-  const to = process.env.OFFICE_EMAIL || FROM;
+  const to = officeEmail();
   return sendMail({
     to,
     subject: `New contact message: ${msg.type} — ${msg.name}`,
@@ -240,7 +245,7 @@ async function sendAppointmentStatus(toEmail, name, whenLabel, statusWord) {
 }
 
 async function notifyPrayerRequest(prayer) {
-  const to = process.env.OFFICE_EMAIL || FROM;
+  const to = officeEmail();
   return sendMail({
     to,
     subject: `New prayer request: ${prayer.category}`,
@@ -254,4 +259,4 @@ async function notifyPrayerRequest(prayer) {
   });
 }
 
-module.exports = { sendMail, sendBatchViaResend, emailTransportName, RESEND_BATCH_MAX, sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendEventRsvpConfirmation, sendPrayerConfirmation, sendAppointmentConfirmation, sendAppointmentStatus };
+module.exports = { sendMail, sendBatchViaResend, emailTransportName, RESEND_BATCH_MAX, officeEmail, sendAutoReply, notifyOffice, sendPasswordReset, notifyPrayerRequest, sendPartnerApplicationConfirmation, sendEventRsvpConfirmation, sendPrayerConfirmation, sendAppointmentConfirmation, sendAppointmentStatus };
