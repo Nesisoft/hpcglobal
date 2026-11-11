@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { LOGO_URL } from '../../config/brand';
+import { Eye, EyeOff } from 'lucide-react';
 import PasswordRequirements from '../../components/PasswordRequirements';
 import { evaluatePassword, MIN_LENGTH } from '../../utils/passwordPolicy';
 
@@ -11,6 +12,7 @@ export default function AdminResetPassword() {
   const token               = searchParams.get('token') ?? '';
   const [password, setPassword]   = useState('');
   const [confirm, setConfirm]     = useState('');
+  const [show, setShow]           = useState(false);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const [done, setDone]           = useState(false);
@@ -65,22 +67,32 @@ export default function AdminResetPassword() {
               {error && <div className="bg-red-500/10 border border-red-500/30 rounded p-3 text-red-400 text-sm font-body">{error}</div>}
               <div>
                 <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">New Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={MIN_LENGTH}
-                  className="w-full bg-white/10 border border-white/15 rounded px-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
-                  placeholder={`At least ${MIN_LENGTH} characters`}
-                />
+                <div className="relative">
+                  <input
+                    type={show ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={MIN_LENGTH}
+                    className="w-full bg-white/10 border border-white/15 rounded pl-4 pr-11 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
+                    placeholder={`At least ${MIN_LENGTH} characters`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShow((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 hover:text-white/70"
+                    aria-label={show ? 'Hide passwords' : 'Show passwords'}
+                  >
+                    {show ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
 
               <PasswordRequirements password={password} tone="dark" />
               <div>
                 <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">Confirm Password</label>
                 <input
-                  type="password"
+                  type={show ? 'text' : 'password'}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   required
