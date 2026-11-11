@@ -2011,4 +2011,80 @@ router.delete('/partner-messages/:id', async (req, res) => {
   }
 });
 
+// ─── Delivery problems ────────────────────────────────────────────────────────
+// Confirmations, office alerts and resets the site tried to send and couldn't,
+// recorded by lib/notify.js so the office can follow up with the person.
+// Bulk event messages keep their own failure list in the events composer.
+//
+// Super admins only: the rows name prayer requesters and carry their contact
+// details, and admin addresses from failed resets — things the other roles
+// can't see under Prayer or Users either.
+const DELIVERY_FAILURE_DAYS = 90;
+const DELIVERY_FAILURE_PAGE = 200;
+const deliveryCutoff = () => new Date(Date.now() - DELIVERY_FAILURE_DAYS * 24 * 60 * 60 * 1000);
+
+router.get('/delivery-failures', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    // Old ones are of no use to anyone; clear them out as the list is read.
+    await prisma.deliveryFailure.deleteMany({ where: { createdAt: { lt: deliveryCutoff() } } });
+
+    const showAll = req.query.show === 'all';
+    const where   = showAll ? {} : { resolvedAt: null };
+    const [failures, total, open] = await Promise.all([
+      prisma.deliveryFailure.findMany({ where, orderBy: { createdAt: 'desc' }, take: DELIVERY_FAILURE_PAGE }),
+      prisma.deliveryFailure.count({ where }),
+      prisma.deliveryFailure.count({ where: { resolvedAt: null } }),
+    ]);
+    // A provider that isn't set up fails every message without recording
+    // each one, so the page says so once instead.
+    res.json({ failures, total, open, transports: { email: emailTransportName(), sms: smsTransportName() } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// For the sidebar badge, on every admin page — so just the number, counted
+// over the same window the list keeps.
+router.get('/delivery-failures/count', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    res.json({ open: await prisma.deliveryFailure.count({ where: { resolvedAt: null, createdAt: { gte: deliveryCutoff() } } }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// "Mark all resolved" sends the rows it had on screen, so anything recorded
+// since the page loaded, or beyond the newest 200, stays open until someone
+// has actually seen it.
+const resolveFailuresSchema = z.object({ ids: z.array(z.string()).min(1).max(DELIVERY_FAILURE_PAGE) });
+
+router.put('/delivery-failures/resolve', requireRole('SUPER_ADMIN'), validate(resolveFailuresSchema), async (req, res) => {
+  try {
+    const { count } = await prisma.deliveryFailure.updateMany({
+      where: { id: { in: req.body.ids }, resolvedAt: null },
+      data:  { resolvedAt: new Date() },
+    });
+    res.json({ resolved: count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/delivery-failures/:id/resolve', requireRole('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const failure = await prisma.deliveryFailure.update({
+      where: { id: req.params.id },
+      data:  { resolvedAt: new Date() },
+    });
+    res.json(failure);
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ message: 'Not found' });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

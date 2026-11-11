@@ -4,6 +4,7 @@ const jwt     = require('jsonwebtoken');
 const crypto  = require('crypto');
 const { z }   = require('zod');
 const { waitUntil } = require('@vercel/functions');
+const { recordFailure } = require('../lib/notify');
 
 const { validate }     = require('../middleware/validate');
 const { verifyToken }  = require('../middleware/auth');
@@ -186,7 +187,12 @@ router.post('/forgot-password', (req, res) => {
       });
       const appUrl  = process.env.APP_URL || 'https://www.hpcglobal.org';
       const resetUrl = `${appUrl}/admin/reset-password?token=${token}`;
-      await emailService.sendPasswordReset(user.email, resetUrl);
+      try {
+        await emailService.sendPasswordReset(user.email, resetUrl);
+      } catch (err) {
+        await recordFailure({ channel: 'EMAIL', context: 'Admin password reset', label: 'reset email', to: user.email, error: err });
+        throw err;
+      }
     } catch (err) {
       console.error('Password reset error (non-fatal):', err.message);
     }

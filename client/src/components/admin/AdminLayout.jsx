@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LOGO_URL } from '../../config/brand';
+import { adminApi } from '../../services/api';
 import {
   LayoutDashboard, Image, Mic2, Calendar, BookOpen, Images,
   Users, Church, FileText, Clock, Settings, Mail, Heart,
   HandHeart, UserPlus, Menu, X, LogOut, ExternalLink, ChevronDown, Library,
-  Video, MessageSquare, Banknote, CalendarCheck, ClipboardList, KeyRound,
+  Video, MessageSquare, Banknote, CalendarCheck, ClipboardList, KeyRound, AlertTriangle,
 } from 'lucide-react';
 
 const NAV = [
@@ -29,6 +30,7 @@ const NAV = [
   { label: 'Prayer',      to: '/admin/prayer',        icon: HandHeart },
   { label: 'Visitors',    to: '/admin/visitors',      icon: UserPlus  },
   { label: 'Messages',    to: '/admin/contact',       icon: Mail      },
+  { label: 'Delivery Problems', to: '/admin/delivery-problems', icon: AlertTriangle, badge: 'deliveryFailures', superOnly: true },
   { label: 'Giving',      to: '/admin/giving',        icon: Heart     },
   { label: 'Appointments', to: '/admin/appointments', icon: CalendarCheck },
   { label: 'Dept. Reports', to: '/admin/reports',   icon: ClipboardList, superOnly: true },
@@ -39,7 +41,7 @@ const NAV = [
   { label: 'Partner Messages',  to: '/admin/partner-messages',  icon: MessageSquare},
 ];
 
-function Sidebar({ open, onClose, user, onLogout }) {
+function Sidebar({ open, onClose, user, onLogout, badges }) {
   return (
     <>
       {/* Mobile backdrop */}
@@ -101,6 +103,11 @@ function Sidebar({ open, onClose, user, onLogout }) {
               >
                 <Icon size={15} className="flex-shrink-0" />
                 {item.label}
+                {badges?.[item.badge] > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                    {badges[item.badge]}
+                  </span>
+                )}
               </NavLink>
             );
           })}
@@ -225,6 +232,23 @@ export default function AdminLayout({ children, title }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [deliveryFailures, setDeliveryFailures] = useState(0);
+
+  // Sends that failed and are waiting for someone, as a badge on Delivery
+  // Problems so the office notices without having to look. A hint, not the
+  // page: if the count can't be read, there is simply no badge. The page
+  // announces changes so the badge follows as items are resolved.
+  const isSuper = user?.role === 'SUPER_ADMIN';
+  useEffect(() => {
+    if (!isSuper) return undefined;   // the page and its data are super-admin only
+    let active = true;
+    const load = () => adminApi.countDeliveryFailures()
+      .then(({ data }) => { if (active) setDeliveryFailures(data.open || 0); })
+      .catch(() => {});
+    load();
+    window.addEventListener('hpc:delivery-failures', load);
+    return () => { active = false; window.removeEventListener('hpc:delivery-failures', load); };
+  }, [isSuper]);
 
   async function handleLogout() {
     await logout();
@@ -238,6 +262,7 @@ export default function AdminLayout({ children, title }) {
         onClose={() => setSidebarOpen(false)}
         user={user}
         onLogout={handleLogout}
+        badges={{ deliveryFailures }}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

@@ -183,6 +183,11 @@ export const adminApi = {
   getMessages:  (p)    => api.get('/admin/contact/messages', { params: p }),
   readMessage:  (id)   => api.put(`/admin/contact/messages/${id}`),
 
+  getDeliveryFailures:        (p)  => api.get('/admin/delivery-failures', { params: p }),
+  countDeliveryFailures:      ()   => api.get('/admin/delivery-failures/count'),
+  resolveDeliveryFailure:     (id) => api.put(`/admin/delivery-failures/${id}/resolve`),
+  resolveDeliveryFailures:    (ids) => api.put('/admin/delivery-failures/resolve', { ids }),
+
   getReports:        (p)     => api.get('/admin/reports', { params: p }),
   getReport:         (id)    => api.get(`/admin/reports/${id}`),
   reviewReport:      (id, d) => api.put(`/admin/reports/${id}/review`, d),

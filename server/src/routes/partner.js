@@ -46,12 +46,12 @@ router.post('/apply', validate(applySchema), async (req, res) => {
     const existing = await prisma.partner.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ message: 'An application with this email already exists.' });
     const partner = await prisma.partner.create({ data: { ...req.body, email } });
-    await sendNotifications('Partner application', [
-      ['confirmation email', () => emailService.sendPartnerApplicationConfirmation(partner.email, partner.firstName)],
+    await sendNotifications(`Partner application from ${partner.firstName} ${partner.lastName}`, [
+      ['confirmation email', () => emailService.sendPartnerApplicationConfirmation(partner.email, partner.firstName), partner.email],
       partner.phone && ['confirmation SMS', () => sendSms(
         partner.phone,
         `HPC Global: Hi ${partner.firstName}, we have received your partnership application. We will email you to activate your account after verification. God bless you.`
-      )],
+      ), partner.phone],
     ]);
     res.status(201).json({ message: 'Application received. You will receive an email to activate your account after verification.' });
   } catch (err) {
