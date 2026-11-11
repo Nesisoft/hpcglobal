@@ -1453,6 +1453,15 @@ function handleUserWriteError(err, res) {
   return res.status(dbStatus(err)).json({ message: dbMessage(err) });
 }
 
+// The unique index is case-sensitive, but sign-in matches addresses whatever
+// their case — so an account must not differ from another only in case, or
+// sign-in could not tell them apart.
+async function emailTakenByAnother(email, exceptId) {
+  const rows = await prisma.$queryRaw`
+    SELECT id FROM "AdminUser" WHERE lower(email) = lower(${email})`;
+  return rows.some((r) => r.id !== exceptId);
+}
+
 router.get('/users', requireRole('SUPER_ADMIN'), async (_req, res) => {
   try {
     const users = await withDbRetry(
@@ -1469,6 +1478,9 @@ router.get('/users', requireRole('SUPER_ADMIN'), async (_req, res) => {
 router.post('/users', requireRole('SUPER_ADMIN'), validate(userCreateSchema), async (req, res) => {
   try {
     const { name, email, password, role, department } = req.body;
+    if (await emailTakenByAnother(email)) {
+      return res.status(409).json({ message: 'An account with that email already exists' });
+    }
     const user = await prisma.adminUser.create({
       data: {
         name,
@@ -1498,6 +1510,9 @@ router.put('/users/:id', requireRole('SUPER_ADMIN'), validate(userUpdateSchema),
     // out of user management.
     if (req.params.id === req.user.id && role !== 'SUPER_ADMIN') {
       return res.status(400).json({ message: 'You cannot change your own role' });
+    }
+    if (await emailTakenByAnother(email, req.params.id)) {
+      return res.status(409).json({ message: 'An account with that email already exists' });
     }
 
     const data = { name, email, role, department: role === 'HOD' ? department : null };

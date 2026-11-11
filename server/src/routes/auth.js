@@ -13,7 +13,7 @@ const prisma = require('../lib/prisma');
 const { policy: passwordPolicy, evaluatePassword, firstProblem } = require('../lib/passwordPolicy');
 
 const loginSchema = z.object({
-  email:    z.string().email(),
+  email:    z.string().trim().email(),
   password: z.string().min(6),
 });
 
@@ -42,11 +42,30 @@ function signRefresh(user) {
   );
 }
 
+// Email addresses are matched whatever their capitalisation: people type
+// "Ama@HPCGlobal.org" as readily as the lowercase it was saved in, and some
+// older accounts were saved before addresses were lowercased on the way in.
+//
+// lower() on both sides, compared exactly — not Prisma's case-insensitive
+// `equals`, which becomes ILIKE and lets % and _ in whatever was typed match
+// other people's accounts. Two accounts that differ only in case: the exact
+// spelling wins, and failing that neither does, rather than guessing.
+async function findAdminByEmail(email) {
+  const matches = await prisma.$queryRaw`
+    SELECT id, email FROM "AdminUser" WHERE lower(email) = lower(${email})`;
+  const match = matches.length === 1 ? matches[0] : matches.find((m) => m.email === email);
+  if (!match) {
+    if (matches.length > 1) console.warn(`Admin sign-in: ${matches.length} accounts differ only in the case of their email; refusing to pick one`);
+    return null;
+  }
+  return prisma.adminUser.findUnique({ where: { id: match.id } });
+}
+
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await prisma.adminUser.findUnique({ where: { email } });
+    const user = await findAdminByEmail(email);
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -147,7 +166,7 @@ router.post('/change-password', verifyToken, validate(changePasswordSchema), asy
 
 // POST /api/auth/forgot-password — public, rate-limit in production
 router.post('/forgot-password', (req, res) => {
-  const { email } = req.body;
+  const email = String(req.body?.email || '').trim().slice(0, 254);
   // Always return 200 to avoid user enumeration
   res.json({ message: 'If that email exists, a reset link has been sent.' });
 
@@ -156,7 +175,8 @@ router.post('/forgot-password', (req, res) => {
   // exist. waitUntil keeps the Vercel function alive until they finish instead.
   waitUntil((async () => {
     try {
-      const user = await prisma.adminUser.findUnique({ where: { email } });
+      if (!email) return;
+      const user = await findAdminByEmail(email);
       if (!user) return;
       const token  = crypto.randomBytes(32).toString('hex');
       const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
