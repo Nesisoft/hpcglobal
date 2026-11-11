@@ -70,10 +70,7 @@ const reportSchema = z
     // The one narrative field worth insisting on: a report with no account of
     // what the department did says nothing.
     activities: z
-      .string({
-        required_error:     'Please describe what the department did',
-        invalid_type_error: 'Please describe what the department did',
-      })
+      .string({ error: 'Please describe what the department did' })
       .trim()
       .min(3, 'Please describe what the department did')
       .max(5000),

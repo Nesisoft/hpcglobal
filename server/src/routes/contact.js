@@ -10,7 +10,7 @@ const prisma = require('../lib/prisma');
 const { sendNotifications } = require('../lib/notify');
 
 const messageSchema = z.object({
-  name:    z.string().min(1).max(100),
+  name:    z.string({ error: 'Please enter your name' }).min(1, 'Please enter your name').max(100, 'Please keep your name under 100 characters'),
   email:   z.string().email(),
   phone:   z.string().optional(),
   type:    z.string(),

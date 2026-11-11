@@ -1,8 +1,10 @@
+const { z } = require('zod');
+
 function validate(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const flat   = result.error.flatten();
+      const flat   = z.flattenError(result.error);
       const errors = flat.fieldErrors;
       // Lead with the specific complaint. Clients surface `message`, and
       // "Validation failed" tells the person filling the form nothing about

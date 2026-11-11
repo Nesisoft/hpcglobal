@@ -32,7 +32,7 @@ const OPTIONAL_NAME_CATEGORIES = ['TITHE', 'OFFERING'];
 const schema = z.object({
   name:        z.string().optional(),
   email:       z.string().email('Valid email required'),
-  amount:      z.number({ invalid_type_error: 'Enter an amount' }).positive('Must be positive'),
+  amount:      z.number({ error: 'Enter an amount' }).positive('Must be positive'),
   category:    z.string().min(1, 'Select a category'),
   method:      z.string().min(1, 'Select a payment method'),
   titheNumber: z.string().optional(),

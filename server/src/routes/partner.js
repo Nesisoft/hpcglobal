@@ -31,8 +31,8 @@ async function verifyPartner(req, res, next) {
 
 // ─── Apply (no commitment at this stage) ──────────────────────────────────────
 const applySchema = z.object({
-  firstName:  z.string().min(1).max(100),
-  lastName:   z.string().min(1).max(100),
+  firstName:  z.string({ error: 'Please enter your first name' }).min(1, 'Please enter your first name').max(100, 'Please keep your first name under 100 characters'),
+  lastName:   z.string({ error: 'Please enter your last name' }).min(1, 'Please enter your last name').max(100, 'Please keep your last name under 100 characters'),
   email:      z.string().email(),
   phone:      z.string().optional(),
   country:    z.string().optional(),

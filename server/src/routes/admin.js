@@ -1412,7 +1412,7 @@ const withStrongPassword = (schema) =>
   schema.superRefine((v, ctx) => {
     if (!v.password || evaluatePassword(v.password).ok) return;
     ctx.addIssue({
-      code:    z.ZodIssueCode.custom,
+      code:    'custom',
       message: firstProblem(v.password),
       path:    ['password'],
     });

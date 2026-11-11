@@ -68,13 +68,13 @@ router.get('/slots', async (_req, res) => {
 
 // ─── Public: book an appointment ──────────────────────────────────────────────
 const bookSchema = z.object({
-  name:   z.string().min(1).max(100),
-  email:  z.string().email(),
-  phone:  z.string().min(1).max(30),
-  date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),  // YYYY-MM-DD
-  time:   z.string().regex(/^\d{2}:\d{2}$/),         // HH:mm
-  reason: z.string().min(1).max(200),
-  notes:  z.string().max(2000).optional(),
+  name:   z.string({ error: 'Please enter your name' }).min(1, 'Please enter your name').max(100, 'Please keep your name under 100 characters'),
+  email:  z.string({ error: 'Please enter a valid email address' }).email('Please enter a valid email address'),
+  phone:  z.string({ error: 'Please enter your phone number' }).min(1, 'Please enter your phone number').max(30, 'Please enter a valid phone number'),
+  date:   z.string({ error: 'Please choose a date' }).regex(/^\d{4}-\d{2}-\d{2}$/, 'Please choose a date'),  // YYYY-MM-DD
+  time:   z.string({ error: 'Please choose a time' }).regex(/^\d{2}:\d{2}$/, 'Please choose a time'),         // HH:mm
+  reason: z.string({ error: 'Please choose a reason' }).min(1, 'Please choose a reason').max(200, 'Please keep the reason under 200 characters'),
+  notes:  z.string().max(2000, 'Please keep your notes under 2,000 characters').optional(),
 });
 
 /**
