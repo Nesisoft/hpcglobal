@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LOGO_URL } from '../../config/brand';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLogin() {
   const { login } = useAuth();
   const navigate  = useNavigate();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [show, setShow]         = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
@@ -44,9 +46,19 @@ export default function AdminLogin() {
           </div>
           <div>
             <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-              className="w-full bg-white/10 border border-white/15 rounded px-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
-              placeholder="••••••••" />
+            <div className="relative">
+              <input type={show ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required
+                className="w-full bg-white/10 border border-white/15 rounded pl-4 pr-11 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
+                placeholder="••••••••" />
+              <button
+                type="button"
+                onClick={() => setShow((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 hover:text-white/70"
+                aria-label={show ? 'Hide password' : 'Show password'}
+              >
+                {show ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
           </div>
           <button type="submit" disabled={loading}
             className="w-full bg-gold text-purple-deep font-body font-semibold py-3 rounded text-sm hover:bg-gold-light transition-colors disabled:opacity-60">

@@ -276,6 +276,7 @@ export default function AdminUsers() {
                   type="button"
                   onClick={() => setShowPw((v) => !v)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink/30 hover:text-ink/60"
+                  aria-label={showPw ? 'Hide passwords' : 'Show passwords'}
                 >
                   {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>

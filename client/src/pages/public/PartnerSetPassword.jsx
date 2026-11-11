@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, CheckCircle } from 'lucide-react';
+import { Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { supabase, authLink } from '../../lib/supabase';
 import { LOGO_URL } from '../../config/brand';
 import PasswordRequirements from '../../components/PasswordRequirements';
@@ -50,6 +50,7 @@ export default function PartnerSetPassword() {
   const [checking, setChecking] = useState(!linkError);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
+  const [show, setShow]         = useState(false);
   const [error, setError]       = useState('');
   const [saving, setSaving]     = useState(false);
   const [done, setDone]         = useState(false);
@@ -151,10 +152,18 @@ export default function PartnerSetPassword() {
                 <div className="relative">
                   <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
                   <input
-                    type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={MIN_LENGTH}
-                    className="w-full bg-white/10 border border-white/15 rounded pl-9 pr-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
+                    type={show ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={MIN_LENGTH}
+                    className="w-full bg-white/10 border border-white/15 rounded pl-9 pr-11 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
                     placeholder={`At least ${MIN_LENGTH} characters`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShow((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 hover:text-white/70"
+                    aria-label={show ? 'Hide passwords' : 'Show passwords'}
+                  >
+                    {show ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
               </div>
 
@@ -164,7 +173,7 @@ export default function PartnerSetPassword() {
                 <div className="relative">
                   <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
                   <input
-                    type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required
+                    type={show ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} required
                     className="w-full bg-white/10 border border-white/15 rounded pl-9 pr-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
                     placeholder="Repeat password"
                   />

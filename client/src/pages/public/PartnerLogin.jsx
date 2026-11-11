@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePartnerAuth } from '../../context/PartnerAuthContext';
 import { LOGO_URL } from '../../config/brand';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function PartnerLogin() {
   const { login }         = usePartnerAuth();
   const navigate          = useNavigate();
   const [email, setEmail] = useState('');
   const [pass, setPass]   = useState('');
+  const [show, setShow]   = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,11 +49,21 @@ export default function PartnerLogin() {
           </div>
           <div>
             <label className="text-white/50 text-xs font-body uppercase tracking-widest block mb-2">Password</label>
-            <input
-              type="password" value={pass} onChange={(e) => setPass(e.target.value)} required
-              className="w-full bg-white/10 border border-white/15 rounded px-4 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={show ? 'text' : 'password'} value={pass} onChange={(e) => setPass(e.target.value)} required
+                className="w-full bg-white/10 border border-white/15 rounded pl-4 pr-11 py-3 text-white text-sm font-body placeholder-white/30 focus:outline-none focus:border-gold"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShow((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35 hover:text-white/70"
+                aria-label={show ? 'Hide password' : 'Show password'}
+              >
+                {show ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
             <div className="text-right mt-2">
               <Link to="/partner/forgot-password" className="text-gold hover:text-gold-light text-xs font-body transition-colors">
                 Forgot password?
