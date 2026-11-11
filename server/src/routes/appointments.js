@@ -87,15 +87,19 @@ const bookSchema = z.object({
  * contact details it supplied.
  */
 async function isOfferedSlot(date, time) {
+  // Walk the same days GET /slots does and take the weekday from the matching
+  // one, so the two agree in any timezone: /slots labels a local day with its
+  // UTC date, and reading the weekday back off that label would be a day out
+  // on a server east of UTC.
   const start = new Date(); start.setHours(0, 0, 0, 0);
-  const horizon = [];
-  for (let i = 1; i <= DAYS_AHEAD; i++) {
+  let offered = null;
+  for (let i = 1; i <= DAYS_AHEAD && !offered; i++) {
     const day = new Date(start); day.setDate(day.getDate() + i);
-    horizon.push(ymd(day));
+    if (ymd(day) === date) offered = day;
   }
-  if (!horizon.includes(date)) return false;
+  if (!offered) return false;
 
-  const dow  = new Date(`${date}T00:00:00.000Z`).getUTCDay();
+  const dow  = offered.getDay();
   const wins = await prisma.appointmentAvailability.findMany({ where: { isActive: true, dayOfWeek: dow } });
   const t = toMin(time);
   return wins.some((w) => {
