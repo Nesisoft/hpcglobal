@@ -46,6 +46,7 @@ const AdminSermons   = lazy(() => import('./pages/admin/AdminSermons'));
 const AdminSermonSeries = lazy(() => import('./pages/admin/AdminSermonSeries'));
 const AdminEvents    = lazy(() => import('./pages/admin/AdminEvents'));
 const AdminGiving    = lazy(() => import('./pages/admin/AdminGiving'));
+const AdminTithes    = lazy(() => import('./pages/admin/AdminTithes'));
 const AdminPrayer    = lazy(() => import('./pages/admin/AdminPrayer'));
 const AdminVisitors  = lazy(() => import('./pages/admin/AdminVisitors'));
 const AdminBlog      = lazy(() => import('./pages/admin/AdminBlog'));
@@ -158,6 +159,8 @@ export default function App() {
             <Route path="/admin/sermon-series" element={<AdminRoute><AdminSermonSeries /></AdminRoute>} />
             <Route path="/admin/events"     element={<AdminRoute><AdminEvents /></AdminRoute>} />
             <Route path="/admin/giving"     element={<AdminRoute><AdminGiving /></AdminRoute>} />
+            {/* Super admins only, like the server says: the other roles are sent to their dashboard. */}
+            <Route path="/admin/tithes"     element={<ProtectedRoute roles={['SUPER_ADMIN']}><AdminTithes /></ProtectedRoute>} />
             <Route path="/admin/prayer"     element={<AdminRoute><AdminPrayer /></AdminRoute>} />
             <Route path="/admin/visitors"   element={<AdminRoute><AdminVisitors /></AdminRoute>} />
             <Route path="/admin/blog"       element={<AdminRoute><AdminBlog /></AdminRoute>} />

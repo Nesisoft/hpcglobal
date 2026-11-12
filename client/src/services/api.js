@@ -188,6 +188,31 @@ export const adminApi = {
   resolveDeliveryFailure:     (id) => api.put(`/admin/delivery-failures/${id}/resolve`),
   resolveDeliveryFailures:    (ids) => api.put('/admin/delivery-failures/resolve', { ids }),
 
+  // Tithes — super admins only (see routes/tithes.js)
+  titheSummary:        (p)      => api.get('/admin/tithes/summary', { params: p }),
+  getTithers:          (p)      => api.get('/admin/tithes/tithers', { params: p }),
+  getTither:           (id)     => api.get(`/admin/tithes/tithers/${id}`),
+  nextTitheNumber:     ()       => api.get('/admin/tithes/tithers/next-number'),
+  createTither:        (d)      => api.post('/admin/tithes/tithers', d),
+  updateTither:        (id, d)  => api.put(`/admin/tithes/tithers/${id}`, d),
+  // Archive / restore: changes that flag alone, never the other details.
+  setTitherActive:     (id, isActive) => api.put(`/admin/tithes/tithers/${id}/active`, { isActive }),
+  deleteTither:        (id)     => api.delete(`/admin/tithes/tithers/${id}`),
+  titherTemplateCsv:   ()       => api.get('/admin/tithes/tithers/template.csv', { responseType: 'blob' }),
+  // The file itself is the body; the server reads CSV or .xlsx from the bytes.
+  previewTitherImport: (file)   => api.post('/admin/tithes/tithers/import/preview', file, {
+    headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name || '') },
+  }),
+  importTithers:       (d)      => api.post('/admin/tithes/tithers/import', d),
+  getTithePayments:    (p)      => api.get('/admin/tithes/payments', { params: p }),
+  exportTithePayments: (p)      => api.get('/admin/tithes/payments/export', { params: p, responseType: 'blob' }),
+  recordTithePayment:  (d)      => api.post('/admin/tithes/payments', d),
+  updateTithePayment:  (id, d)  => api.put(`/admin/tithes/payments/${id}`, d),
+  deleteTithePayment:  (id)     => api.delete(`/admin/tithes/payments/${id}`),
+  resendTitheSms:      (id)     => api.post(`/admin/tithes/payments/${id}/sms`),
+  getTitheSettings:    ()       => api.get('/admin/tithes/settings'),
+  updateTitheSettings: (d)      => api.put('/admin/tithes/settings', d),
+
   getReports:        (p)     => api.get('/admin/reports', { params: p }),
   getReport:         (id)    => api.get(`/admin/reports/${id}`),
   reviewReport:      (id, d) => api.put(`/admin/reports/${id}/review`, d),

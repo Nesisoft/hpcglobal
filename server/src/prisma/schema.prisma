@@ -579,6 +579,83 @@ model Appointment {
   @@unique([date, time])
 }
 
+// ─── Tithes ───────────────────────────────────────────────────────────────────
+
+enum TitherType {
+  INDIVIDUAL
+  COUPLE
+}
+
+/// What became of the acknowledgement SMS for one tithe payment.
+enum TitheSmsStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+/// A member (or married couple) with a tithe number. The office records what
+/// they give against it and the site texts them an acknowledgement.
+///
+/// Phones are stored in the form Hubtel sends to (233XXXXXXXXX) so that a
+/// number typed as "024 123 4567" and one uploaded as 244123456 (Excel drops
+/// the leading zero) are the same number.
+model Tither {
+  id          String     @id @default(uuid())
+  number      String     @unique // "HPC021"
+  type        TitherType @default(INDIVIDUAL)
+  name        String
+  phone       String?
+  // A couple's second person. Both are texted when a payment is recorded.
+  spouseName  String?
+  spousePhone String?
+  notes       String?
+  // Archived rather than deleted once payments exist: the number stays
+  // reserved and the history stays readable.
+  isActive    Boolean    @default(true)
+  payments    TithePayment[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([isActive, name])
+}
+
+model TithePayment {
+  id         String   @id @default(uuid())
+  titherId   String
+  /// Restrict, not Cascade: a tither with payments is archived, never deleted,
+  /// and the database holds to that even if two requests race.
+  tither     Tither   @relation(fields: [titherId], references: [id], onDelete: Restrict)
+  amount     Float
+  currency   String   @default("GHS")
+  /// The month the tithe is for, as "YYYY-MM" — not always the month it was paid in.
+  month      String
+  /// The day it was given. A date, not a moment: no timezone to get wrong.
+  paidOn     DateTime @db.Date
+  note       String?
+  /// Who recorded it, as a name snapshot that outlives the account.
+  recordedBy String?
+
+  smsStatus  TitheSmsStatus?
+  /// The numbers the acknowledgement went to (or was meant for), comma-separated.
+  smsTo      String?
+  smsError   String?
+  smsSentAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([titherId, paidOn])
+  @@index([month])
+  @@index([paidOn])
+}
+
+/// Singleton, like SiteSettings. The acknowledgement template is editable in
+/// Admin → Tithes; the placeholders it may use are listed in lib/tithe.js.
+model TitheSettings {
+  id          String   @id @default("singleton")
+  smsTemplate String   @default("Dear {name}, we acknowledge receipt of your tithe of {amount} for {month}, paid on {date}. Tithe No. {number}. Thank you and God bless you. - HPC Global")
+  smsEnabled  Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
 // ─── Department reporting ─────────────────────────────────────────────────────
 
 enum ReportPeriod {
