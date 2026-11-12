@@ -2051,7 +2051,11 @@ test('a couple whose text reached one phone keeps the time it went', async () =>
 test('the database refuses to delete a tither who has payments, whatever the route checked first', async () => {
   const kofi = await addTither(KOFI);
   await record(kofi.id, { sendSms: false });
-  await assert.rejects(prisma.tither.delete({ where: { id: kofi.id } }), /violates RESTRICT setting of foreign key/);
+  // Postgres 16 reports this as a foreign-key violation, which Prisma calls
+  // P2003; Postgres 17+ has a code of its own (23001) that Prisma only
+  // passes on in the message.
+  await assert.rejects(prisma.tither.delete({ where: { id: kofi.id } }),
+    (err) => err.code === 'P2003' || /violates RESTRICT setting of foreign key/.test(err.message));
   assert.equal(await prisma.tithePayment.count({ where: { titherId: kofi.id } }), 1);
 
   // The route answers that refusal in words, as when a payment lands between
