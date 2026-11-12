@@ -199,10 +199,26 @@ router.post('/forgot-password', (req, res) => {
   })());
 });
 
+// The tokens forgot-password issues: 32 random bytes as lowercase hex.
+const RESET_TOKEN = /^[0-9a-f]{64}$/;
+
 // POST /api/auth/reset-password — public
+//
+// The token must be checked to be a string of the issued shape before it goes
+// anywhere near the query. express.json() hands over objects as readily as
+// strings, and Prisma reads an object in a `where` as a filter: a body of
+// { "token": { "not": "" } } would match whichever account has a reset
+// pending — one an attacker can start with forgot-password — and set its
+// password.
 router.post('/reset-password', async (req, res) => {
-  const { token, password } = req.body;
+  const { token, password } = req.body ?? {};
   if (!token || !password) {
+    return res.status(400).json({ message: 'Token and password are required.' });
+  }
+  if (typeof token !== 'string' || !RESET_TOKEN.test(token)) {
+    return res.status(400).json({ message: 'Token is invalid or has expired.' });
+  }
+  if (typeof password !== 'string') {
     return res.status(400).json({ message: 'Token and password are required.' });
   }
   try {

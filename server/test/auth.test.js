@@ -235,3 +235,63 @@ test('renaming an account to its own address in a different case is allowed', as
   const after = await prisma.adminUser.findUnique({ where: { id: esi.id } });
   assert.equal(after.email, 'esi@hpcglobal.org');
 });
+
+// ─── POST /auth/reset-password ────────────────────────────────────────────────
+
+// A reset link pending for Ama, as forgot-password leaves one.
+async function pendingReset() {
+  const token = require('crypto').randomBytes(32).toString('hex');
+  await prisma.adminUser.update({
+    where: { email: 'ama@hpcglobal.org' },
+    data:  { passwordHash, passwordResetToken: token, passwordResetExpiry: new Date(Date.now() + 60 * 60 * 1000) },
+  });
+  return token;
+}
+
+const reset = (token, password, ip = '203.0.113.20') =>
+  server.call('POST', '/auth/reset-password', { token, password }, { ip });
+
+test('reset-password refuses anything but a token of the issued shape, so a filter cannot stand in for one', async () => {
+  await clearResetTokens();
+  const real = await pendingReset();
+
+  // JSON hands over objects and arrays as readily as strings. Read as a Prisma
+  // filter, each of these would match Ama's pending reset.
+  for (const token of [
+    { not: '' }, { contains: '' }, { startsWith: '' }, { not: 'x' }, { gt: '' },
+    [real], 1234, true, real.toUpperCase(), real.slice(1), `${real}0`, ' '.repeat(64),
+  ]) {
+    const res = await reset(token, STRONG_PASSWORD);
+    assert.equal(res.status, 400, JSON.stringify(token));
+    assert.equal(res.body.message, 'Token is invalid or has expired.', JSON.stringify(token));
+  }
+  for (const password of [{ length: 20 }, ['Fresh-Start-2026!'], 12345678901234]) {
+    const res = await reset(real, password);
+    assert.equal(res.status, 400, JSON.stringify(password));
+  }
+
+  // Nothing changed: the old password still works, the link is still pending.
+  const ama = await prisma.adminUser.findUnique({ where: { email: 'ama@hpcglobal.org' } });
+  assert.ok(await bcrypt.compare(PASSWORD, ama.passwordHash), 'the password must be untouched');
+  assert.equal(ama.passwordResetToken, real);
+
+  // The genuine link still works, once.
+  const ok = await reset(real, STRONG_PASSWORD);
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  const after = await prisma.adminUser.findUnique({ where: { email: 'ama@hpcglobal.org' } });
+  assert.ok(await bcrypt.compare(STRONG_PASSWORD, after.passwordHash));
+  assert.equal(after.passwordResetToken, null);
+  assert.equal((await reset(real, STRONG_PASSWORD)).status, 400, 'a used link is spent');
+
+  // Put Ama back as the other tests expect her.
+  await prisma.adminUser.update({ where: { email: 'ama@hpcglobal.org' }, data: { passwordHash } });
+});
+
+test('reset-password still says what is missing when the token or password is left out', async () => {
+  assert.deepEqual((await reset(undefined, STRONG_PASSWORD)).body, { message: 'Token and password are required.' });
+  assert.deepEqual((await reset('a'.repeat(64), '')).body, { message: 'Token and password are required.' });
+  // Well-formed but issued to nobody.
+  const res = await reset('a'.repeat(64), STRONG_PASSWORD);
+  assert.equal(res.status, 400);
+  assert.equal(res.body.message, 'Token is invalid or has expired.');
+});
