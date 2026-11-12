@@ -24,7 +24,11 @@ const sermonSchema = z.object({
 // GET /api/sermons — public, published only
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 12, series, preacher } = req.query;
+    const { page = 1, limit = 12 } = req.query;
+    // Strings only: ?series[contains]= arrives as an object, which Prisma
+    // would read as a filter rather than a value.
+    const series   = typeof req.query.series   === 'string' ? req.query.series   : '';
+    const preacher = typeof req.query.preacher === 'string' ? req.query.preacher : '';
     const where = {
       isPublished: true,
       ...(series   && { series }),

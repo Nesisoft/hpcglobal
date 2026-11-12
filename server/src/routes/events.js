@@ -20,7 +20,10 @@ const rsvpSchema = z.object({
 // GET /api/events — public upcoming
 router.get('/', async (req, res) => {
   try {
-    const { featured, category } = req.query;
+    const { featured } = req.query;
+    // A string only: ?category[not]= arrives as an object, which Prisma would
+    // read as a filter rather than a value.
+    const category = typeof req.query.category === 'string' ? req.query.category : '';
     const where = {
       isPublished: true,
       startDate:   { gte: new Date() },

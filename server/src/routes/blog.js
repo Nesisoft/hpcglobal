@@ -20,7 +20,10 @@ const postSchema = z.object({
 // GET /api/blog — public
 router.get('/', async (req, res) => {
   try {
-    const { category, page = 1, limit = 12 } = req.query;
+    const { page = 1, limit = 12 } = req.query;
+    // A string only: ?category[not]= arrives as an object, which Prisma would
+    // read as a filter rather than a value.
+    const category = typeof req.query.category === 'string' ? req.query.category : '';
     const where = {
       isPublished: true,
       ...(category && { category }),
