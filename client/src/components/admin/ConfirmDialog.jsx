@@ -23,7 +23,7 @@ export default function ConfirmDialog({
   loading,
 }) {
   return (
-    <AdminModal open={open} onClose={onClose} title="" size="sm">
+    <AdminModal open={open} onClose={onClose} title="" label={title} dismissable={!loading} size="sm">
       <div className="text-center py-2">
         <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${danger ? 'bg-red-50' : 'bg-gold/10'}`}>
           <AlertTriangle size={22} className={danger ? 'text-red-500' : 'text-gold'} />

@@ -2,6 +2,7 @@ const express = require('express');
 const cors    = require('cors');
 const helmet  = require('helmet');
 const rateLimit = require('express-rate-limit');
+const jwt     = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -23,11 +24,22 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
+// Signed-in staff are exempt from the general cap: recording a Sunday's tithes
+// is a few hundred requests in a sitting, which the cap would cut off halfway
+// with a message that reads like an outage. The token is checked here only to
+// decide that — every admin route still verifies it for itself.
+function signedInAdmin(req) {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) return false;
+  try { jwt.verify(header.slice(7), process.env.JWT_SECRET); return true; } catch { return false; }
+}
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: signedInAdmin,
 });
 app.use('/api', limiter);
 
@@ -73,6 +85,7 @@ app.use('/api/about',         require('./routes/about'));
 app.use('/api/contact',       require('./routes/contact'));
 app.use('/api/youtube',       require('./routes/youtube'));
 app.use('/api/settings',      require('./routes/settings'));
+app.use('/api/admin/tithes',  require('./routes/tithes'));
 app.use('/api/admin',         require('./routes/admin'));
 app.use('/api/reports',       require('./routes/reports'));
 app.use('/api/partner',       require('./routes/partner'));
