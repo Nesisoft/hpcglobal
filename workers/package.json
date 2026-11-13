@@ -1,0 +1,43 @@
+{
+  "name": "hpc-workers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HPC Workers — church workers' attendance app (workers.hpcglobal.org). Deployed as its own Vercel project with Root Directory = workers; shares nothing with the website but the Supabase database, where it lives in its own `workers` schema.",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "nodemon --watch server/src server/src/server.js",
+    "dev:client": "cd client && vite",
+    "build": "prisma generate --schema=server/src/prisma/schema.prisma && cd client && vite build",
+    "start": "node server/src/server.js",
+    "db:generate": "prisma generate --schema=server/src/prisma/schema.prisma",
+    "db:sync": "node server/src/prisma/sync.js",
+    "test": "node --test --test-concurrency=4 \"server/test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.18.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.5.0",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.14",
+    "postcss": "^8.5.32",
+    "prisma": "5.22.0",
+    "tailwindcss": "^3.4.19",
+    "vite": "^5.4.21"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

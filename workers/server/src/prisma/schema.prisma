@@ -1,0 +1,151 @@
+// HPC Workers — the church workers' attendance app.
+//
+// Everything here lives in the Postgres schema `workers` of the same Supabase
+// database as the website, reached through the `workers_app` role, which owns
+// that schema and has no rights on `public` (the website's tables). The schema
+// comes from DATABASE_URL's `?schema=workers`, so Prisma reads and writes only
+// there, and the website's own deploy-time sync, which looks only at `public`,
+// never sees these tables.
+//
+// Schema changes reach production through server/src/prisma/sync.js at deploy
+// time, which applies additions only — the same rules as the website.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+/// What a person may do beyond their own record. Heads of department are
+/// workers with `isHod` set — a flag on the worker, not a role, so there is a
+/// single meaning of "HOD" (the old PHP app had two that disagreed).
+enum WorkerRole {
+  WORKER
+  ADMIN
+  SUPER_ADMIN
+}
+
+/// PENDING until their HOD or an admin approves the sign-up. Only ACTIVE
+/// workers can clock in or reach anything beyond their own profile.
+enum WorkerStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  // Archived rather than deleted: past attendance and reports still name it.
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workers     Worker[]
+}
+
+model Worker {
+  id           String       @id @default(uuid())
+  firstName    String
+  lastName     String
+  /// Always lower-case, so one address is one account.
+  email        String       @unique
+  /// Stored as dialled internationally, e.g. 233244123456 (see lib/phone.js).
+  phone        String
+  gender       Gender
+  passwordHash String
+  role         WorkerRole   @default(WORKER)
+  status       WorkerStatus @default(PENDING)
+  departmentId String?
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  isHod        Boolean      @default(false)
+
+  /// Who approved the sign-up, kept as a snapshot so it reads the same after
+  /// that person's account changes.
+  approvedAt     DateTime?
+  approvedById   String?
+  approvedByName String?
+  /// The reason given when a sign-up is declined or an account suspended,
+  /// shown to the person on their waiting screen.
+  statusNote     String?
+
+  /// Set when an admin gives the worker a temporary password. Until they
+  /// choose their own, the API answers nothing but the password change.
+  mustChangePassword  Boolean   @default(false)
+  /// A temporary password stops working after this (72 hours), so one read
+  /// out over the phone and never used can't be guessed at for ever.
+  tempPasswordExpires DateTime?
+  /// Bumped to sign the worker out everywhere: every token carries the
+  /// version it was issued at, and an older one is refused.
+  tokenVersion       Int       @default(0)
+  /// Password reset by emailed code. Only a hash is kept; the code itself
+  /// exists only in the email.
+  resetCodeHash      String?
+  resetCodeExpires   DateTime?
+  resetCodeAttempts  Int       @default(0)
+  resetCodeSentAt    DateTime?
+  /// A day's allowance across all codes, so asking for a new code doesn't buy
+  /// five more guesses: at most 5 codes and 10 wrong guesses per 24 hours,
+  /// counted from resetWindowStart.
+  resetWindowStart      DateTime?
+  resetCodesInWindow    Int       @default(0)
+  resetFailuresInWindow Int       @default(0)
+
+  lastLogin DateTime?
+  /// When anything an admin's form shows last changed — details, status,
+  /// role, HOD flag, department — but not a sign-in or a reset code. An
+  /// admin's edit carries the editedAt it was loaded with and is refused if
+  /// this has moved since, so a form opened before someone else's change
+  /// can't quietly undo it. (updatedAt moves on every write, sign-ins too.)
+  editedAt  DateTime  @default(now())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([departmentId, status])
+  @@index([status])
+}
+
+/// Emails sent, counted per day (UTC, which is Accra time): one row for the
+/// whole app ("all:2026-11-14") and one per sender's address
+/// ("address:2026-11-14:203.0.113.0"). The app's Resend key is on the same
+/// account as the website's, whose free plan allows 100 a day in all, so this
+/// app stops well short of that — and no one address can spend much of it.
+model EmailCount {
+  key  String   @id
+  day  String
+  sent Int      @default(0)
+
+  @@index([day])
+}
+
+/// Who changed what. Names are snapshots so an entry still reads correctly
+/// after the people in it change or leave.
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorName  String
+  /// e.g. "worker.approve", "department.update"
+  action     String
+  targetType String
+  targetId   String?
+  /// One line a person can read: "Approved Ama Mensah (Ushers)".
+  summary    String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+}

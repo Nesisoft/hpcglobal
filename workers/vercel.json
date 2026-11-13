@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "npm install --include=dev && npm run build && npm run db:sync",
+  "outputDirectory": "client/dist",
+  "functions": {
+    "api/index.js": { "maxDuration": 30 }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/:path*",     "destination": "/index.html" }
+  ]
+}
