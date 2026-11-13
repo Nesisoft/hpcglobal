@@ -45,7 +45,13 @@ const dbMessage = (err) =>
 
 // ─── CSV helpers ──────────────────────────────────────────────────────────────
 function toCsv(rows, columns) {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  // A cell starting with = + - @ (or a tab / carriage return) is a formula to
+  // Excel even inside quotes; names and emails typed on the public site reach
+  // these exports, so such a cell gets a leading apostrophe.
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
+  };
   const header = columns.map((c) => esc(c.label)).join(',');
   const lines  = rows.map((r) => columns.map((c) => esc(c.value(r))).join(','));
   return [header, ...lines].join('\n');
@@ -617,6 +623,9 @@ router.get('/giving', requireRole('SUPER_ADMIN'), async (req, res) => {
   }
 });
 
+// Whether an online tithe made it onto Admin → Tithes, in the office's words.
+const TITHE_REGISTER_LABELS = { RECORDED: 'Added', NEEDS_MATCH: 'Needs adding', DISMISSED: 'Dismissed' };
+
 router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
   try {
     const where = givingFilter(req.query);
@@ -625,16 +634,20 @@ router.get('/giving/export', requireRole('SUPER_ADMIN'), async (req, res) => {
       { label: 'admin giving export' }
     );
     const csv = toCsv(records, [
-      { label: 'Date',      value: (r) => fmtCsvDate(r.createdAt) },
-      { label: 'Name',      value: (r) => r.name },
-      { label: 'Phone',     value: (r) => r.phone },
-      { label: 'Email',     value: (r) => r.email },
-      { label: 'Amount',    value: (r) => r.amount },
-      { label: 'Currency',  value: (r) => r.currency },
-      { label: 'Category',  value: (r) => r.category },
-      { label: 'Method',    value: (r) => r.method },
-      { label: 'Status',    value: (r) => r.status },
-      { label: 'Reference', value: (r) => r.reference },
+      { label: 'Date',           value: (r) => fmtCsvDate(r.createdAt) },
+      { label: 'Name',           value: (r) => r.name },
+      { label: 'Phone',          value: (r) => r.phone },
+      { label: 'Email',          value: (r) => r.email },
+      { label: 'Amount',         value: (r) => r.amount },
+      { label: 'Currency',       value: (r) => r.currency },
+      { label: 'Category',       value: (r) => r.category },
+      { label: 'Method',         value: (r) => r.method },
+      { label: 'Status',         value: (r) => r.status },
+      { label: 'Reference',      value: (r) => r.reference },
+      { label: 'Paid At',        value: (r) => fmtCsvDate(r.paidAt) },
+      { label: 'Tithe Number',   value: (r) => r.titheNumber },
+      { label: 'Tithe Month',    value: (r) => r.titheMonth },
+      { label: 'Tithe Register', value: (r) => TITHE_REGISTER_LABELS[r.titheStatus] || '' },
     ]);
     sendCsv(res, `giving-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   } catch (err) {

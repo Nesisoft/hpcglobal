@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HandCoins, Plus, Upload, Users, CalendarDays, TrendingUp, UserX, AlertTriangle } from 'lucide-react';
+import { HandCoins, Plus, Upload, Users, CalendarDays, TrendingUp, UserX, AlertTriangle, Globe } from 'lucide-react';
 import { adminApi } from '../../services/api';
 import { useApi } from '../../hooks/useApi';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import TithersPanel from '../../components/admin/tithes/TithersPanel';
 import PaymentsPanel from '../../components/admin/tithes/PaymentsPanel';
+import OnlineTithesPanel from '../../components/admin/tithes/OnlineTithesPanel';
 import SmsTemplateEditor from '../../components/admin/tithes/SmsTemplateEditor';
 import TitherForm from '../../components/admin/tithes/TitherForm';
 import RecordPaymentModal from '../../components/admin/tithes/RecordPaymentModal';
@@ -17,8 +18,19 @@ import { amountLabel, monthLabel } from '../../utils/tithe';
 const TABS = [
   ['tithers',  'Tithers'],
   ['payments', 'Payments'],
+  ['online',   'Online tithes'],
   ['sms',      'SMS Template'],
 ];
+
+/**
+ * What the new-tither form starts with for the giver of an online tithe. The
+ * number they gave is offered only when nobody on the register holds it.
+ */
+const fromGift = (gift) => ({
+  number: gift.issue === 'NOT_FOUND' ? gift.titheNumber || '' : '',
+  name:   gift.name || '',
+  phone:  gift.phone || '',
+});
 
 // Two to a row on a phone, so the icon sits above the figures there to leave
 // them the card's full width; side by side from sm up.
@@ -47,12 +59,19 @@ export default function AdminTithes() {
   const tab = TABS.some(([key]) => key === params.get('tab')) ? params.get('tab') : 'tithers';
   const setTab = (next) => setParams(next === 'tithers' ? {} : { tab: next }, { replace: true });
 
-  // Bumped after anything changes, so every panel and the summary refetch.
+  // Bumped after anything changes, so every panel and the summary refetch —
+  // and the sidebar's count of online tithes to add.
   const [refreshKey, setRefreshKey] = useState(0);
-  const bump = () => setRefreshKey((k) => k + 1);
+  const bump = () => {
+    setRefreshKey((k) => k + 1);
+    window.dispatchEvent(new Event('hpc:online-tithes'));
+  };
 
-  const [form, setForm]             = useState(null);    // { mode, tither } while the add/edit form is open
-  const [record, setRecord]         = useState(null);    // { tither } while recording a payment
+  // { mode, tither, initial?, gift? } while the add/edit form is open; `gift`
+  // when the tither is being added for an online tithe, which is then added
+  // to their new account.
+  const [form, setForm]             = useState(null);
+  const [record, setRecord]         = useState(null);    // { tither, gift } while recording a payment
   const [importOpen, setImportOpen] = useState(false);
   const [detailId, setDetailId]     = useState(null);
 
@@ -65,7 +84,30 @@ export default function AdminTithes() {
   const { data: summary, error: summaryError, refetch: refetchSummary } = useApi(summaryFn, []);
   useEffect(() => { if (refreshKey > 0) refetchSummary(); }, [refreshKey, refetchSummary]);
 
-  const openRecord = (tither) => setRecord({ tither: tither ?? null });
+  // Online tithes still to add. A reminder: if it can't be read, it isn't shown.
+  const onlineFn = useCallback(() => adminApi.countOnlineTithes(), []);
+  const { data: online, refetch: refetchOnline } = useApi(onlineFn, []);
+  useEffect(() => { if (refreshKey > 0) refetchOnline(); }, [refreshKey, refetchOnline]);
+  const needsMatch = online?.needsMatch ?? 0;
+
+  const openRecord = (tither) => setRecord({ tither: tither ?? null, gift: null });
+  const openAssign = (gift, tither) => setRecord({ tither: tither ?? null, gift });
+  const openNewTitherFor = (gift) => {
+    setRecord(null);
+    setForm({ mode: 'create', tither: null, initial: fromGift(gift), gift });
+  };
+
+  function handleSaved(saved) {
+    const gift = form?.gift;
+    setForm(null);
+    bump();
+    // Straight on to adding the online tithe to the account just made (it is
+    // already chosen). The gift was read before that account existed, so its
+    // "not on the register" facts and suggestions no longer apply.
+    if (gift && saved?.id) {
+      setRecord({ tither: saved, gift: { ...gift, issue: null, holder: null, suggestions: [], newTither: true } });
+    }
+  }
 
   const month = summary?.month ? monthLabel(summary.month) : 'this month';
 
@@ -91,6 +133,20 @@ export default function AdminTithes() {
             <AlertTriangle size={13} className="mt-px flex-shrink-0" />
             SMS is not set up, so no acknowledgements are going out. Payments are still recorded. Set the Hubtel credentials in Vercel to switch it on.
           </p>
+        </div>
+      )}
+
+      {needsMatch > 0 && tab !== 'online' && (
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+          <p className="flex items-start gap-1.5 text-xs font-body text-amber-800">
+            <Globe size={13} className="mt-px flex-shrink-0" />
+            {needsMatch === 1
+              ? '1 online tithe is waiting to be added to the register.'
+              : `${needsMatch} online tithes are waiting to be added to the register.`}
+          </p>
+          <button type="button" onClick={() => setTab('online')} className="btn-outline text-xs px-3 py-1.5 whitespace-nowrap flex-shrink-0">
+            Review them
+          </button>
         </div>
       )}
 
@@ -143,6 +199,11 @@ export default function AdminTithes() {
             }`}
           >
             {label}
+            {key === 'online' && needsMatch > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold align-middle">
+                {needsMatch}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -162,6 +223,15 @@ export default function AdminTithes() {
           onChanged={bump}
           onOpenTither={setDetailId}
           onRecordPayment={() => openRecord(null)}
+        />
+      )}
+      {tab === 'online' && (
+        <OnlineTithesPanel
+          refreshKey={refreshKey}
+          onChanged={bump}
+          onAssign={openAssign}
+          onAddTither={openNewTitherFor}
+          onOpenTither={setDetailId}
         />
       )}
       {smsVisited && (
@@ -189,15 +259,19 @@ export default function AdminTithes() {
         open={Boolean(form)}
         mode={form?.mode ?? 'create'}
         tither={form?.tither ?? null}
+        initial={form?.initial}
         onClose={() => setForm(null)}
-        onSaved={() => { setForm(null); bump(); }}
+        onSaved={handleSaved}
       />
 
       <RecordPaymentModal
         open={Boolean(record)}
         tither={record?.tither ?? null}
+        gift={record?.gift ?? null}
         onClose={() => setRecord(null)}
         onRecorded={bump}
+        onAddTither={openNewTitherFor}
+        onChanged={bump}
       />
 
       <TitherImport

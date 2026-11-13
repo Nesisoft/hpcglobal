@@ -32,7 +32,7 @@ const NAV = [
   { label: 'Messages',    to: '/admin/contact',       icon: Mail      },
   { label: 'Delivery Problems', to: '/admin/delivery-problems', icon: AlertTriangle, badge: 'deliveryFailures', superOnly: true },
   { label: 'Giving',      to: '/admin/giving',        icon: Heart     },
-  { label: 'Tithes',      to: '/admin/tithes',        icon: Coins, superOnly: true },
+  { label: 'Tithes',      to: '/admin/tithes',        icon: Coins, badge: 'onlineTithes', superOnly: true },
   { label: 'Appointments', to: '/admin/appointments', icon: CalendarCheck },
   { label: 'Dept. Reports', to: '/admin/reports',   icon: ClipboardList, superOnly: true },
   { divider: 'Partners' },
@@ -222,6 +222,36 @@ function Topbar({ onMenuClick, title }) {
   );
 }
 
+// Each badge's count, read from the server.
+const countDeliveryFailures = () => adminApi.countDeliveryFailures().then(({ data }) => data.open);
+const countOnlineTithes     = () => adminApi.countOnlineTithes().then(({ data }) => data.needsMatch);
+
+/**
+ * A number for a sidebar badge, so the office notices without having to look.
+ * A hint, not the page: if the count can't be read, there is simply no badge.
+ * The page behind it fires `eventName` on window after a change, so the badge
+ * follows as items are dealt with.
+ */
+function useBadgeCount(fetchCount, eventName, enabled) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let active = true;
+    let latest = 0;
+    const load = () => {
+      // Only the newest answer counts when two loads overlap.
+      const mine = ++latest;
+      fetchCount()
+        .then((n) => { if (active && mine === latest) setCount(n || 0); })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener(eventName, load);
+    return () => { active = false; window.removeEventListener(eventName, load); };
+  }, [fetchCount, eventName, enabled]);
+  return enabled ? count : 0;
+}
+
 /**
  * Wrap every admin page with this.
  * Usage:
@@ -233,23 +263,13 @@ export default function AdminLayout({ children, title }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [deliveryFailures, setDeliveryFailures] = useState(0);
 
-  // Sends that failed and are waiting for someone, as a badge on Delivery
-  // Problems so the office notices without having to look. A hint, not the
-  // page: if the count can't be read, there is simply no badge. The page
-  // announces changes so the badge follows as items are resolved.
+  // Sends that failed and are waiting for someone, and tithes paid online that
+  // still need adding to the register. Both pages and their data are
+  // super-admin only.
   const isSuper = user?.role === 'SUPER_ADMIN';
-  useEffect(() => {
-    if (!isSuper) return undefined;   // the page and its data are super-admin only
-    let active = true;
-    const load = () => adminApi.countDeliveryFailures()
-      .then(({ data }) => { if (active) setDeliveryFailures(data.open || 0); })
-      .catch(() => {});
-    load();
-    window.addEventListener('hpc:delivery-failures', load);
-    return () => { active = false; window.removeEventListener('hpc:delivery-failures', load); };
-  }, [isSuper]);
+  const deliveryFailures = useBadgeCount(countDeliveryFailures, 'hpc:delivery-failures', isSuper);
+  const onlineTithes     = useBadgeCount(countOnlineTithes, 'hpc:online-tithes', isSuper);
 
   async function handleLogout() {
     await logout();
@@ -263,7 +283,7 @@ export default function AdminLayout({ children, title }) {
         onClose={() => setSidebarOpen(false)}
         user={user}
         onLogout={handleLogout}
-        badges={{ deliveryFailures }}
+        badges={{ deliveryFailures, onlineTithes }}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
@@ -5,11 +6,25 @@ import { adminApi } from '../../services/api';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import StatCard from '../../components/admin/StatCard';
-import { HandHeart, UserPlus, Calendar, Mic2, Heart, Mail, Plus } from 'lucide-react';
+import { HandHeart, UserPlus, Calendar, Mic2, Heart, Mail, Plus, Coins, ArrowRight } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { data, loading } = useApi(adminApi.getDashboard);
+
+  // Tithes paid on the website that could not be put on the register by
+  // themselves. Super admins only, like the Tithes page. A reminder, not a
+  // report: if the count can't be read, nothing is shown.
+  const isSuper = user?.role === 'SUPER_ADMIN';
+  const [onlineTithes, setOnlineTithes] = useState(0);
+  useEffect(() => {
+    if (!isSuper) return undefined;
+    let active = true;
+    adminApi.countOnlineTithes()
+      .then(({ data: count }) => { if (active) setOnlineTithes(count?.needsMatch || 0); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [isSuper]);
 
   return (
     <AdminLayout title="Dashboard">
@@ -17,6 +32,29 @@ export default function AdminDashboard() {
         title={`Welcome back, ${user?.name ?? 'Admin'}`}
         subtitle="Here's what's happening at HPC Global today."
       />
+
+      {isSuper && onlineTithes > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+              <Coins size={16} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-body font-medium text-amber-900">
+                {onlineTithes === 1
+                  ? '1 online tithe needs adding to the register'
+                  : `${onlineTithes} online tithes need adding to the register`}
+              </p>
+              <p className="text-xs font-body text-amber-800/80 mt-0.5">
+                Paid on the website without a tithe number, or with one that isn't on the register.
+              </p>
+            </div>
+          </div>
+          <Link to="/admin/tithes?tab=online" className="btn-primary text-xs px-4 py-2.5 self-start sm:self-auto whitespace-nowrap">
+            Review <ArrowRight size={13} />
+          </Link>
+        </div>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">

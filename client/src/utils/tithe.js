@@ -27,6 +27,55 @@ export function normalizeTitheNumber(raw) {
   return /^(?=.*\d)[A-Z0-9]{2,20}$/.test(value) ? value : '';
 }
 
+// sms.js normalizePhone, copied so canonicalPhone below can make the same
+// final check the server does.
+function normalizePhone(raw) {
+  let v = String(raw ?? '').replace(/[\s()\-.]/g, '');
+  if (!v) return '';
+  if (v.startsWith('+')) v = v.slice(1);
+  if (v.startsWith('00')) v = v.slice(2);
+  if (v.startsWith('0') && v.length === 10) v = `233${v.slice(1)}`;
+  else if (/^\d{9}$/.test(v)) v = `233${v}`;
+  return /^\d{7,15}$/.test(v) ? v : '';
+}
+
+/**
+ * The stored form of a phone (233244123456), or '' when the server would
+ * refuse it. Same rules as canonicalPhone in server/src/lib/tithe.js, so the
+ * give page can say "that doesn't look right" before the giver is sent away.
+ */
+export function canonicalPhone(raw) {
+  const v = String(raw ?? '').replace(INVISIBLE, '').trim()
+    .replace(/^(\d+)\.0+$/, '$1')   // 244123456.0 — a number cell read as a decimal
+    .replace(/\(0\)/g, '')          // +233 (0)24 …: that 0 is only dialled at home
+    .replace(/[\s()\-.]/g, '');
+  if (!v) return '';
+
+  let stored = '';
+  const international = /^(?:\+|00)(\d+)$/.exec(v);
+  if (international) {
+    const digits = international[1];
+    if (digits.startsWith('233')) {
+      // Ghana: exactly nine digits after 233, once a stray 0 is dropped.
+      const rest = digits.slice(3).replace(/^0/, '');
+      if (/^[1-9]\d{8}$/.test(rest)) stored = `233${rest}`;
+    } else if (/^[1-9]\d{9,14}$/.test(digits)) {
+      stored = digits;                       // another country, taken as given
+    }
+  } else if (/^0[1-9]\d{8}$/.test(v)) {
+    stored = `233${v.slice(1)}`;             // 0244123456
+  } else if (/^[1-9]\d{8}$/.test(v)) {
+    stored = `233${v}`;                      // 244123456 — the zero left off
+  } else if (/^233[1-9]\d{8}$/.test(v)) {
+    stored = v;                              // 233244123456
+  } else if (/^2330[1-9]\d{8}$/.test(v)) {
+    stored = `233${v.slice(4)}`;             // 233 0244123456
+  } else if (/^[1-9]\d{9,14}$/.test(v) && !v.startsWith('233')) {
+    stored = v;                              // another country's number without its +
+  }
+  return stored && normalizePhone(stored) === stored ? stored : '';
+}
+
 /** Stored phones are 233…; show them the way people in Ghana write them. */
 export function formatPhone(stored) {
   const v = String(stored ?? '');

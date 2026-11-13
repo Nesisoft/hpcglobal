@@ -212,6 +212,13 @@ export const adminApi = {
   resendTitheSms:      (id)     => api.post(`/admin/tithes/payments/${id}/sms`),
   getTitheSettings:    ()       => api.get('/admin/tithes/settings'),
   updateTitheSettings: (d)      => api.put('/admin/tithes/settings', d),
+  // Tithes paid on the Give page that still need adding to the register.
+  // Pages that change one dispatch 'hpc:online-tithes' so the sidebar badge follows.
+  countOnlineTithes:   ()       => api.get('/admin/tithes/online/count'),
+  getOnlineTithes:     (p)      => api.get('/admin/tithes/online', { params: p }),
+  assignOnlineTithe:   (id, d)  => api.post(`/admin/tithes/online/${id}/assign`, d),
+  dismissOnlineTithe:  (id, note) => api.post(`/admin/tithes/online/${id}/dismiss`, { note }),
+  restoreOnlineTithe:  (id)     => api.post(`/admin/tithes/online/${id}/restore`),
 
   getReports:        (p)     => api.get('/admin/reports', { params: p }),
   getReport:         (id)    => api.get(`/admin/reports/${id}`),
