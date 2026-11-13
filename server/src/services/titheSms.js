@@ -62,4 +62,17 @@ async function sendAcknowledgement({ tither, payment, template, church, skip = [
   return { status: 'SENT', to, error: null, text };
 }
 
-module.exports = { sendAcknowledgement };
+/**
+ * The tither as the acknowledgement should see them for a tithe paid online:
+ * the phones on the account when it has any, otherwise the phone the giver
+ * typed on the Give page — so someone the office never took a number for
+ * still hears their tithe arrived. Never both: a giver's number that is not
+ * on the account may be a typo that reached the wrong person's tithe.
+ */
+function withFallbackPhone(tither, phone) {
+  if (smsRecipients(tither).length) return tither;
+  const fallback = canonicalPhone(phone);
+  return fallback ? { ...tither, phone: fallback } : tither;
+}
+
+module.exports = { sendAcknowledgement, withFallbackPhone };

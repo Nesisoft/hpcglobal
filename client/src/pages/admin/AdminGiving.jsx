@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Download, TrendingUp, DollarSign, Calendar, BarChart2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Download, TrendingUp, DollarSign, Calendar, BarChart2, X } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend,
@@ -11,6 +12,7 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTable from '../../components/admin/AdminTable';
 import AdminPagination from '../../components/admin/AdminPagination';
 import { downloadBlob } from '../../utils/download';
+import { formatPhone, MONTHS } from '../../utils/tithe';
 
 // ─── Enum maps ────────────────────────────────────────────────────────────────
 const CATEGORIES = ['TITHE', 'OFFERING', 'FIRST_FRUITS', 'BUILDING_FUND', 'MISSIONS', 'PASTORAL', 'OTHER'];
@@ -48,6 +50,29 @@ const PIE_COLORS = ['#7E5BAC', '#C49A3C', '#5B8AC4', '#4CAF8A', '#E07D4F', '#9B5
 const fmtAmt   = (n) => `GHS ${Number(n ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`;
 const fmtDate  = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const fmtTime  = (d) => new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+// Phones from the Give page are stored as 233… (country code, no +); anything
+// else is shown as it was typed.
+const fmtPhone = (p) => (/^[1-9]\d{6,14}$/.test(p ?? '') ? formatPhone(p) : p);
+// "2026-11" → "Nov 2026".
+const fmtMonth = (m) => {
+  const [y, mo] = String(m ?? '').split('-');
+  return MONTHS[Number(mo) - 1] ? `${MONTHS[Number(mo) - 1].slice(0, 3)} ${y}` : m;
+};
+
+// Where an online tithe stands on the tithe register.
+const BADGE = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium';
+function RegisterChip({ status }) {
+  if (status === 'RECORDED') return <span className={`${BADGE} bg-green-50 text-green-700`}>On register</span>;
+  if (status === 'NEEDS_MATCH') {
+    return (
+      <Link to="/admin/tithes?tab=online" className={`${BADGE} bg-amber-50 text-amber-800 hover:bg-amber-100`} title="Add it on the Tithes page">
+        Needs adding
+      </Link>
+    );
+  }
+  if (status === 'DISMISSED') return <span className={`${BADGE} bg-ink/5 text-ink/50`}>Dismissed</span>;
+  return null;
+}
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, accent }) {
@@ -89,6 +114,7 @@ export default function AdminGiving() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterMethod,   setFilterMethod]   = useState('');
   const [page,           setPage]           = useState(1);
+  const [exportError,    setExportError]    = useState('');
 
   // Any filter change invalidates the current offset — page 4 of the unfiltered
   // ledger is usually past the end of a filtered one.
@@ -135,6 +161,7 @@ export default function AdminGiving() {
 
   // Export — server-side CSV (all matching records, not just the current page)
   async function handleExport() {
+    setExportError('');
     try {
       const { data } = await adminApi.exportGiving({
         status:   filterStatus   || undefined,
@@ -143,7 +170,7 @@ export default function AdminGiving() {
       });
       downloadBlob(data, `giving-${new Date().toISOString().slice(0, 10)}.csv`);
     } catch {
-      alert('Export failed. Please try again.');
+      setExportError('Export failed. Please try again.');
     }
   }
 
@@ -153,8 +180,8 @@ export default function AdminGiving() {
       label: 'Donor',
       render: (row) => (
         <div>
-          <p className="font-medium text-ink/90 text-sm leading-tight">{row.name}</p>
-          <p className="text-ink/40 text-[11px]">{row.phone}</p>
+          <p className={`text-sm leading-tight ${row.name ? 'font-medium text-ink/90' : 'text-ink/40'}`}>{row.name || 'No name given'}</p>
+          {row.phone && <p className="text-ink/40 text-[11px]">{fmtPhone(row.phone)}</p>}
         </div>
       ),
     },
@@ -169,9 +196,20 @@ export default function AdminGiving() {
       key: 'category',
       label: 'Category',
       render: (row) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-brand/10 text-purple-brand">
-          {CAT_LABELS[row.category] ?? row.category}
-        </span>
+        <div>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-brand/10 text-purple-brand">
+            {CAT_LABELS[row.category] ?? row.category}
+          </span>
+          {/* A tithe given on the website: the number given, the month it is for, and whether it is on the register. */}
+          {row.category === 'TITHE' && row.titheMonth && (
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="text-ink/55 text-[11px]">
+                {row.titheNumber ? <span className="font-mono">{row.titheNumber}</span> : 'No number'} · {fmtMonth(row.titheMonth)}
+              </span>
+              <RegisterChip status={row.titheStatus} />
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -216,6 +254,15 @@ export default function AdminGiving() {
         subtitle={`${total} record${total !== 1 ? 's' : ''} · SUPER_ADMIN access only`}
         action={{ label: 'Export CSV', icon: Download, onClick: handleExport }}
       />
+
+      {exportError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-red-600 text-sm font-body flex items-start justify-between gap-3">
+          <span>{exportError}</span>
+          <button type="button" onClick={() => setExportError('')} className="flex-shrink-0 text-red-400 hover:text-red-600" aria-label="Dismiss">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Summary error */}
       {summaryError && (

@@ -4,6 +4,7 @@ import { adminApi } from '../../../services/api';
 import AdminModal from '../AdminModal';
 import FormField from '../FormField';
 import MonthPicker from './MonthPicker';
+import { OnlineChip } from './OnlineTithesPanel';
 import { displayName, todayYmd } from '../../../utils/tithe';
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -33,6 +34,8 @@ function check(form, initial) {
 /**
  * Edit the amount, month, date or note of a recorded tithe payment. Who it
  * was from cannot change here — delete it and record it again for that.
+ * A tithe paid online keeps the amount and date of the payment itself; only
+ * its month and note can change.
  *
  * Props:
  *   payment  – the payment (P from the API); the modal is open while truthy
@@ -89,6 +92,8 @@ export default function PaymentEditModal({ payment, onClose, onSaved }) {
   }
 
   const tither = payment?.tither;
+  const online = Boolean(payment?.online);
+  const fixedHint = online ? 'From the online payment' : undefined;
 
   return (
     // Held open while saving, so a late answer can't land after it was closed.
@@ -110,11 +115,12 @@ export default function PaymentEditModal({ payment, onClose, onSaved }) {
                   Archived
                 </span>
               )}
+              <OnlineChip online={payment.online} />
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Amount" required error={problems.amount}>
+            <FormField label="Amount" required error={problems.amount} hint={fixedHint}>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-body text-ink/40 pointer-events-none">
                   GHS
@@ -124,18 +130,20 @@ export default function PaymentEditModal({ payment, onClose, onSaved }) {
                   step="0.01"
                   min="0.01"
                   inputMode="decimal"
-                  className="input pl-14"
-                  autoFocus
+                  className="input pl-14 disabled:opacity-60 disabled:cursor-not-allowed"
+                  autoFocus={!online}
+                  disabled={online}
                   value={form.amount}
                   onChange={(e) => set({ amount: e.target.value })}
                   placeholder="0.00"
                 />
               </div>
             </FormField>
-            <FormField label="Date paid" required error={problems.paidOn}>
+            <FormField label="Date paid" required error={problems.paidOn} hint={fixedHint}>
               <input
                 type="date"
-                className="input"
+                className="input disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={online}
                 value={form.paidOn}
                 max={todayYmd()}
                 onChange={(e) => set({ paidOn: e.target.value })}
@@ -156,6 +164,14 @@ export default function PaymentEditModal({ payment, onClose, onSaved }) {
               placeholder="e.g. Paid by mobile money"
             />
           </FormField>
+
+          {online && (
+            <p className="flex items-start gap-2 text-[11px] font-body text-ink/50">
+              <Info size={13} className="flex-shrink-0 mt-px text-ink/40" />
+              This tithe was paid on the website, so its amount and date come from the payment itself.
+              If it is on the wrong account, delete it — it goes back to Online tithes to be added again.
+            </p>
+          )}
 
           <p className="flex items-start gap-2 text-[11px] font-body text-ink/50">
             <Info size={13} className="flex-shrink-0 mt-px text-ink/40" />

@@ -702,9 +702,9 @@ test('the payments list filters by month, tither, dates and SMS status, totals w
   assert.equal(csv.headers.get('content-disposition'), 'attachment; filename="tithes-2026-11.csv"');
   assert.equal(csv.text.charCodeAt(0), 0xfeff, 'a BOM, so Excel reads the accents');
   assert.deepEqual(csv.text.slice(1).split('\n'), [
-    '"Date paid","Month for","Tithe number","Name","Type","Amount","Currency","Note","SMS","Recorded by"',
-    '"2026-11-11","November 2026","HPC021","Kofi Mensah","INDIVIDUAL","150.00","GHS","","SENT","Efua Asante"',
-    '"2026-11-08","November 2026","HPC007","Ama Owusu","INDIVIDUAL","200.00","GHS","","SKIPPED","Efua Asante"',
+    '"Date paid","Month for","Tithe number","Name","Type","Amount","Currency","Note","SMS","Recorded by","Source"',
+    '"2026-11-11","November 2026","HPC021","Kofi Mensah","INDIVIDUAL","150.00","GHS","","SENT","Efua Asante","Office"',
+    '"2026-11-08","November 2026","HPC007","Ama Owusu","INDIVIDUAL","200.00","GHS","","SKIPPED","Efua Asante","Office"',
   ]);
   const everything = await download('/admin/tithes/payments/export');
   assert.match(everything.headers.get('content-disposition'), /^attachment; filename="tithes-\d{4}-\d{2}-\d{2}\.csv"$/);
@@ -1276,7 +1276,7 @@ test('the CSV export cannot carry a formula into a spreadsheet, and quotes comma
   // Read back the way a spreadsheet would.
   const rows = parseCsv(Buffer.from(csv.text, 'utf8'));
   assert.equal(rows.length, 6);
-  for (const row of rows) assert.equal(row.length, 10, JSON.stringify(row));
+  for (const row of rows) assert.equal(row.length, 11, JSON.stringify(row));
   const formula = '\'=HYPERLINK("http://x","Click")';
   assert.deepEqual(rows.slice(1).map((r) => [r[3], r[7]]), [
     [formula,                      "'+233 paid by MoMo"],
@@ -1577,6 +1577,36 @@ test('lib/tithe: the client copy of normalizeTitheNumber agrees with the server 
   // And it shows a stored phone the same way.
   for (const stored of ['233244123456', '447911123456', '']) {
     assert.equal(client.formatPhone(stored), tithe.formatPhone(stored), stored);
+  }
+});
+
+// The Give page checks the phone with the client copy before the giver is
+// sent to Paystack; the server checks it again. If they disagreed, a giver
+// would be stopped by one and not the other.
+const PHONE_CASES = [
+  ['0244123456', '233244123456'], ['024 412 3456', '233244123456'], ['024-412-3456', '233244123456'],
+  ['(024) 412-3456', '233244123456'], ['+233 (0)24 412 3456', '233244123456'], ['+2330244123456', '233244123456'],
+  ['+233 24 412 3456', '233244123456'], ['00233244123456', '233244123456'], ['2330244123456', '233244123456'],
+  ['233 0244123456', '233244123456'], ['233244123456', '233244123456'], ['244123456', '233244123456'],
+  ['244123456.0', '233244123456'],
+  // Invisible characters copied along with the number.
+  ['​0244123456', '233244123456'], ['﻿024 412 3456', '233244123456'], ['024­412⁠3456', '233244123456'],
+  ['024‎412​3456‬', '233244123456'],
+  // Another country's number, kept as given.
+  ['+447911123456', '447911123456'], ['447911123456', '447911123456'], ['+44 (0)7911 123456', '447911123456'],
+  ['0044 7911 123456', '447911123456'], ['+1 (555) 123-4567', '15551234567'],
+  // Refused: too short, too long, a stray prefix, two numbers, not a number.
+  ['+12345', ''], ['+23324412345', ''], ['9999999999999999', ''], ['12345', ''],
+  ['1234567', ''], ['02441234567', ''], ['024412345', ''], ['2330244123', ''], ['+0244123456', ''],
+  ['024 412 3456 / 020 123 4567', ''], ['2.44E+08', ''], ['+233', ''], ['00', ''], ['+44 7911', ''],
+  ['', ''], ['   ', ''], [null, ''], [undefined, ''], ['call me', ''],
+];
+
+test('lib/tithe: the client copy of canonicalPhone agrees with the server on every case', async () => {
+  const client = await import(pathToFileURL(path.join(__dirname, '..', '..', 'client', 'src', 'utils', 'tithe.js')).href);
+  for (const [typed, stored] of PHONE_CASES) {
+    assert.equal(tithe.canonicalPhone(typed), stored, `server: ${JSON.stringify(typed)}`);
+    assert.equal(client.canonicalPhone(typed), stored, `client: ${JSON.stringify(typed)}`);
   }
 });
 

@@ -455,6 +455,26 @@ model GivingRecord {
   source      String         @default("GIVING") // "GIVING" | "PARTNER"
   partnerId   String?
   createdAt   DateTime       @default(now())
+
+  // Online tithes. Set only on TITHE gifts from the Give page's tithe form;
+  // titheMonth doubles as the marker, so tithes given before online tithes
+  // were matched to the register are left alone.
+  titheMonth      String?            // "YYYY-MM": the month the giver said it is for
+  paidAt          DateTime?          // when Paystack confirmed it
+  titheStatus     OnlineTitheStatus?
+  titheNote       String?            // why the office dismissed it
+  titheReviewedBy String?            // who dismissed or restored it (name snapshot)
+  tithePayment    TithePayment?
+
+  @@index([titheStatus])
+}
+
+/// What became of an online tithe on the register. Null on every other gift,
+/// and on tithes given before online tithes were matched.
+enum OnlineTitheStatus {
+  NEEDS_MATCH
+  RECORDED
+  DISMISSED
 }
 
 model ContactMessage {
@@ -641,6 +661,11 @@ model TithePayment {
   smsError   String?
   smsSentAt  DateTime?
   createdAt  DateTime @default(now())
+
+  /// The website gift this payment came from; null when the office recorded
+  /// it. Restrict: the gift behind a payment on the register cannot vanish.
+  givingRecordId String?       @unique
+  givingRecord   GivingRecord? @relation(fields: [givingRecordId], references: [id], onDelete: Restrict)
 
   @@index([titherId, paidOn])
   @@index([month])

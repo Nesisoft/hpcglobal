@@ -11,6 +11,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import Spinner from '../../ui/Spinner';
 import SmsStatusBadge from './SmsStatusBadge';
 import PaymentEditModal from './PaymentEditModal';
+import { OnlineChip } from './OnlineTithesPanel';
 import { displayName, formatPhone, monthLabel, dateLabel, amountLabel } from '../../../utils/tithe';
 
 const OUTCOME = {
@@ -197,7 +198,12 @@ export default function TitherDetail({ titherId, onClose, onEdit, onConvert, onR
     {
       key: 'amount',
       label: 'Amount',
-      render: (row) => <span className="font-display text-base text-ink whitespace-nowrap">{amountLabel(row.amount, row.currency)}</span>,
+      render: (row) => (
+        <div>
+          <span className="font-display text-base text-ink whitespace-nowrap">{amountLabel(row.amount, row.currency)}</span>
+          {row.online && <div className="mt-0.5"><OnlineChip online={row.online} /></div>}
+        </div>
+      ),
     },
     {
       key: 'sms',
@@ -206,11 +212,14 @@ export default function TitherDetail({ titherId, onClose, onEdit, onConvert, onR
         const result  = smsResult?.id === row.id ? smsResult : null;
         const sent    = row.smsStatus === 'SENT';
         const sending = busy === row.id;
+        // With no phone on the account, an online tithe's text goes to the
+        // phone it was paid from.
+        const canText = hasPhone || Boolean(row.online?.phone);
         return (
           <div className="min-w-0">
             <div className="flex items-start gap-2">
               <SmsStatusBadge status={row.smsStatus} error={row.smsError} to={row.smsTo} detail />
-              {hasPhone && (
+              {canText && (
                 <button
                   type="button"
                   onClick={() => (sent ? setConfirm({ resend: row }) : resend(row))}
@@ -432,10 +441,12 @@ export default function TitherDetail({ titherId, onClose, onEdit, onConvert, onR
         onClose={() => setConfirm(null)}
         onConfirm={deletePayment}
         loading={busy === 'delete-payment'}
-        title="Delete this payment?"
-        message={confirm?.payment
-          ? `${amountLabel(confirm.payment.amount, confirm.payment.currency)} for ${monthLabel(confirm.payment.month)}, paid on ${dateLabel(confirm.payment.paidOn)}, will be removed from the records. This cannot be undone.`
-          : ''}
+        title={confirm?.payment?.online ? 'Take this online tithe off the register?' : 'Delete this payment?'}
+        message={!confirm?.payment ? ''
+          // An online tithe is not lost: it goes back to be added again.
+          : confirm.payment.online
+            ? `${amountLabel(confirm.payment.amount, confirm.payment.currency)} for ${monthLabel(confirm.payment.month)}, paid online on ${dateLabel(confirm.payment.paidOn)}, will come off this account and go back to Online tithes, where it can be added to the right tither. It stays on the Giving page.`
+            : `${amountLabel(confirm.payment.amount, confirm.payment.currency)} for ${monthLabel(confirm.payment.month)}, paid on ${dateLabel(confirm.payment.paidOn)}, will be removed from the records. This cannot be undone.`}
         danger
       />
     </AdminModal>

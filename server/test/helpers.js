@@ -88,6 +88,10 @@ const TEST_ENV = {
   HUBTEL_SMS_CLIENT_SECRET: 'test',
   HUBTEL_SMS_BASE_URL:      'http://127.0.0.1:1',
   APP_URL:                  'https://www.hpcglobal.org',
+  // A test key and a closed port: no test can reach the real Paystack. The
+  // giving tests point PAYSTACK_BASE_URL at a fake before loading the app.
+  PAYSTACK_SECRET_KEY:      'sk_test_not_a_real_key',
+  PAYSTACK_BASE_URL:        'http://127.0.0.1:1',
 };
 
 /**

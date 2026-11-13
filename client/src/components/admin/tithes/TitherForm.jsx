@@ -46,10 +46,13 @@ function fromTither(tither, mode) {
  *   open     – boolean
  *   mode     – 'create' | 'edit' | 'convert'
  *   tither   – the account being edited or converted (T from the API)
+ *   initial  – optional, create mode only: { number, name, phone } to start
+ *              from, e.g. the giver of an online tithe. A number given here
+ *              is used instead of the suggested next free one.
  *   onClose  – close handler
  *   onSaved  – (tither) => void, called with the saved row; the parent closes
  */
-export default function TitherForm({ open, mode = 'create', tither, onClose, onSaved }) {
+export default function TitherForm({ open, mode = 'create', tither, initial, onClose, onSaved }) {
   const [form, setForm]               = useState(EMPTY);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError]             = useState('');
@@ -62,6 +65,11 @@ export default function TitherForm({ open, mode = 'create', tither, onClose, onS
   const titherRef = useRef(tither);
   titherRef.current = tither;
   const titherId = tither?.id;
+  // Read when the form opens, like the tither: a new object from the parent
+  // must not refill the form mid-typing.
+  const initialRef = useRef(initial);
+  initialRef.current = initial;
+  const prefilled = mode === 'create' && Boolean(initial);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -74,7 +82,17 @@ export default function TitherForm({ open, mode = 'create', tither, onClose, onS
       return undefined;
     }
 
-    setForm(EMPTY);
+    const start = initialRef.current;
+    const prefill = {
+      ...EMPTY,
+      number: start?.number ?? '',
+      name:   start?.name ?? '',
+      phone:  start?.phone ?? '',
+    };
+    setForm(prefill);
+    // A number brought along wins over the suggested next one.
+    if (prefill.number) return undefined;
+
     setNumberState('loading');
     let cancelled = false;
     adminApi.nextTitheNumber()
@@ -165,6 +183,13 @@ export default function TitherForm({ open, mode = 'create', tither, onClose, onS
     <AdminModal open={open} onClose={onClose} title={TITLES[mode] ?? TITLES.create} size="md" dismissable={!saving}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="space-y-4">
+          {prefilled && (
+            <div className="flex items-start gap-2 rounded-lg bg-purple-brand/5 border border-purple-brand/15 px-4 py-3 text-xs font-body text-ink/70">
+              <Info size={14} className="text-purple-brand mt-px flex-shrink-0" />
+              <p>Filled in from the online tithe. Check the details and save — you'll then add the tithe to this new account.</p>
+            </div>
+          )}
+
           {locked && (
             <div className="flex items-start gap-2 rounded-lg bg-purple-brand/5 border border-purple-brand/15 px-4 py-3 text-xs font-body text-ink/70">
               <Info size={14} className="text-purple-brand mt-px flex-shrink-0" />

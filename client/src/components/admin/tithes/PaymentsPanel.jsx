@@ -8,6 +8,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import MonthPicker from './MonthPicker';
 import SmsStatusBadge from './SmsStatusBadge';
 import PaymentEditModal from './PaymentEditModal';
+import { OnlineChip } from './OnlineTithesPanel';
 import { displayName, monthLabel, dateLabel, amountLabel, thisMonth, todayYmd } from '../../../utils/tithe';
 import { downloadBlob } from '../../../utils/download';
 
@@ -193,7 +194,12 @@ export default function PaymentsPanel({ refreshKey, onChanged, onOpenTither, onR
     {
       key: 'amount',
       label: 'Amount',
-      render: (row) => <span className="font-display text-base text-ink">{amountLabel(row.amount, row.currency)}</span>,
+      render: (row) => (
+        <div>
+          <span className="font-display text-base text-ink">{amountLabel(row.amount, row.currency)}</span>
+          {row.online && <div className="mt-0.5"><OnlineChip online={row.online} /></div>}
+        </div>
+      ),
     },
     {
       key: 'sms',
@@ -348,10 +354,12 @@ export default function PaymentsPanel({ refreshKey, onChanged, onOpenTither, onR
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Delete this payment?"
-        message={deleteTarget
-          ? `${amountLabel(deleteTarget.amount, deleteTarget.currency)} from ${displayName(deleteTarget.tither)} for ${monthLabel(deleteTarget.month)} will be removed from the records. This cannot be undone.`
-          : ''}
+        title={deleteTarget?.online ? 'Take this online tithe off the register?' : 'Delete this payment?'}
+        message={!deleteTarget ? ''
+          // An online tithe is not lost: it goes back to be added again.
+          : deleteTarget.online
+            ? `${amountLabel(deleteTarget.amount, deleteTarget.currency)} from ${displayName(deleteTarget.tither)} for ${monthLabel(deleteTarget.month)} will come off the register and go back to Online tithes, where it can be added to the right tither. It stays on the Giving page.`
+            : `${amountLabel(deleteTarget.amount, deleteTarget.currency)} from ${displayName(deleteTarget.tither)} for ${monthLabel(deleteTarget.month)} will be removed from the records. This cannot be undone.`}
         danger
       />
     </div>

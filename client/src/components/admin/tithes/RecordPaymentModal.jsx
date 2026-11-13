@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Check, X, Plus, Phone, CheckCircle2, AlertTriangle, Info, RefreshCw } from 'lucide-react';
+import { Search, Check, X, Plus, Phone, CheckCircle2, AlertTriangle, Info, RefreshCw, UserPlus, Mail, Globe } from 'lucide-react';
 import { adminApi } from '../../../services/api';
 import AdminModal from '../AdminModal';
 import FormField from '../FormField';
 import Toggle from '../Toggle';
 import MonthPicker from './MonthPicker';
+import { IssueBadge, methodLabel } from './OnlineTithesPanel';
 import {
   displayName, formatPhone, renderTemplate, templateValues,
   amountLabel, monthLabel, dateLabel, todayYmd, thisMonth,
@@ -20,18 +21,49 @@ function recipientsOf(tither) {
   return [...new Set(phones)].map(formatPhone);
 }
 
-const freshForm = () => ({ amount: '', month: thisMonth(), paidOn: todayYmd(), note: '' });
+/**
+ * Where an online tithe's acknowledgement goes: the account's own phones, and
+ * only when it has none, the phone the giver paid from — the server's rule.
+ */
+function recipientsFor(tither, gift) {
+  const own = recipientsOf(tither);
+  return own.length || !gift?.phone ? own : [gift.phone];
+}
+
+const freshForm = (gift) => ({
+  amount: '',
+  month:  gift?.titheMonth || thisMonth(),
+  paidOn: todayYmd(),
+  note:   '',
+});
+
+/** What the search box starts with for an online tithe: the number given, else the giver's name. */
+const giftQuery = (gift) => (gift ? gift.titheNumber || gift.name || '' : '');
+
+/** The holder of the number given and accounts with the giver's phone, active ones only. */
+function candidatesOf(gift) {
+  if (!gift) return [];
+  const all = [gift.holder, ...(gift.suggestions ?? [])].filter((t) => t?.isActive);
+  return all.filter((t, i) => all.findIndex((o) => o.id === t.id) === i);
+}
 
 /**
  * Record one tithe payment and show what became of its acknowledgement SMS.
+ * Given `gift`, it instead adds a tithe paid on the website to the register:
+ * the amount and date come from the payment itself, so only who it is for,
+ * the month and a note are asked.
  *
  * Props:
- *   open        – boolean
- *   tither      – optional: the account the payment is for (otherwise searched here)
- *   onClose     – close handler
- *   onRecorded  – ({ payment, sms }) => void, right after a payment is saved
+ *   open         – boolean
+ *   tither       – optional: the account the payment is for (otherwise searched here)
+ *   gift         – optional: an online tithe (Gift from GET /admin/tithes/online)
+ *   onClose      – close handler
+ *   onRecorded   – ({ payment, sms }) => void, right after a payment is saved
+ *   onAddTither  – (gift) => void: the giver isn't on the register, add them first
+ *   onChanged    – called when the online tithe turns out to have been dealt
+ *                  with elsewhere (a 404 or 409), so the page can reload
  */
-export default function RecordPaymentModal({ open, tither, onClose, onRecorded }) {
+export default function RecordPaymentModal({ open, tither, gift, onClose, onRecorded, onAddTither, onChanged }) {
   const [selected, setSelected]       = useState(tither ?? null);
   const [query, setQuery]             = useState('');
   const [results, setResults]         = useState([]);
@@ -43,7 +75,7 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
   const [settingsError, setSettingsError] = useState('');
   const [settingsTry, setSettingsTry]     = useState(0);
 
-  const [form, setForm]       = useState(freshForm);
+  const [form, setForm]       = useState(() => freshForm(gift));
   const [sendSms, setSendSms] = useState(true);
   const [phase, setPhase]     = useState('');     // '' | 'saving'
   const [error, setError]     = useState('');
@@ -65,14 +97,14 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
   useEffect(() => {
     if (!open) return;
     setSelected(tither ?? null);
-    setQuery(''); setResults([]); setResultsFor(''); setSearchError('');
-    setForm(freshForm());
+    setQuery(giftQuery(gift)); setResults([]); setResultsFor(''); setSearchError('');
+    setForm(freshForm(gift));
     setSendSms(true);
     smsTouchedRef.current = false;
     enterRef.current += 1;
     setPhase(''); setError(''); setResult(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, tither?.id]);
+  }, [open, tither?.id, gift?.id]);
 
   // The template, the church name and whether SMS can go out at all.
   useEffect(() => {
@@ -117,6 +149,13 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
+  // Back to the search, which for an online tithe starts from what was given.
+  function change() {
+    setSelected(null);
+    setError('');
+    if (gift && !query.trim()) setQuery(giftQuery(gift));
+  }
+
   function pick(t) {
     enterRef.current += 1;   // a search still running for Enter no longer matters
     setSelected(t);
@@ -157,7 +196,9 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
     setSendSms(value);
   }
 
-  const recipients = recipientsOf(selected);
+  const ownPhones  = recipientsOf(selected);
+  const recipients = recipientsFor(selected, gift);
+  const fallback   = Boolean(gift) && ownPhones.length === 0 && recipients.length > 0;
   const noPhone    = Boolean(selected) && recipients.length === 0;
   const smsOff     = settings?.sms === 'none';
   const autoOff    = settings?.smsEnabled === false;
@@ -165,13 +206,17 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
   const smsLocked  = noPhone || smsOff;
   const willSend   = sendSms && !smsLocked;
 
-  const smsNote = noPhone ? 'No phone number on this account.'
+  const smsNote = noPhone ? (gift ? 'No phone number on this account, and none came with the payment.' : 'No phone number on this account.')
     : smsOff ? 'SMS is not set up in Vercel.'
     : autoOff ? 'Automatic SMS is switched off under SMS Template. Switch this on to send one by hand for this payment.'
     : '';
 
+  // An online tithe's amount and date are the payment's own.
+  const previewPayment = gift
+    ? { amount: gift.amount, currency: gift.currency, month: form.month, paidOn: String(gift.paidAt || gift.createdAt || '').slice(0, 10) }
+    : { amount: Number(form.amount) || 0, month: form.month, paidOn: form.paidOn };
   const previewText = willSend && selected && settings
-    ? renderTemplate(settings.smsTemplate, templateValues(selected, { amount: Number(form.amount) || 0, month: form.month, paidOn: form.paidOn }, settings.church))
+    ? renderTemplate(settings.smsTemplate, templateValues(selected, previewPayment, settings.church))
     : '';
   const segments = previewText ? smsSegments(previewText) : 0;
 
@@ -181,9 +226,9 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
     const amount = Number(form.amount);
     if (!selected) { setError('Choose who the payment is from.'); return; }
     if (archived) { setError(`${displayName(selected)}'s account is archived. Restore it first, then record the payment.`); return; }
-    if (!form.amount.trim() || !Number.isFinite(amount) || amount <= 0) { setError('Enter the amount paid — more than zero.'); return; }
+    if (!gift && (!form.amount.trim() || !Number.isFinite(amount) || amount <= 0)) { setError('Enter the amount paid — more than zero.'); return; }
     if (!form.month) { setError('Choose the month the tithe is for.'); return; }
-    if (!form.paidOn) { setError('Choose the date it was paid.'); return; }
+    if (!gift && !form.paidOn) { setError('Choose the date it was paid.'); return; }
 
     setPhase('saving'); setError('');
     try {
@@ -194,18 +239,29 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
       // their choice for this payment: on sends even while automatic sending
       // is off, off records only.
       const choice = !smsLocked && (smsTouchedRef.current || settingsError) ? { sendSms: willSend } : {};
-      const { data } = await adminApi.recordTithePayment({
-        titherId: selected.id,
-        amount,
-        month:   form.month,
-        paidOn:  form.paidOn,
-        note:    form.note.trim(),
-        ...choice,
-      });
+      const { data } = gift
+        ? await adminApi.assignOnlineTithe(gift.id, {
+            titherId: selected.id,
+            month:    form.month,
+            note:     form.note.trim(),
+            ...choice,
+          })
+        : await adminApi.recordTithePayment({
+            titherId: selected.id,
+            amount,
+            month:   form.month,
+            paidOn:  form.paidOn,
+            note:    form.note.trim(),
+            ...choice,
+          });
       setResult(data);
       onRecorded?.(data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not record the payment. Please try again.');
+      setError(err.response?.data?.message || (gift
+        ? 'Could not add it to the register. Please try again.'
+        : 'Could not record the payment. Please try again.'));
+      // Already added or dismissed elsewhere, or gone: the list behind is stale.
+      if (gift && [404, 409].includes(err.response?.status)) onChanged?.();
     } finally {
       setPhase('');
     }
@@ -218,11 +274,19 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
   }
 
   return (
-    <AdminModal open={open} onClose={onClose} title="Record a tithe payment" size="lg" dismissable={!phase}>
+    <AdminModal
+      open={open}
+      onClose={onClose}
+      title={gift ? 'Add an online tithe to the register' : 'Record a tithe payment'}
+      size="lg"
+      dismissable={!phase}
+    >
       {result ? (
-        <ResultView result={result} onAnother={recordAnother} onDone={onClose} />
+        <ResultView result={result} online={Boolean(gift)} onAnother={gift ? null : recordAnother} onDone={onClose} />
       ) : (
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          {gift && <GiftFacts gift={gift} selectedId={selected?.id} onPick={pick} />}
+
           {/* Who */}
           {selected ? (
             <div className="rounded-lg border border-purple-brand/15 bg-cream/40 px-4 py-3 flex items-start justify-between gap-3">
@@ -239,10 +303,10 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
                 </p>
                 <p className="text-[11px] text-ink/45 font-body mt-1 flex items-center gap-1">
                   <Phone size={11} className="flex-shrink-0" />
-                  {recipients.length ? recipients.join(' · ') : 'No phone number'}
+                  {ownPhones.length ? ownPhones.join(' · ') : 'No phone number'}
                 </p>
               </div>
-              <button type="button" onClick={() => setSelected(null)} className="btn-ghost text-xs flex-shrink-0">
+              <button type="button" onClick={change} className="btn-ghost text-xs flex-shrink-0">
                 Change
               </button>
             </div>
@@ -291,7 +355,37 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
             </FormField>
           )}
 
-          {/* What */}
+          {gift && onAddTither && !gift.newTither && (
+            <button
+              type="button"
+              onClick={() => onAddTither(gift)}
+              disabled={Boolean(phase)}
+              className="inline-flex items-center gap-1 text-xs font-body text-purple-brand hover:text-purple-deep font-medium disabled:opacity-50"
+            >
+              <UserPlus size={12} /> Not on the register? Add them as a new tither
+            </button>
+          )}
+
+          {/* What — an online tithe's amount and date are the payment's own */}
+          {gift ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                label="Month the tithe is for"
+                required
+                hint={form.month === gift.titheMonth ? 'As the giver chose.' : `The giver chose ${monthLabel(gift.titheMonth)}.`}
+              >
+                <MonthPicker value={form.month} onChange={(month) => set({ month })} />
+              </FormField>
+              <FormField label="Note" hint="Optional. Internal only. Left blank, it says it was paid online and from which phone.">
+                <input
+                  className="input"
+                  value={form.note}
+                  onChange={(e) => set({ note: e.target.value })}
+                  maxLength={300}
+                />
+              </FormField>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Amount" required>
               <div className="relative">
@@ -331,6 +425,7 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
               />
             </FormField>
           </div>
+          )}
 
           {/* SMS */}
           <div className="space-y-3 border-t border-purple-brand/8 pt-4">
@@ -343,6 +438,11 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
               />
               {smsNote && (
                 <p className={`text-[11px] font-body mt-1.5 ${autoOff && !smsLocked ? 'text-amber-700' : 'text-ink/45'}`}>{smsNote}</p>
+              )}
+              {fallback && !smsOff && (
+                <p className="text-[11px] font-body mt-1.5 text-ink/45">
+                  No phone number on this account, so the SMS goes to the phone the tithe was paid from.
+                </p>
               )}
             </div>
 
@@ -380,7 +480,9 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
               <X size={14} /> Cancel
             </button>
             <button type="submit" disabled={Boolean(phase) || archived} className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
-              {phase === 'saving' ? (willSend ? 'Saving and sending…' : 'Saving…') : <><Check size={14} /> Record payment</>}
+              {phase === 'saving'
+                ? (willSend ? 'Saving and sending…' : 'Saving…')
+                : <><Check size={14} /> {gift ? 'Add to register' : 'Record payment'}</>}
             </button>
           </div>
         </form>
@@ -390,7 +492,7 @@ export default function RecordPaymentModal({ open, tither, onClose, onRecorded }
 }
 
 /** What was just recorded and whether the person was told. */
-function ResultView({ result, onAnother, onDone }) {
+function ResultView({ result, online, onAnother, onDone }) {
   const { payment, sms } = result;
   const to = sms?.to ?? [];
 
@@ -402,7 +504,9 @@ function ResultView({ result, onAnother, onDone }) {
         </div>
         <div className="min-w-0">
           <p className="font-display text-lg text-ink font-light leading-snug">
-            Recorded {amountLabel(payment.amount, payment.currency)} from {displayName(payment.tither)} for {monthLabel(payment.month)}.
+            {online
+              ? <>Added {amountLabel(payment.amount, payment.currency)} from {displayName(payment.tither)} to the register for {monthLabel(payment.month)}.</>
+              : <>Recorded {amountLabel(payment.amount, payment.currency)} from {displayName(payment.tither)} for {monthLabel(payment.month)}.</>}
           </p>
           <p className="text-ink/45 text-xs font-body mt-1">
             Paid on {dateLabel(payment.paidOn)}
@@ -436,13 +540,73 @@ function ResultView({ result, onAnother, onDone }) {
       ) : null}
 
       <div className="flex justify-end gap-3 pt-4 border-t border-purple-brand/8">
-        <button type="button" onClick={onAnother} className="btn-outline text-sm px-5 py-2">
-          <Plus size={14} /> Record another
-        </button>
+        {onAnother && (
+          <button type="button" onClick={onAnother} className="btn-outline text-sm px-5 py-2">
+            <Plus size={14} /> Record another
+          </button>
+        )}
         <button type="button" onClick={onDone} className="btn-primary text-sm px-5 py-2" autoFocus>
           <Check size={14} /> Done
         </button>
       </div>
+    </div>
+  );
+}
+
+/** The online payment being added: read-only, with the likely tithers to pick from. */
+function GiftFacts({ gift, selectedId, onPick }) {
+  const candidates = candidatesOf(gift);
+  return (
+    <div className="rounded-lg border border-blue-100 bg-blue-50/40 px-4 py-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-ink/50 flex items-center gap-1">
+            <Globe size={11} /> Paid on the website
+          </p>
+          <p className="font-display text-xl text-ink font-light leading-tight mt-1">{amountLabel(gift.amount, gift.currency)}</p>
+          <p className="text-xs text-ink/55 font-body mt-0.5">
+            {dateLabel(gift.paidAt || gift.createdAt)} · {methodLabel(gift.method)} · for {monthLabel(gift.titheMonth)}
+          </p>
+        </div>
+        <div className="sm:text-right">
+          <p className="text-[11px] font-body text-ink/45 mb-1">Number given</p>
+          <IssueBadge gift={gift} />
+        </div>
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-blue-100 text-xs font-body text-ink/70 space-y-0.5">
+        <p className={gift.name ? 'text-ink/85 font-medium' : 'text-ink/40'}>{gift.name || 'No name given'}</p>
+        {gift.phone && <p className="flex items-center gap-1.5"><Phone size={11} className="text-ink/35 flex-shrink-0" /> {gift.phone}</p>}
+        {gift.email && <p className="flex items-center gap-1.5 break-all"><Mail size={11} className="text-ink/35 flex-shrink-0" /> {gift.email}</p>}
+      </div>
+
+      {candidates.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-blue-100">
+          <p className="text-[11px] font-body text-ink/45 mb-1.5">Could be</p>
+          <div className="flex flex-wrap gap-1.5">
+            {candidates.map((t) => {
+              const chosen = t.id === selectedId;
+              const why = t.id === gift.holder?.id ? 'holds that number' : 'same phone';
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onPick(t)}
+                  aria-pressed={chosen}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-body border transition-colors text-left ${
+                    chosen
+                      ? 'bg-purple-brand text-white border-purple-brand'
+                      : 'bg-white text-ink/75 border-purple-brand/15 hover:border-purple-brand/40'
+                  }`}
+                >
+                  <span className="font-mono">{t.number}</span> {displayName(t)}
+                  <span className={chosen ? 'text-white/70' : 'text-ink/40'}> · {why}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

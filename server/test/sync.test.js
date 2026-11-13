@@ -95,6 +95,14 @@ function schemaFile(text) {
 // deploy that adds a model starts from.
 const BEFORE_DELIVERY_FAILURES = dropBlock(dropBlock(CURRENT, 'model DeliveryFailure'), 'enum DeliveryChannel');
 
+// The database as it was before online tithes were matched to the register:
+// what the production deploy of that change starts from.
+const BEFORE_ONLINE_TITHES = [
+  ...['titheMonth', 'paidAt', 'titheStatus', 'titheNote', 'titheReviewedBy', 'tithePayment', '@@index'].map((name) => ['model GivingRecord', name]),
+  ['model TithePayment', 'givingRecordId'],
+  ['model TithePayment', 'givingRecord'],
+].reduce((text, [header, name]) => setLine(text, header, name, null), dropBlock(CURRENT, 'enum OnlineTitheStatus'));
+
 // ─── Reviewing Prisma's diff ──────────────────────────────────────────────────
 
 // Prisma resolves the datasource's env() even when it doesn't connect.
@@ -157,6 +165,15 @@ test.describe('reviewing Prisma\'s diff', { concurrency: true }, () => {
       );
       const { effects, verdict } = await judge(CURRENT, schema);
       assert.deepEqual(effects, ['AlterEnum:add', 'AlterTable:add']);
+      assert.equal(verdict, 'apply');
+    });
+
+    test('online tithes: a new enum, new optional columns, their indexes and the link to the gift', async () => {
+      const { sections, effects, verdict } = await judge(BEFORE_ONLINE_TITHES);
+      assert.deepEqual([...new Set(effects)], ['CreateEnum:add', 'AlterTable:add', 'CreateIndex:add', 'AddForeignKey:add']);
+      // Nothing that rewrites GivingRecord or TithePayment under a lock.
+      assert.ok(sections.some((s) => /CREATE UNIQUE INDEX "TithePayment_givingRecordId_key"/.test(s.sql)));
+      assert.ok(sections.some((s) => /ON DELETE RESTRICT/.test(s.sql)));
       assert.equal(verdict, 'apply');
     });
 
@@ -378,6 +395,21 @@ test.describe('the script', { concurrency: true }, () => {
     const second = await runSync(production(url, APPLY));
     assert.equal(second.status, 0, second.output);
     assert.match(second.output, /database matches schema\.prisma/);
+  });
+
+  test('apply mode adds online tithes to a database that predates them', async () => {
+    const url = await createDatabaseAt('sync_online_tithes', BEFORE_ONLINE_TITHES);
+    assert.equal((await look(url)).columns.includes('GivingRecord.titheMonth'), false);
+
+    const run = await runSync(production(url, APPLY));
+    assert.equal(run.status, 0, run.output);
+    assert.match(run.output, /applied — database now matches schema\.prisma/);
+    const after = await look(url);
+    for (const column of ['GivingRecord.titheMonth', 'GivingRecord.paidAt', 'GivingRecord.titheStatus', 'GivingRecord.titheNote', 'GivingRecord.titheReviewedBy', 'TithePayment.givingRecordId']) {
+      assert.ok(after.columns.includes(column), column);
+    }
+    assert.ok(after.indexes.includes('TithePayment_givingRecordId_key'));
+    assert.ok(after.indexes.includes('GivingRecord_titheStatus_idx'));
   });
 
   test('without DB_SCHEMA_SYNC=apply it only reports what it would do', async () => {

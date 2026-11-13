@@ -17,10 +17,16 @@ const prisma = require('../lib/prisma');
 const { withDbRetry, isRetryable } = require('../lib/dbRetry');
 const { readTable, SpreadsheetError, MAX_ROWS } = require('../lib/spreadsheet');
 const tithe = require('../lib/tithe');
-const { sendAcknowledgement } = require('../services/titheSms');
 const { smsTransportName }    = require('../services/sms');
+const { withFallbackPhone }   = require('../services/titheSms');
+const {
+  titheSettings: settings, churchName, paymentInclude, presentPayment, ymd, asDate, smsSkipReason, acknowledge,
+} = require('../services/tithePayments');
 
 router.use(verifyToken, requireRole('SUPER_ADMIN'));
+
+// Tithes paid on the website that are waiting to be added to the register.
+router.use('/online', require('./onlineTithes'));
 
 const dbStatus  = (err) => (isRetryable(err) ? 503 : 500);
 const dbMessage = (err) =>
@@ -85,34 +91,10 @@ async function takenMessage(number) {
   return other ? `${number} is already ${tithe.displayName(other)}'s number.` : `${number} is already taken.`;
 }
 
-async function settings() {
-  return prisma.titheSettings.upsert({
-    where:  { id: 'singleton' },
-    update: {},
-    create: { id: 'singleton', smsTemplate: tithe.DEFAULT_SMS_TEMPLATE },
-  });
-}
-
-async function churchName() {
-  const site = await prisma.siteSettings.findUnique({ where: { id: 'singleton' }, select: { churchName: true } });
-  return site?.churchName || 'HPC Global';
-}
-
 const titherSelect = {
   id: true, number: true, type: true, name: true, phone: true, spouseName: true, spousePhone: true,
   notes: true, isActive: true, createdAt: true, updatedAt: true,
 };
-
-/** What the browser shows for a payment: the row plus who it was for. */
-const paymentInclude = {
-  tither: { select: { id: true, number: true, name: true, type: true, spouseName: true, isActive: true } },
-};
-
-const ymd = (date) => new Date(date).toISOString().slice(0, 10);
-
-function presentPayment(p) {
-  return { ...p, paidOn: ymd(p.paidOn), smsTo: p.smsTo ? p.smsTo.split(',').map(tithe.formatPhone) : [] };
-}
 
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 const monthRe   = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -238,7 +220,10 @@ router.get('/tithers/:id', async (req, res) => {
   try {
     const row = await prisma.tither.findUnique({
       where:   { id: req.params.id },
-      select:  { ...titherSelect, payments: { orderBy: [{ paidOn: 'desc' }, { createdAt: 'desc' }] } },
+      select:  {
+        ...titherSelect,
+        payments: { orderBy: [{ paidOn: 'desc' }, { createdAt: 'desc' }], include: { givingRecord: paymentInclude.givingRecord } },
+      },
     });
     if (!row) return res.status(404).json({ message: 'That tither no longer exists.' });
 
@@ -485,7 +470,6 @@ router.use((err, _req, res, next) => {
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
-const asDate = (s) => new Date(`${s}T00:00:00.000Z`);
 const validYmd = (s) => dateRe.test(s) && !Number.isNaN(asDate(s).getTime()) && asDate(s).toISOString().slice(0, 10) === s;
 
 const paymentFields = {
@@ -578,6 +562,7 @@ router.get('/payments/export', async (req, res) => {
       ['Note',         (p) => p.note],
       ['SMS',          (p) => p.smsStatus || ''],
       ['Recorded by',  (p) => p.recordedBy],
+      ['Source',       (p) => (p.givingRecord ? 'Online' : 'Office')],
     ];
     const csv = [columns.map(([label]) => csvCell(label)).join(','), ...rows.map((p) => columns.map(([, value]) => csvCell(value(p))).join(','))].join('\n');
     const name = where.month ? `tithes-${where.month}.csv` : `tithes-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -596,51 +581,7 @@ function asShown(payment) {
   return { ...payment, tither: Object.fromEntries(keys.map((k) => [k, payment.tither[k]])) };
 }
 
-/**
- * Send (or resend) the acknowledgement and keep the outcome on the payment.
- *
- * Everything that can fail before the text goes out is the caller's to fetch
- * first. Once a text has gone, this does not throw: answering with an error
- * then would have the office record the payment, or press Send, a second time
- * — and text the tither twice. If the outcome cannot be saved it is logged and
- * the payment is answered as it stood.
- */
-async function acknowledge(payment, tither, { template, church }) {
-  // A resend after a partly failed send finishes the job: the phones the text
-  // already reached are not texted again, and stay on the record as reached.
-  // A resend of one that went through goes to everyone, as asked.
-  const before = payment.smsStatus === 'FAILED' && payment.smsTo ? payment.smsTo.split(',') : [];
-  const result = await sendAcknowledgement({ tither, payment, template, church, skip: before });
-
-  const to  = result.status === 'SKIPPED' ? result.to : [...new Set([...result.to, ...before])];
-  const sms = { status: result.status, to: to.map(tithe.formatPhone), error: result.error, text: result.text };
-
-  // A resend that did not get through — nothing went (say the phone has since
-  // been removed), or Hubtel failed — must not overwrite the record of a text
-  // that did go. The office still sees this attempt's outcome in `sms`.
-  const keepRecord = (result.status === 'SKIPPED' && (payment.smsStatus === 'SENT' || before.length))
-    || (result.status !== 'SENT' && payment.smsStatus === 'SENT');
-  if (keepRecord) return { payment: presentPayment(payment), sms };
-  // When the text last reached a phone: now, if this attempt reached one.
-  const reachedNow = result.to.some((p) => !before.includes(p));
-
-  try {
-    const updated = await withDbRetry(() => prisma.tithePayment.update({
-      where: { id: payment.id },
-      data: {
-        smsStatus: result.status,
-        smsTo:     to.join(',') || null,
-        smsError:  result.error,
-        smsSentAt: reachedNow ? new Date() : payment.smsSentAt ?? null,
-      },
-      include: paymentInclude,
-    }), { label: 'tithe SMS outcome' });
-    return { payment: presentPayment(updated), sms };
-  } catch (err) {
-    console.error(`Tithe payment ${payment.id}: the SMS outcome (${result.status}) could not be saved:`, err);
-    return { payment: presentPayment(payment), sms };
-  }
-}
+const sameAmount = (a, b) => Math.round(a * 100) === Math.round(b * 100);
 
 router.post('/payments', validate(paymentCreateSchema), async (req, res) => {
   const { titherId, amount, month, paidOn, note, sendSms } = req.body;
@@ -652,12 +593,7 @@ router.post('/payments', validate(paymentCreateSchema), async (req, res) => {
     // Read before the payment is saved: a failure after it would answer an
     // error for a payment that is in fact recorded, inviting a second one.
     const [config, church] = await withDbRetry(() => Promise.all([settings(), churchName()]), { label: 'tithe payment settings' });
-    // The office's choice for this payment wins — switching the toggle on is
-    // how a text is sent by hand while automatic sending is off.
-    const wanted  = typeof sendSms === 'boolean' ? sendSms : config.smsEnabled;
-    const reason  = wanted ? null
-      : sendSms === false ? 'Switched off for this payment.'
-      : 'Automatic acknowledgements are switched off under SMS Template.';
+    const reason = smsSkipReason(config, sendSms);
 
     const payment = await prisma.tithePayment.create({
       data: {
@@ -683,6 +619,13 @@ router.post('/payments', validate(paymentCreateSchema), async (req, res) => {
 router.put('/payments/:id', validate(paymentUpdateSchema), async (req, res) => {
   const { amount, month, paidOn, note } = req.body;
   try {
+    // An online tithe's amount and day are what Paystack confirmed; only the
+    // month and the note are the office's to change.
+    const current = await prisma.tithePayment.findUnique({ where: { id: req.params.id }, select: { amount: true, paidOn: true, givingRecordId: true } });
+    if (!current) return res.status(404).json({ message: 'That payment no longer exists.' });
+    if (current.givingRecordId && (!sameAmount(amount, current.amount) || paidOn !== ymd(current.paidOn))) {
+      return res.status(400).json({ message: 'The amount and date of an online tithe come from the payment itself. Delete it to send it back to Online tithes.' });
+    }
     const payment = await prisma.tithePayment.update({
       where: { id: req.params.id },
       data:  { amount, month, paidOn: asDate(paidOn), note: note || null },
@@ -698,6 +641,17 @@ router.put('/payments/:id', validate(paymentUpdateSchema), async (req, res) => {
 
 router.delete('/payments/:id', async (req, res) => {
   try {
+    const current = await prisma.tithePayment.findUnique({ where: { id: req.params.id }, select: { givingRecordId: true } });
+    if (!current) return res.status(404).json({ message: 'That payment no longer exists.' });
+    if (current.givingRecordId) {
+      // The money was still received: the gift goes back to Online tithes for
+      // the office to add to the right account.
+      await prisma.$transaction([
+        prisma.tithePayment.delete({ where: { id: req.params.id } }),
+        prisma.givingRecord.update({ where: { id: current.givingRecordId }, data: { titheStatus: 'NEEDS_MATCH', titheNote: null } }),
+      ]);
+      return res.json({ ok: true, returnedToQueue: true });
+    }
     await prisma.tithePayment.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
   } catch (err) {
@@ -710,10 +664,15 @@ router.delete('/payments/:id', async (req, res) => {
 // Asked for by hand, so it goes even while automatic sending is switched off.
 router.post('/payments/:id/sms', async (req, res) => {
   try {
-    const found = await prisma.tithePayment.findUnique({ where: { id: req.params.id }, include: { tither: true } });
+    const found = await prisma.tithePayment.findUnique({
+      where:   { id: req.params.id },
+      include: { tither: true, givingRecord: paymentInclude.givingRecord },
+    });
     if (!found) return res.status(404).json({ message: 'That payment no longer exists.' });
     const [config, church] = await withDbRetry(() => Promise.all([settings(), churchName()]), { label: 'tithe SMS resend settings' });
-    res.json(await acknowledge(asShown(found), found.tither, { template: config.smsTemplate, church }));
+    // Paid online to an account with no phone: the giver's phone instead.
+    const to = found.givingRecord ? withFallbackPhone(found.tither, found.givingRecord.phone) : found.tither;
+    res.json(await acknowledge(asShown(found), to, { template: config.smsTemplate, church }));
   } catch (err) {
     console.error('Tithe SMS resend error:', err);
     res.status(dbStatus(err)).json({ message: dbMessage(err) });

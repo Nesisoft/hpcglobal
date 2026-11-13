@@ -19,6 +19,12 @@ app.use(cors({
   credentials: true,
 }));
 
+// ─── Paystack webhook ─────────────────────────────────────────────────────────
+// Ahead of the body parsers: the signature is over the raw bytes, which
+// express.json would consume. Ahead of the rate limits too: Paystack sends
+// every webhook from a few addresses, and a busy Sunday must not lock it out.
+app.use('/api/paystack', require('./routes/paystackWebhook'));
+
 // ─── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -49,7 +55,17 @@ const strictLimiter = rateLimit({
   message: { message: 'Too many requests, please try again later.' },
 });
 app.use('/api/auth/login', strictLimiter);
-app.use('/api/give',        strictLimiter);
+// Starting a gift only. Checking one is a giver coming back from Paystack,
+// perhaps pressing "Check again" while their phone prompt is pending, so it
+// has a looser counter of its own.
+app.post('/api/give',       strictLimiter);
+
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { message: 'Too many requests, please try again later.' },
+});
+app.get('/api/give/verify/:ref', verifyLimiter);
 
 // Public forms that email and text whatever address and number they are given.
 // They now always finish sending, so without a tighter cap a script could use
