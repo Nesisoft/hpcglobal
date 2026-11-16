@@ -43,3 +43,50 @@ jobs:
       - run: npx prisma generate --schema=server/src/prisma/schema.prisma
 
       - run: npm test
+
+  # The workers app (workers/, workers.hpcglobal.org): its own dependencies and
+  # tests, in its own job. One of its tests (workers/server/test/sync.test.js)
+  # deliberately reads the website's server/src/prisma/schema.prisma, to prove
+  # the website's deploy-time sync never sees the workers app's tables — so a
+  # website change that Prisma 5.22 can't read, or that renames AdminUser, can
+  # turn this job red too. Neither app's deploy depends on the other's tests.
+  workers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+    defaults:
+      run:
+        working-directory: workers
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/package-lock.json
+
+      - run: npm ci
+
+      - run: npx prisma generate --schema=server/src/prisma/schema.prisma
+
+      - run: npm test
+
+      - run: npx vite build client

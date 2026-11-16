@@ -4,3 +4,8 @@ client/dist/
 server/src/prisma/migrations/
 *.log
 .DS_Store
+
+# The old PHP attendance app, kept locally for reference while the workers app
+# replaces it. It holds live credentials (.env.production) and a database dump
+# of real people's details — it must never be committed.
+attendance-mgt-system/
