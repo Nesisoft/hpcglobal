@@ -47,14 +47,15 @@ enum Gender {
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model Department {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String         @id @default(uuid())
+  name        String         @unique
   description String?
   // Archived rather than deleted: past attendance and reports still name it.
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   workers     Worker[]
+  notices     Announcement[]
 }
 
 model Worker {
@@ -84,19 +85,19 @@ model Worker {
 
   /// Set when an admin gives the worker a temporary password. Until they
   /// choose their own, the API answers nothing but the password change.
-  mustChangePassword  Boolean   @default(false)
+  mustChangePassword    Boolean   @default(false)
   /// A temporary password stops working after this (72 hours), so one read
   /// out over the phone and never used can't be guessed at for ever.
-  tempPasswordExpires DateTime?
+  tempPasswordExpires   DateTime?
   /// Bumped to sign the worker out everywhere: every token carries the
   /// version it was issued at, and an older one is refused.
-  tokenVersion       Int       @default(0)
+  tokenVersion          Int       @default(0)
   /// Password reset by emailed code. Only a hash is kept; the code itself
   /// exists only in the email.
-  resetCodeHash      String?
-  resetCodeExpires   DateTime?
-  resetCodeAttempts  Int       @default(0)
-  resetCodeSentAt    DateTime?
+  resetCodeHash         String?
+  resetCodeExpires      DateTime?
+  resetCodeAttempts     Int       @default(0)
+  resetCodeSentAt       DateTime?
   /// A day's allowance across all codes, so asking for a new code doesn't buy
   /// five more guesses: at most 5 codes and 10 wrong guesses per 24 hours,
   /// counted from resetWindowStart.
@@ -104,8 +105,11 @@ model Worker {
   resetCodesInWindow    Int       @default(0)
   resetFailuresInWindow Int       @default(0)
 
-  attendance Attendance[]
-  leave      LeaveRequest[]
+  attendance  Attendance[]
+  leave       LeaveRequest[]
+  noticeReads AnnouncementRead[]
+  tickets     Ticket[]
+  rewards     RewardClaim[]
 
   lastLogin DateTime?
   /// When anything an admin's form shows last changed — details, status,
@@ -127,9 +131,9 @@ model Worker {
 /// account as the website's, whose free plan allows 100 a day in all, so this
 /// app stops well short of that — and no one address can spend much of it.
 model EmailCount {
-  key  String   @id
+  key  String @id
   day  String
-  sent Int      @default(0)
+  sent Int    @default(0)
 
   @@index([day])
 }
@@ -194,30 +198,31 @@ enum QrResult {
 /// A service workers attend — "Dominion Encounter Service", Sundays 07:30.
 /// Its dates are ServiceSessions, made automatically for the week ahead.
 model Service {
-  id         String      @id @default(uuid())
+  id         String           @id @default(uuid())
   name       String
-  kind       ServiceKind @default(REGULAR)
+  kind       ServiceKind      @default(REGULAR)
   venueName  String?
   /// Where workers must be to clock in by GPS. Null until the office sets it
   /// (from inside the venue, with "use my current location").
   latitude   Float?
   longitude  Float?
-  radiusM    Int         @default(100)
-  recurrence Recurrence  @default(WEEKLY)
+  radiusM    Int              @default(100)
+  recurrence Recurrence       @default(WEEKLY)
   /// 0 = Sunday … 6 = Saturday, for WEEKLY.
   weekday    Int?
   /// "HH:MM", Accra time (which is UTC all year).
   startTime  String
   endTime    String
-  startsOn   DateTime?   @db.Date
-  endsOn     DateTime?   @db.Date
+  startsOn   DateTime?        @db.Date
+  endsOn     DateTime?        @db.Date
   /// Counts towards absence in reports. A service workers may choose to
   /// attend (a 6 a.m. prayer meeting, say) can be switched off.
-  expected   Boolean     @default(true)
-  active     Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  expected   Boolean          @default(true)
+  active     Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
   sessions   ServiceSession[]
+  rewards    Reward[]
 }
 
 /// One date of a service. Unique per service and date, so making the coming
@@ -238,6 +243,7 @@ model ServiceSession {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
   attendance Attendance[]
+  tickets    Ticket[]
 
   @@unique([serviceId, date])
   @@index([startsAt])
@@ -351,4 +357,119 @@ model LeaveRequest {
 
   @@index([workerId, startDate])
   @@index([status])
+}
+
+// ─── Notices, tickets and rewards (part 4) ────────────────────────────────────
+
+enum Audience {
+  ALL
+  DEPARTMENT
+  HODS
+}
+
+/// A notice for workers: everyone, one department, or the heads of department.
+model Announcement {
+  id           String             @id @default(uuid())
+  title        String
+  body         String
+  audience     Audience           @default(ALL)
+  departmentId String?
+  department   Department?        @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  pinned       Boolean            @default(false)
+  /// Shown from this moment (a notice can be written ahead).
+  publishAt    DateTime           @default(now())
+  /// Hidden after this moment, if set.
+  expiresAt    DateTime?
+  authorId     String?
+  authorName   String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  reads        AnnouncementRead[]
+
+  @@index([publishAt])
+}
+
+/// Who has seen a notice — what the unread count is made from.
+model AnnouncementRead {
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  workerId       String
+  worker         Worker       @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@id([announcementId, workerId])
+  @@index([workerId])
+}
+
+enum TicketType {
+  WARNING
+  LATENESS
+  ABSENCE
+  MISCONDUCT
+}
+
+enum TicketSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// A penalty ticket: issued by a head of department or the office, seen by
+/// the worker, resolved (with a note) once dealt with.
+model Ticket {
+  id             String          @id @default(uuid())
+  workerId       String
+  worker         Worker          @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  type           TicketType
+  severity       TicketSeverity  @default(LOW)
+  reason         String
+  sessionId      String?
+  session        ServiceSession? @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  issuedById     String?
+  issuedByName   String
+  resolved       Boolean         @default(false)
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedByName String?
+  resolutionNote String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([workerId, createdAt])
+  @@index([resolved])
+}
+
+/// A reward for attendance, e.g. "Lunch with the Senior Pastor" for 10
+/// Sundays from September to November. Progress is counted from attendance
+/// whenever it is shown, never stored, so it can't drift.
+model Reward {
+  id            String        @id @default(uuid())
+  name          String
+  description   String?
+  /// The service that counts, or every service that counts towards attendance.
+  serviceId     String?
+  service       Service?      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  target        Int
+  onTimeOnly    Boolean       @default(false)
+  startsOn      DateTime      @db.Date
+  endsOn        DateTime      @db.Date
+  active        Boolean       @default(true)
+  createdByName String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  claims        RewardClaim[]
+}
+
+/// A reward handed over: once per worker per reward (the unique key).
+model RewardClaim {
+  id               String   @id @default(uuid())
+  rewardId         String
+  reward           Reward   @relation(fields: [rewardId], references: [id], onDelete: Restrict)
+  workerId         String
+  worker           Worker   @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  handedOverAt     DateTime @default(now())
+  handedOverById   String?
+  handedOverByName String
+
+  @@unique([rewardId, workerId])
 }

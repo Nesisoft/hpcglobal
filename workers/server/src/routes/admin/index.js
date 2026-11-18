@@ -11,5 +11,8 @@ router.use(require('./audit'));
 router.use(require('./services'));
 router.use(require('./leave'));
 router.use(require('./reports'));
+router.use(require('./notices'));
+router.use(require('./tickets'));
+router.use(require('./rewards'));
 
 module.exports = router;

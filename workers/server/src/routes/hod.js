@@ -6,7 +6,7 @@ const { withDbRetry } = require('../lib/dbRetry');
 const { validate } = require('../middleware/validate');
 const { authenticate, requireActive, requireHod, WITH_DEPARTMENT } = require('../middleware/auth');
 const { handle } = require('../lib/http');
-const { presentWorker } = require('../lib/present');
+const { presentWorker, fullName } = require('../lib/present');
 const { decide } = require('../lib/approval');
 const { getSettings } = require('../lib/settings');
 const { todayKey, dateOnly, addDays, isDateKey, isTime } = require('../lib/time');
@@ -15,6 +15,10 @@ const { buildReport, buildRegister, reportCsvRows, parsePeriod } = require('../l
 const { sendCsv } = require('../lib/csv');
 const { markPresent, removeAttendance, HOD_DAYS_BACK } = require('../lib/marking');
 const { presentLeave, reviewLeave, WITH_WORKER } = require('../lib/leave');
+const tickets = require('../lib/tickets');
+const { presentNotice, noticeFields, noticeDates, WITH_DEPARTMENT: NOTICE_DEPARTMENT } = require('../lib/notices');
+const { audit } = require('../lib/audit');
+const { transaction } = require('../lib/tx');
 
 // A head of department's tools. Every query is limited to the HOD's own
 // department, taken from their account on the server — an id sent by the
@@ -224,5 +228,84 @@ for (const [path, approve] of [['approve', true], ['reject', false]]) {
     res.json(result);
   }));
 }
+
+// ─── Tickets ──────────────────────────────────────────────────────────────────
+
+router.get('/tickets', handle('hod tickets', async (req, res) => {
+  const inDepartment = { worker: { departmentId: req.worker.departmentId } };
+  const [list, open] = await withDbRetry(() => Promise.all([
+    prisma.ticket.findMany({
+      where:   { ...inDepartment, ...tickets.statusFilter(req.query.status) },
+      include: tickets.WITH_DETAILS,
+      orderBy: { createdAt: 'desc' },
+      take:    200,
+    }),
+    prisma.ticket.count({ where: { ...inDepartment, resolved: false } }),
+  ]));
+  res.json({ tickets: list.map(tickets.presentTicket), open });
+}));
+
+router.post('/tickets', validate(tickets.issueSchema), handle('hod issue ticket', async (req, res) => {
+  const result = await tickets.issueTicket(req.worker, req.body, { departmentId: req.worker.departmentId });
+  if (result.status) return res.status(result.status).json({ message: result.message, field: result.field });
+  res.status(201).json(result);
+}));
+
+router.post('/tickets/:id/resolve', validate(tickets.resolveSchema), handle('hod resolve ticket', async (req, res) => {
+  const result = await tickets.resolveTicket(req.worker, req.params.id, req.body.note, { departmentId: req.worker.departmentId });
+  if (result.status) return res.status(result.status).json({ message: result.message });
+  res.json(result);
+}));
+
+// ─── Notices to the department ────────────────────────────────────────────────
+
+router.get('/notices', handle('hod notices', async (req, res) => {
+  const now = new Date();
+  const where = { audience: 'DEPARTMENT', departmentId: req.worker.departmentId };
+  const [notices, members] = await withDbRetry(() => Promise.all([
+    prisma.announcement.findMany({
+      where, include: { ...NOTICE_DEPARTMENT, _count: { select: { reads: true } } }, orderBy: { publishAt: 'desc' }, take: 100,
+    }),
+    prisma.worker.count({ where: { departmentId: req.worker.departmentId, status: 'ACTIVE' } }),
+  ]));
+  res.json({ notices: notices.map((n) => presentNotice(n, { now })), members });
+}));
+
+router.post('/notices', validate(noticeFields), handle('hod post notice', async (req, res) => {
+  const dates = noticeDates(req.body);
+  if (dates.error) return res.status(400).json(dates.error);
+  const notice = await transaction(async (tx) => {
+    const created = await tx.announcement.create({
+      data: {
+        title: req.body.title, body: req.body.body, pinned: req.body.pinned ?? false,
+        audience: 'DEPARTMENT', departmentId: req.worker.departmentId,
+        publishAt: dates.publishAt, expiresAt: dates.expiresAt, authorId: req.worker.id, authorName: fullName(req.worker),
+      },
+      include: NOTICE_DEPARTMENT,
+    });
+    await audit(tx, req.worker, {
+      action: 'notice.create', targetType: 'notice', targetId: created.id,
+      summary: `Posted “${created.title}” to ${req.worker.department.name}`,
+    });
+    return created;
+  });
+  res.status(201).json({ notice: presentNotice(notice) });
+}));
+
+/** A HOD takes down their own department notices; the office can take down any. */
+router.delete('/notices/:id', handle('hod delete notice', async (req, res) => {
+  const result = await transaction(async (tx) => {
+    const notice = await tx.announcement.findUnique({ where: { id: req.params.id } });
+    if (!notice || notice.audience !== 'DEPARTMENT' || notice.departmentId !== req.worker.departmentId) {
+      return { status: 404, message: 'That notice isn’t one of your department’s.' };
+    }
+    if (notice.authorId !== req.worker.id) return { status: 403, message: 'Only the person who posted it, or the church office, can take it down.' };
+    await tx.announcement.delete({ where: { id: notice.id } });
+    await audit(tx, req.worker, { action: 'notice.delete', targetType: 'notice', targetId: notice.id, summary: `Took down “${notice.title}”` });
+    return { removed: notice.id };
+  });
+  if (result.status) return res.status(result.status).json({ message: result.message });
+  res.json(result);
+}));
 
 module.exports = router;

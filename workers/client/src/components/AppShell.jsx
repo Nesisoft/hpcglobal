@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   Home, Users, UserCog, Building2, ScrollText, CircleUser, LogOut, ExternalLink, History, Church, CalendarDays, Settings,
-  LayoutDashboard, CalendarOff, BarChart3,
+  LayoutDashboard, CalendarOff, BarChart3, Megaphone, Award, Ticket, Gift,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { useUnreadNotices } from '../lib/notices';
 import { LOGO_URL } from './ui';
 import { initials, ROLE_LABEL } from '../lib/format';
 
@@ -16,6 +17,9 @@ const ADMIN_PAGES = [
   { to: '/admin/services', label: 'Services', icon: Church },
   { to: '/admin/sessions', label: 'Sessions', icon: CalendarDays },
   { to: '/admin/leave', label: 'Leave', icon: CalendarOff },
+  { to: '/admin/notices', label: 'Notices', icon: Megaphone },
+  { to: '/admin/tickets', label: 'Tickets', icon: Ticket },
+  { to: '/admin/rewards', label: 'Rewards', icon: Gift },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
   { to: '/admin/audit', label: 'Audit log', icon: ScrollText },
 ];
@@ -29,6 +33,7 @@ const ADMIN_PAGES = [
 export default function AppShell({ title, children }) {
   const { worker, isHod, isAdmin, logout } = useAuth();
   const { pathname } = useLocation();
+  const { unread } = useUnreadNotices(worker.id);
 
   const sections = [
     {
@@ -36,6 +41,8 @@ export default function AppShell({ title, children }) {
         { to: '/', label: 'Home', icon: Home, end: true },
         { to: '/history', label: 'My attendance', icon: History },
         { to: '/leave', label: 'My leave', icon: CalendarOff },
+        { to: '/notices', label: 'Notices', icon: Megaphone, badge: unread },
+        { to: '/record', label: 'My record', icon: Award },
       ],
     },
     isHod && { heading: worker.department.name, items: [{ to: '/department', label: 'My department', icon: Users }] },
@@ -48,7 +55,7 @@ export default function AppShell({ title, children }) {
   // among the admin tabs instead.
   const both = isHod && isAdmin;
   const bottom = [
-    { to: '/', label: 'Home', icon: Home, end: true },
+    { to: '/', label: 'Home', icon: Home, end: true, dot: unread > 0 },
     { to: '/history', label: 'History', icon: History },
     isHod && !isAdmin && { to: '/department', label: 'Department', icon: Users },
     isAdmin && { to: '/admin', label: 'Admin', icon: UserCog, match: both ? ['/admin', '/department'] : ['/admin'] },
@@ -76,7 +83,7 @@ export default function AppShell({ title, children }) {
               {section.heading && (
                 <p className="px-3 mb-1.5 text-[10px] font-body font-semibold uppercase tracking-[0.18em] text-white/30 truncate">{section.heading}</p>
               )}
-              {section.items.map(({ to, label, icon: Icon, end }) => (
+              {section.items.map(({ to, label, icon: Icon, end, badge }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -85,6 +92,9 @@ export default function AppShell({ title, children }) {
                     isActive ? 'bg-gold/15 text-gold border-gold/20' : 'text-white/55 hover:text-white hover:bg-white/5 border-transparent'}`}
                 >
                   <Icon size={15} className="flex-shrink-0" /> {label}
+                  {badge > 0 && (
+                    <span className="ml-auto text-[10px] font-semibold bg-gold text-purple-deep rounded-full px-1.5 py-0.5" aria-label={`${badge} new`}>{badge}</span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -145,7 +155,7 @@ export default function AppShell({ title, children }) {
         {/* Bottom navigation — phones */}
         <nav className="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-30 bg-purple-deep border-t border-white/10 pb-safe">
           <div className="flex">
-            {bottom.map(({ to, label, icon: Icon, end, match }) => (
+            {bottom.map(({ to, label, icon: Icon, end, match, dot }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -155,7 +165,10 @@ export default function AppShell({ title, children }) {
                   return `flex-1 flex flex-col items-center gap-1 py-2.5 text-[11px] font-body ${active ? 'text-gold' : 'text-white/50'}`;
                 }}
               >
-                <Icon size={20} />
+                <span className="relative">
+                  <Icon size={20} />
+                  {dot && <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-gold ring-2 ring-purple-deep" aria-label="New notices" />}
+                </span>
                 {label}
               </NavLink>
             ))}

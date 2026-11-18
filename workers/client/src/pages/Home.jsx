@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Clock, MapPin, LogIn, LogOut, UserCheck, UserCog, ChevronRight, CalendarDays, History as HistoryIcon,
-  CircleCheck, TriangleAlert, RotateCcw, QrCode, MapPinOff, Keyboard, Lock, CalendarOff, LayoutDashboard,
+  CircleCheck, TriangleAlert, RotateCcw, QrCode, MapPinOff, Keyboard, Lock, CalendarOff, LayoutDashboard, Megaphone, Award,
 } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import { Alert, Modal, Spinner } from '../components/ui';
 import { AttendanceBadge, CodeDialog, MethodTag, PhaseChip, QrHint, phaseAt, useNow } from '../components/clock';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { useUnreadNotices } from '../lib/notices';
 import { getPosition, LocationError, locationProblem } from '../lib/geo';
 import {
   accraParts, formatDay, formatDuration, formatTime, formatTimeRange, formatWait, greeting, relativeDay,
@@ -28,6 +29,7 @@ import {
 export default function Home() {
   const { worker, isHod, isAdmin } = useAuth();
   const [waiting, setWaiting] = useState({ department: null, all: null, leave: null });
+  const notices = useUnreadNotices(worker.id);
   const [typingCode, setTypingCode] = useState(false);
   const [offset, setOffset] = useState(0);   // server time − phone time, from /clock/today
 
@@ -47,7 +49,11 @@ export default function Home() {
 
       <section className="grid sm:grid-cols-2 gap-4">
         <ActionCard to="/history" icon={HistoryIcon} title="My attendance" text="Every service you’ve clocked in to, month by month" />
+        <ActionCard to="/notices" icon={Megaphone} title="Notices"
+          text={notices.unread ? `${notices.unread} new${notices.latest ? ` — “${notices.latest.title}”` : ''}` : 'From the church office and your head of department'}
+          highlight={notices.unread > 0} />
         <ActionCard to="/leave" icon={CalendarOff} title="My leave" text="Ask to be excused when you’re ill, travelling or away" />
+        <ActionCard to="/record" icon={Award} title="My record" text="Rewards you’re working towards, and any tickets" />
         {isHod && (
           <ActionCard
             to={waiting.department ? '/department?tab=members' : waiting.leave ? '/department?tab=leave' : '/department'}
