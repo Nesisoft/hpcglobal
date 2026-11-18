@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LogOut, MonitorSmartphone } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import InstallApp from '../components/InstallApp';
+import { ReminderSettings } from '../components/Reminders';
 import { Alert, Field, PageHeader, PasswordChecklist, PasswordInput, Pill, Spinner } from '../components/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -29,6 +30,7 @@ export default function Profile() {
             <Row label="Member since" value={formatDate(worker.createdAt)} />
             <p className="text-ink/40 font-body text-xs pt-1">To change your department or email, speak to your head of department or the church office.</p>
           </section>
+          <ReminderSettings />
           <InstallApp />
           <SignOut onSignOut={logout} />
         </div>

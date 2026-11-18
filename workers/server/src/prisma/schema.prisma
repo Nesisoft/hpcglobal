@@ -105,11 +105,12 @@ model Worker {
   resetCodesInWindow    Int       @default(0)
   resetFailuresInWindow Int       @default(0)
 
-  attendance  Attendance[]
-  leave       LeaveRequest[]
-  noticeReads AnnouncementRead[]
-  tickets     Ticket[]
-  rewards     RewardClaim[]
+  attendance        Attendance[]
+  leave             LeaveRequest[]
+  noticeReads       AnnouncementRead[]
+  tickets           Ticket[]
+  rewards           RewardClaim[]
+  pushSubscriptions PushSubscription[]
 
   lastLogin DateTime?
   /// When anything an admin's form shows last changed — details, status,
@@ -280,6 +281,8 @@ model Attendance {
   markedById       String?
   markedByName     String?
   markReason       String?
+  /// When the "clock out before you leave" reminder went to their phone.
+  reminderSentAt   DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -472,4 +475,20 @@ model RewardClaim {
   handedOverByName String
 
   @@unique([rewardId, workerId])
+}
+
+/// A phone (or browser) that asked for notifications — clock-out reminders.
+/// The endpoint is the push service's address for that device; one device
+/// belongs to whoever last signed in and switched reminders on there.
+model PushSubscription {
+  id         String    @id @default(uuid())
+  workerId   String
+  worker     Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+
+  @@index([workerId])
 }

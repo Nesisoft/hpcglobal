@@ -103,6 +103,9 @@ app.post('/api/me/password', limit({
 }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+// Clock-out reminders go when a service ends; checked as the app is used.
+app.use(['/api/clock', '/api/qr', '/api/hod', '/api/admin'], require('./lib/reminders').tick(require('./lib/prisma')));
+
 app.use('/api/auth',        require('./routes/auth'));
 app.use('/api/me',          require('./routes/me'));
 app.use('/api/departments', require('./routes/departments'));
@@ -113,6 +116,7 @@ app.use('/api/qr',          require('./routes/qr'));
 app.use('/api/leave',       require('./routes/leave'));
 app.use('/api/notices',     require('./routes/notices'));
 app.use('/api/record',      require('./routes/record'));
+app.use('/api/push',        require('./routes/push'));
 app.use('/api/cron',        require('./routes/cron'));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

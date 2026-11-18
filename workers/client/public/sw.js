@@ -8,7 +8,7 @@
  * offline that never reached the server; neither happens here. Clocking in
  * needs the server's clock and the venue check, so offline the app says so.
  */
-const CACHE = 'hpc-workers-v3';
+const CACHE = 'hpc-workers-v4';
 const SHELL = ['/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png'];
 
 /** Our own successful answer — never an error page, a redirect or someone else's. */
@@ -132,4 +132,37 @@ self.addEventListener('fetch', (event) => {
       })),
     );
   }
+});
+
+// ─── Reminders ────────────────────────────────────────────────────────────────
+
+// A clock-out reminder from the server: shown as a notification.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { /* not ours */ }
+  const title = data.title || 'HPC Workers';
+  event.waitUntil(self.registration.showNotification(title, {
+    body:     data.body || '',
+    icon:     '/icon-192.png',
+    badge:    '/icon-192.png',
+    tag:      data.tag || 'hpc-workers',
+    renotify: Boolean(data.tag),
+    data:     { url: data.url || '/' },
+  }));
+});
+
+// Tapping it opens the app — the window already open if there is one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+    if (open) {
+      await open.focus();
+      if (open.url !== url && 'navigate' in open) await open.navigate(url).catch(() => {});
+      return;
+    }
+    await self.clients.openWindow(url);
+  })());
 });
