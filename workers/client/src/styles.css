@@ -126,3 +126,27 @@
     animation: none;
   }
 }
+
+/* The round Clock in / Clock out button: a ring in the button's own colour
+   that glows, brightening and fading, so it draws the eye. --glow is the
+   colour as "R G B". */
+@keyframes clock-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 8px rgb(var(--glow) / 0.45), 0 8px 28px 4px rgb(var(--glow) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgb(var(--glow) / 0.7), 0 10px 48px 14px rgb(var(--glow) / 0.5);
+  }
+}
+.clock-glow {
+  animation: clock-glow 2.4s ease-in-out infinite;
+}
+.clock-glow-gold    { --glow: 201 168 76; }   /* gold */
+.clock-glow-crimson { --glow: 165 28 48; }    /* crimson */
+/* Asked for less motion: the ring stays, without the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .clock-glow {
+    animation: none;
+    box-shadow: 0 0 0 10px rgb(var(--glow) / 0.55), 0 8px 36px 8px rgb(var(--glow) / 0.4);
+  }
+}

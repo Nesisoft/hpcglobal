@@ -418,8 +418,9 @@ function FocusCard({ session, now, acting, outcome, onClockIn, onClockOut, onTyp
 
 /**
  * The big round button, as in the old app — gold to clock in, crimson to
- * clock out (with the time so far), a calm tick when done — and, when it can't
- * be pressed, saying why: when clock-in opens, or that it has closed.
+ * clock out (with the time so far), each in a glowing ring of its own
+ * colour; a calm tick when done — and, when it can't be pressed, saying
+ * why: when clock-in opens, or that it has closed.
  */
 function BigButton({ phase, a, out, canIn, canOut, gps, mine, acting, now, session, minutesIn, onClockIn, onClockOut, onTypeCode }) {
   const base = 'w-44 h-44 sm:w-48 sm:h-48 rounded-full flex flex-col items-center justify-center gap-2 text-center transition-all duration-200 font-body select-none';
@@ -428,7 +429,7 @@ function BigButton({ phase, a, out, canIn, canOut, gps, mine, acting, now, sessi
   if (canIn) {
     return (
       <button type="button" onClick={gps ? onClockIn : onTypeCode} disabled={Boolean(acting)}
-        className={`${base} bg-gold text-purple-deep ring-8 ring-gold/20 shadow-[0_10px_40px_rgba(201,168,76,0.45)] hover:bg-gold-light active:scale-95 disabled:opacity-80`}>
+        className={`${base} clock-glow clock-glow-gold bg-gold text-purple-deep hover:bg-gold-light active:scale-95 disabled:opacity-80`}>
         {mine ? <><Spinner size={34} /><span className="text-sm font-semibold px-6">{busyLabel}</span></> : (
           <>
             {gps ? <LogIn size={40} strokeWidth={1.75} aria-hidden="true" /> : <QrCode size={40} strokeWidth={1.75} aria-hidden="true" />}
@@ -442,7 +443,7 @@ function BigButton({ phase, a, out, canIn, canOut, gps, mine, acting, now, sessi
   if (canOut) {
     return (
       <button type="button" onClick={gps ? onClockOut : onTypeCode} disabled={Boolean(acting)}
-        className={`${base} bg-crimson text-white ring-8 ring-crimson/20 shadow-[0_10px_40px_rgba(165,28,48,0.4)] hover:bg-crimson-dark active:scale-95 disabled:opacity-80`}>
+        className={`${base} clock-glow clock-glow-crimson bg-crimson text-white hover:bg-crimson-dark active:scale-95 disabled:opacity-80`}>
         {mine ? <><Spinner size={34} className="text-gold" /><span className="text-sm font-semibold px-6">{busyLabel}</span></> : (
           <>
             {gps ? <LogOut size={40} strokeWidth={1.75} className="text-gold" aria-hidden="true" /> : <QrCode size={40} strokeWidth={1.75} className="text-gold" aria-hidden="true" />}
