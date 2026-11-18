@@ -48,6 +48,10 @@
 
   /* Deep purple, for the action that follows a gold one — Clock out after
      Clock in — so the two never look alike on the same card. */
+  .btn-crimson {
+    @apply inline-flex items-center justify-center gap-2 bg-crimson text-white font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-crimson-dark hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:pointer-events-none;
+  }
+
   .btn-purple {
     @apply inline-flex items-center justify-center gap-2 bg-purple-deep text-white font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-purple-brand hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:pointer-events-none;
   }
@@ -120,5 +124,29 @@
 @media (prefers-reduced-motion: reduce) {
   .qr-countdown {
     animation: none;
+  }
+}
+
+/* The round Clock in / Clock out button: a ring in the button's own colour
+   that glows, brightening and fading, so it draws the eye. --glow is the
+   colour as "R G B". */
+@keyframes clock-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 8px rgb(var(--glow) / 0.45), 0 8px 28px 4px rgb(var(--glow) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgb(var(--glow) / 0.7), 0 10px 48px 14px rgb(var(--glow) / 0.5);
+  }
+}
+.clock-glow {
+  animation: clock-glow 2.4s ease-in-out infinite;
+}
+.clock-glow-gold    { --glow: 201 168 76; }   /* gold */
+.clock-glow-crimson { --glow: 165 28 48; }    /* crimson */
+/* Asked for less motion: the ring stays, without the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .clock-glow {
+    animation: none;
+    box-shadow: 0 0 0 10px rgb(var(--glow) / 0.55), 0 8px 36px 8px rgb(var(--glow) / 0.4);
   }
 }

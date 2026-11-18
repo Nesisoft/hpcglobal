@@ -12,6 +12,10 @@ export default {
         'purple-deep': '#210A4A',
         'purple-brand': '#3B1278',
         'purple-mid': '#5A2DAF',
+        // Clocking out: a deep crimson that sits with the purple and gold, and
+        // is clearly not the bright red of an error message.
+        crimson: '#A51C30',
+        'crimson-dark': '#8C1728',
         gold: '#C9A84C',
         'gold-light': '#E2C46A',
         'gold-pale': '#F5E9C4',
