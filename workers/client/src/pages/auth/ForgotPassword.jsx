@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthScreen from '../../components/AuthScreen';
 import { Alert, Field, PasswordChecklist, PasswordInput, Spinner } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { useForm } from '../../lib/useForm';
+import { keepReturn, returnTo } from '../../lib/returnTo';
 
 /** Two steps on one screen: ask for a code, then type it with a new password. */
 export default function ForgotPassword() {
   const { applySession } = useAuth();
   const navigate = useNavigate();
+  // Where sign-in was taking them (a scanned QR code), passed on from Login.
+  const back = keepReturn(useLocation().state);
   const [sent, setSent] = useState('');
   const form = useForm({ email: '', code: '', password: '' });
 
@@ -24,10 +27,11 @@ export default function ForgotPassword() {
     const res = await form.submit(() => api.post('/auth/reset-password', form.values, { auth: false }));
     if (!res) return;
     if (res.token) {
-      applySession(res);
-      navigate('/', { replace: true });
+      const me = applySession(res);
+      // Not let in yet: the app shows why, and sends them on from here once they are.
+      if (!me || (me.status === 'ACTIVE' && !me.mustChangePassword)) navigate(returnTo(back), { replace: true });
     } else {
-      navigate('/login', { replace: true, state: { notice: 'Your password has been changed. Sign in with the new one.' } });
+      navigate('/login', { replace: true, state: { notice: 'Your password has been changed. Sign in with the new one.', ...back } });
     }
   }
 
@@ -36,7 +40,7 @@ export default function ForgotPassword() {
     <AuthScreen
       title="Reset your password"
       subtitle={sent ? 'Enter the code from the email and choose a new password.' : 'We’ll email you a 6-digit code.'}
-      footer={<Link to="/login" className="text-gold hover:text-gold-light">Back to sign in</Link>}
+      footer={<Link to="/login" state={back} className="text-gold hover:text-gold-light">Back to sign in</Link>}
     >
       {!sent ? (
         <form onSubmit={askForCode} className="space-y-4" noValidate>

@@ -46,6 +46,12 @@
     @apply inline-flex items-center justify-center gap-2 bg-red-600 text-white font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-red-700 disabled:opacity-60 disabled:pointer-events-none;
   }
 
+  /* Deep purple, for the action that follows a gold one — Clock out after
+     Clock in — so the two never look alike on the same card. */
+  .btn-purple {
+    @apply inline-flex items-center justify-center gap-2 bg-purple-deep text-white font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-purple-brand hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:pointer-events-none;
+  }
+
   .btn-ghost {
     @apply inline-flex items-center gap-2 text-gold font-body font-medium text-sm tracking-wide transition-colors duration-200 hover:text-gold-light disabled:opacity-60 disabled:pointer-events-none;
   }
@@ -96,4 +102,23 @@
 }
 .pb-safe-5 {
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+/* The QR screen's bar, emptying until the code changes. Its length is set on
+   the element (animation-duration), from the server's refreshInMs. */
+@keyframes qr-countdown {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+.qr-countdown {
+  transform-origin: left center;
+  animation-name: qr-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+/* Asked for less motion: the bar stays still, at the length it had when the code arrived. */
+@media (prefers-reduced-motion: reduce) {
+  .qr-countdown {
+    animation: none;
+  }
 }

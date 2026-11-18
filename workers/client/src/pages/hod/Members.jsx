@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, X, Phone, Mail } from 'lucide-react';
 import AppShell from '../../components/AppShell';
+import ShowQrButton from '../../components/ShowQrButton';
 import { Alert, Empty, Field, Modal, PageHeader, Spinner, StatusBadge } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -53,7 +54,9 @@ export default function Members() {
 
   return (
     <AppShell title="My department">
-      <PageHeader title={worker.department.name} subtitle="Approve new members and see who is in your department." />
+      <PageHeader title={worker.department.name} subtitle="Approve new members and see who is in your department.">
+        <ShowQrButton from="/department" />
+      </PageHeader>
 
       <div className="flex gap-1 mb-5 overflow-x-auto -mx-1 px-1">
         {TABS.map((t) => (

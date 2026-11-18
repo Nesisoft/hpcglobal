@@ -1,5 +1,8 @@
+import { useEffect, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Home, Users, UserCog, Building2, ScrollText, CircleUser, LogOut, ExternalLink } from 'lucide-react';
+import {
+  Home, Users, UserCog, Building2, ScrollText, CircleUser, LogOut, ExternalLink, History, Church, CalendarDays, Settings,
+} from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { LOGO_URL } from './ui';
 import { initials, ROLE_LABEL } from '../lib/format';
@@ -7,6 +10,9 @@ import { initials, ROLE_LABEL } from '../lib/format';
 const ADMIN_PAGES = [
   { to: '/admin/workers', label: 'Workers', icon: UserCog },
   { to: '/admin/departments', label: 'Departments', icon: Building2 },
+  { to: '/admin/services', label: 'Services', icon: Church },
+  { to: '/admin/sessions', label: 'Sessions', icon: CalendarDays },
+  { to: '/admin/settings', label: 'Settings', icon: Settings },
   { to: '/admin/audit', label: 'Audit log', icon: ScrollText },
 ];
 
@@ -21,19 +27,24 @@ export default function AppShell({ title, children }) {
   const { pathname } = useLocation();
 
   const sections = [
-    { items: [{ to: '/', label: 'Home', icon: Home, end: true }] },
+    { items: [{ to: '/', label: 'Home', icon: Home, end: true }, { to: '/history', label: 'My attendance', icon: History }] },
     isHod && { heading: worker.department.name, items: [{ to: '/department', label: 'My department', icon: Users }] },
     isAdmin && { heading: 'Administration', items: ADMIN_PAGES },
     { items: [{ to: '/profile', label: 'My profile', icon: CircleUser }] },
   ].filter(Boolean);
 
-  // Four at most along the bottom of a phone.
+  // Four at most along the bottom of a phone, so each stays a good size for a thumb.
+  // Someone who is both a HOD and an administrator finds their department
+  // among the admin tabs instead.
+  const both = isHod && isAdmin;
   const bottom = [
     { to: '/', label: 'Home', icon: Home, end: true },
-    isHod && { to: '/department', label: 'Department', icon: Users },
-    isAdmin && { to: '/admin/workers', label: 'Admin', icon: UserCog, match: '/admin' },
+    { to: '/history', label: 'History', icon: History },
+    isHod && !isAdmin && { to: '/department', label: 'Department', icon: Users },
+    isAdmin && { to: '/admin/workers', label: 'Admin', icon: UserCog, match: both ? ['/admin', '/department'] : ['/admin'] },
     { to: '/profile', label: 'Profile', icon: CircleUser },
   ].filter(Boolean);
+  const showAdminTabs = isAdmin && (pathname.startsWith('/admin') || (both && pathname === '/department'));
 
   // pt-safe on the bars along the top: installed on an iPhone or iPad the app
   // draws under the status bar, so each bar's colour runs up behind it and
@@ -116,7 +127,7 @@ export default function AppShell({ title, children }) {
 
         <main className="flex-1 lg:overflow-y-auto px-4 py-6 sm:px-6 lg:p-8 pb-28 lg:pb-8">
           <div className="max-w-5xl mx-auto">
-            {isAdmin && pathname.startsWith('/admin') && <AdminTabs />}
+            {showAdminTabs && <AdminTabs department={both ? worker.department.name : null} />}
             {children}
           </div>
         </main>
@@ -130,7 +141,7 @@ export default function AppShell({ title, children }) {
                 to={to}
                 end={end}
                 className={({ isActive }) => {
-                  const active = isActive || (match && pathname.startsWith(match));
+                  const active = isActive || (match && match.some((m) => pathname.startsWith(m)));
                   return `flex-1 flex flex-col items-center gap-1 py-2.5 text-[11px] font-body ${active ? 'text-gold' : 'text-white/50'}`;
                 }}
               >
@@ -148,14 +159,26 @@ export default function AppShell({ title, children }) {
 /**
  * The admin pages as tabs along the top, for a phone or a portrait tablet:
  * there the sidebar is hidden and the bottom bar has room for just one
- * "Admin" tab. In the colours of the pages' own status tabs. On the
- * narrowest phones the row scrolls sideways rather than squashing.
+ * "Admin" tab. In the colours of the pages' own status tabs. The row
+ * scrolls sideways rather than squashing, and starts scrolled to the
+ * current page so it is never hidden off the edge. A HOD who is also an
+ * administrator finds their department here first.
  */
-function AdminTabs() {
+function AdminTabs({ department }) {
+  const { pathname } = useLocation();
+  const navRef = useRef(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const current = nav?.querySelector('[aria-current="page"]');
+    if (!nav || !current) return;
+    nav.scrollLeft = Math.max(0, current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2);
+  }, [pathname]);
+
+  const pages = department ? [{ to: '/department', label: department, icon: Users }, ...ADMIN_PAGES] : ADMIN_PAGES;
   return (
-    <nav aria-label="Administration" className="lg:hidden mb-5 -mx-1 px-1 overflow-x-auto">
+    <nav ref={navRef} aria-label="Administration" className="lg:hidden relative mb-5 -mx-1 px-1 overflow-x-auto">
       <div className="flex min-w-max gap-1 bg-white border border-purple-brand/10 rounded-full p-1">
-        {ADMIN_PAGES.map(({ to, label, icon: Icon }) => (
+        {pages.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}

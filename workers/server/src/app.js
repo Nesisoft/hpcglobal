@@ -108,6 +108,9 @@ app.use('/api/me',          require('./routes/me'));
 app.use('/api/departments', require('./routes/departments'));
 app.use('/api/hod',         require('./routes/hod'));
 app.use('/api/admin',       require('./routes/admin'));
+app.use('/api/clock',       require('./routes/clock'));
+app.use('/api/qr',          require('./routes/qr'));
+app.use('/api/cron',        require('./routes/cron'));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 

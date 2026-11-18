@@ -104,6 +104,8 @@ model Worker {
   resetCodesInWindow    Int       @default(0)
   resetFailuresInWindow Int       @default(0)
 
+  attendance Attendance[]
+
   lastLogin DateTime?
   /// When anything an admin's form shows last changed — details, status,
   /// role, HOD flag, department — but not a sign-in or a reset code. An
@@ -148,4 +150,165 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([targetType, targetId])
+}
+
+// ─── Services and clocking (part 2) ──────────────────────────────────────────
+
+enum ServiceKind {
+  REGULAR
+  MIDWEEK
+  CONFERENCE
+  TRAINING
+  SPECIAL
+}
+
+/// How a service's dates come round. WEEKLY on `weekday`; DAILY every day
+/// from startsOn to endsOn (a week of fasting and prayer, a conference);
+/// NONE once, on startsOn.
+enum Recurrence {
+  WEEKLY
+  DAILY
+  NONE
+}
+
+enum ClockMethod {
+  GPS
+  QR
+  MANUAL
+}
+
+enum ArrivalStatus {
+  ON_TIME
+  LATE
+  VERY_LATE
+}
+
+enum QrResult {
+  OK
+  BAD_CODE
+  NOT_OPEN
+  ALREADY
+}
+
+/// A service workers attend — "Dominion Encounter Service", Sundays 07:30.
+/// Its dates are ServiceSessions, made automatically for the week ahead.
+model Service {
+  id         String      @id @default(uuid())
+  name       String
+  kind       ServiceKind @default(REGULAR)
+  venueName  String?
+  /// Where workers must be to clock in by GPS. Null until the office sets it
+  /// (from inside the venue, with "use my current location").
+  latitude   Float?
+  longitude  Float?
+  radiusM    Int         @default(100)
+  recurrence Recurrence  @default(WEEKLY)
+  /// 0 = Sunday … 6 = Saturday, for WEEKLY.
+  weekday    Int?
+  /// "HH:MM", Accra time (which is UTC all year).
+  startTime  String
+  endTime    String
+  startsOn   DateTime?   @db.Date
+  endsOn     DateTime?   @db.Date
+  /// Counts towards absence in reports. A service workers may choose to
+  /// attend (a 6 a.m. prayer meeting, say) can be switched off.
+  expected   Boolean     @default(true)
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  sessions   ServiceSession[]
+}
+
+/// One date of a service. Unique per service and date, so making the coming
+/// week's sessions twice — or by two requests at once — makes them once.
+model ServiceSession {
+  id         String       @id @default(uuid())
+  serviceId  String
+  service    Service      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  date       DateTime     @db.Date
+  startsAt   DateTime
+  endsAt     DateTime
+  /// Kept, not deleted, so a cancelled date is never made again.
+  cancelled  Boolean      @default(false)
+  note       String?
+  /// Its times were set by hand (moved, or added as a one-off), so a change
+  /// to the service's usual times leaves it alone.
+  custom     Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  attendance Attendance[]
+
+  @@unique([serviceId, date])
+  @@index([startsAt])
+}
+
+/// A worker's attendance at one session: at most one each (the unique key is
+/// what makes a double tap, or two phones at once, safe).
+model Attendance {
+  id               String         @id @default(uuid())
+  workerId         String
+  worker           Worker         @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  sessionId        String
+  session          ServiceSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  method           ClockMethod
+  clockInAt        DateTime
+  clockInLat       Float?
+  clockInLng       Float?
+  clockInAccuracy  Float?
+  /// Metres from the venue when they clocked in by GPS.
+  clockInDistance  Int?
+  clockOutAt       DateTime?
+  clockOutLat      Float?
+  clockOutLng      Float?
+  clockOutAccuracy Float?
+  clockOutMethod   ClockMethod?
+  status           ArrivalStatus
+  lateMinutes      Int            @default(0)
+  minutesPresent   Int?
+  leftEarlyMinutes Int?
+  /// Closed by the app after the clock-out time passed without a clock-out.
+  /// Counted as attended (they clocked in at the venue), minutes unknown.
+  autoClockedOut   Boolean        @default(false)
+  /// For records an HOD or admin adds or changes by hand (part 3).
+  markedById       String?
+  markedByName     String?
+  markReason       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([workerId, sessionId])
+  @@index([sessionId])
+  @@index([workerId, clockInAt])
+}
+
+/// The office's rules for clocking, one row.
+model Settings {
+  id                   String   @id @default("singleton")
+  /// Minutes after the start that still count as on time.
+  graceMinutes         Int      @default(15)
+  /// Later than this many minutes after the start is very late.
+  veryLateMinutes      Int      @default(30)
+  /// Clock-in opens this many minutes before the start.
+  opensBeforeMinutes   Int      @default(60)
+  /// Clock-out stays open this many minutes after the end.
+  clockOutAfterMinutes Int      @default(60)
+  /// Less time than this between clock-in and clock-out is "short".
+  minValidMinutes      Int      @default(30)
+  /// Leaving more than this many minutes before the end is "left early".
+  leftEarlyMinutes     Int      @default(15)
+  defaultRadiusM       Int      @default(100)
+  updatedByName        String?
+  updatedAt            DateTime @updatedAt
+}
+
+/// Every QR clock-in attempt, good or bad: who, which session, what happened.
+model QrScan {
+  id        String   @id @default(uuid())
+  workerId  String?
+  sessionId String?
+  result    QrResult
+  address   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
