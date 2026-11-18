@@ -8,7 +8,7 @@
  * offline that never reached the server; neither happens here. Clocking in
  * needs the server's clock and the venue check, so offline the app says so.
  */
-const CACHE = 'hpc-workers-v2';
+const CACHE = 'hpc-workers-v3';
 const SHELL = ['/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png'];
 
 /** Our own successful answer — never an error page, a redirect or someone else's. */

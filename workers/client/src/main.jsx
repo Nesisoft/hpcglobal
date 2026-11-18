@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './lib/auth';
 import App from './App';
+// Caught as the app starts: Android's install offer can come before anything is drawn.
+import './lib/install';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(

@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "HPC Workers",
   "short_name": "HPC Workers",
   "description": "Clock in to services and keep your department's attendance.",
