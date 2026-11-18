@@ -187,7 +187,7 @@ function Body({ state, onClockOut, onRetry, onType }) {
         )}
         <div className="flex flex-col sm:flex-row gap-3 pt-1">
           <Link to="/" className="btn-outline flex-1">Not now</Link>
-          <button type="button" className="btn-purple flex-1" onClick={onClockOut}><LogOut size={16} /> Clock out</button>
+          <button type="button" className="btn-crimson flex-1" onClick={onClockOut}><LogOut size={16} /> Clock out</button>
         </div>
       </div>
     );

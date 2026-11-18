@@ -48,6 +48,10 @@
 
   /* Deep purple, for the action that follows a gold one — Clock out after
      Clock in — so the two never look alike on the same card. */
+  .btn-crimson {
+    @apply inline-flex items-center justify-center gap-2 bg-crimson text-white font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-crimson-dark hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:pointer-events-none;
+  }
+
   .btn-purple {
     @apply inline-flex items-center justify-center gap-2 bg-purple-deep text-white font-body font-semibold px-6 py-3 rounded-sm text-sm tracking-wide transition-all duration-200 hover:bg-purple-brand hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:pointer-events-none;
   }
