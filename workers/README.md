@@ -56,6 +56,10 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres npm tes
    - `MAIL_FROM` — e.g. `HPC Workers <no-reply@hpcglobal.org>`
    - `APP_URL` — `https://workers.hpcglobal.org`
    - `DB_SCHEMA_SYNC` — `apply`
+   - `CRON_SECRET` — a long random string. Vercel sends it with the daily job
+     (`vercel.json` → `/api/cron/daily`, 03:00) that makes the coming
+     fortnight's service dates and closes clock-ins left open; without it the
+     job is refused (the app still does both whenever it is used).
    - Optional: `EMAILS_PER_DAY` (default 40) and `EMAILS_PER_ADDRESS_PER_DAY`
      (default 10) — the most password-reset emails the app sends in a day, in
      all and from any one internet address. The Resend account is shared with

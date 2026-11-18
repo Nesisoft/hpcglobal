@@ -8,5 +8,6 @@ router.use(authenticate, requireActive, requireAdmin);
 router.use(require('./workers'));
 router.use(require('./departments'));
 router.use(require('./audit'));
+router.use(require('./services'));
 
 module.exports = router;

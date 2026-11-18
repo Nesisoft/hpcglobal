@@ -3,10 +3,24 @@
   "buildCommand": "npm install --include=dev && npm run build && npm run db:sync",
   "outputDirectory": "client/dist",
   "functions": {
-    "api/index.js": { "maxDuration": 30 }
+    "api/index.js": {
+      "maxDuration": 30
+    }
   },
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/:path*",     "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

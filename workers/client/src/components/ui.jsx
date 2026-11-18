@@ -114,16 +114,17 @@ const STAT_COLORS = {
   green:  { bg: 'bg-green-50', icon: 'text-green-600', ring: 'ring-green-100' },
   red:    { bg: 'bg-red-50', icon: 'text-red-500', ring: 'ring-red-100' },
 };
+// A little tighter on a phone, where two sit side by side.
 export function StatCard({ icon: Icon, label, value, color = 'gold' }) {
   const c = STAT_COLORS[color] ?? STAT_COLORS.gold;
   return (
-    <div className="card p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-full ${c.bg} ring-1 ${c.ring} flex items-center justify-center flex-shrink-0`}>
-        <Icon size={20} className={c.icon} />
+    <div className="card p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
+      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full ${c.bg} ring-1 ${c.ring} flex items-center justify-center flex-shrink-0`}>
+        <Icon size={20} className={c.icon} aria-hidden="true" />
       </div>
       <div className="min-w-0">
-        <div className="font-display text-2xl text-ink font-light leading-none">{value ?? '—'}</div>
-        <div className="text-ink/45 font-body text-[11px] uppercase tracking-wider mt-1">{label}</div>
+        <div className="font-display text-2xl text-ink font-light leading-none whitespace-nowrap">{value ?? '—'}</div>
+        <div className="text-ink/45 font-body text-[11px] uppercase tracking-wider mt-1 leading-snug">{label}</div>
       </div>
     </div>
   );

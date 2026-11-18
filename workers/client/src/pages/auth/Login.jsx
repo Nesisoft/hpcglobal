@@ -3,6 +3,7 @@ import AuthScreen from '../../components/AuthScreen';
 import { Alert, Field, PasswordInput, Spinner } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { useForm } from '../../lib/useForm';
+import { keepReturn, returnTo } from '../../lib/returnTo';
 
 export default function Login() {
   const { login } = useAuth();
@@ -10,10 +11,13 @@ export default function Login() {
   const location = useLocation();
   const form = useForm({ email: '', password: '' });
   const notice = location.state?.notice;
+  // Where they were going — a QR code scanned while signed out — kept
+  // through a password reset too, so they land there once signed in.
+  const back = keepReturn(location.state);
 
   async function onSubmit(e) {
     e.preventDefault();
-    const ok = await form.submit(async () => {
+    const me = await form.submit(async () => {
       try {
         return await login(form.values.email, form.values.password);
       } catch (err) {
@@ -22,7 +26,11 @@ export default function Login() {
         throw err;
       }
     });
-    if (ok) navigate(location.state?.from || '/', { replace: true });
+    if (!me) return;
+    // Not let in yet (waiting for approval, or a temporary password to
+    // change): stay on this address, so the app sends them on — or Home, if
+    // the QR code has expired by then — once they are let in.
+    if (me.status === 'ACTIVE' && !me.mustChangePassword) navigate(returnTo(back), { replace: true });
   }
 
   return (
@@ -46,7 +54,7 @@ export default function Login() {
           {form.busy ? <><Spinner size={15} /> Signing in…</> : 'Sign in'}
         </button>
         <div className="text-center">
-          <Link to="/forgot-password" className="text-white/40 hover:text-white/70 text-xs font-body">Forgot your password?</Link>
+          <Link to="/forgot-password" state={back}className="text-white/40 hover:text-white/70 text-xs font-body">Forgot your password?</Link>
         </div>
       </form>
     </AuthScreen>
