@@ -84,6 +84,10 @@ const TEST_ENV = {
   MAIL_FROM:  'HPC Workers <no-reply@hpcglobal.org>',
   VERCEL:     '1',
   RESEND_BASE_URL: 'http://127.0.0.1:1',
+  // Reminders off unless a test turns them on: set empty, so a developer's
+  // own keys in workers/.env (which the app reads) can't switch them on.
+  VAPID_PUBLIC_KEY:  '',
+  VAPID_PRIVATE_KEY: '',
 };
 
 /**

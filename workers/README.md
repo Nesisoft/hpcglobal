@@ -60,6 +60,18 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres npm tes
      (`vercel.json` → `/api/cron/daily`, 03:00) that makes the coming
      fortnight's service dates and closes clock-ins left open; without it the
      job is refused (the app still does both whenever it is used).
+   - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` — clock-out reminders on
+     workers' phones. Make the pair once with `npx web-push generate-vapid-keys`
+     and never change it (phones subscribed with the old key would stop
+     getting reminders). Without them the app doesn't offer reminders.
+     Optional `VAPID_SUBJECT`: a contact for the push services, `APP_URL` by
+     default.
+     A reminder goes when a service ends to everyone still clocked in. The app
+     checks whenever it is used — clock-ins and outs, the QR screen, the HOD
+     and admin pages — which it is as a service ends. To make the timing
+     certain on a quiet evening, have a scheduler (e.g. cron-job.org, free)
+     call `GET https://workers.hpcglobal.org/api/cron/reminders` every 5
+     minutes with the header `Authorization: Bearer <CRON_SECRET>`.
    - Optional: `EMAILS_PER_DAY` (default 40) and `EMAILS_PER_ADDRESS_PER_DAY`
      (default 10) — the most password-reset emails the app sends in a day, in
      all and from any one internet address. The Resend account is shared with

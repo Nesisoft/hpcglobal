@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, clearToken, getToken, onAccountProblem, setToken } from './api';
+import { releaseOnSignOut } from './push';
 
 /**
  * Who is signed in. The worker record comes from the server (GET /me) rather
@@ -44,6 +45,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     session.current += 1;
+    releaseOnSignOut();   // this phone stops getting their reminders
     clearToken();
     setWorker(null);
     setUnreachable(null);

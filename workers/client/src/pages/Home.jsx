@@ -7,6 +7,7 @@ import {
 import AppShell from '../components/AppShell';
 import InstallApp from '../components/InstallApp';
 import InstallPrompt from '../components/InstallPrompt';
+import { ReminderNudge } from '../components/Reminders';
 import { Alert, Modal, Spinner } from '../components/ui';
 import { AttendanceBadge, CodeDialog, MethodTag, PhaseChip, QrHint, phaseAt, useNow } from '../components/clock';
 import { api } from '../lib/api';
@@ -199,7 +200,7 @@ function Today({ onTypeCode, onOffset }) {
     setActing({ id: session.id, stage: 'sending', action });
     try {
       const res = await api.post(`/clock/${action}`, { sessionId: session.id, ...position });
-      setOutcome(session.id, { kind: 'success', message: res.message });
+      setOutcome(session.id, { kind: 'success', message: res.message, action });
     } catch (err) {
       setOutcome(session.id, {
         kind: 'refused', message: err.message, code: err.code, field: err.field, status: err.status,
@@ -498,7 +499,14 @@ function Stat({ label, value, live = false }) {
 /** The answer to the last try, kindly — and the QR code whenever GPS was the trouble. */
 function Outcome({ outcome, onTypeCode }) {
   if (!outcome) return null;
-  if (outcome.kind === 'success') return <Alert kind="success">{outcome.message || 'Done.'}</Alert>;
+  if (outcome.kind === 'success') {
+    return (
+      <div className="space-y-3">
+        <Alert kind="success">{outcome.message || 'Done.'}</Alert>
+        {outcome.action === 'in' && <ReminderNudge />}
+      </div>
+    );
+  }
 
   if (outcome.kind === 'location') {
     const p = locationProblem(outcome.problem);
