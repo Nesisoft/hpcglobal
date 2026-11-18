@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { lazyPage } from './lib/lazyPage';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { useAuth } from './lib/auth';
@@ -13,20 +14,28 @@ import ChangePassword from './pages/ChangePassword';
 import Home from './pages/Home';
 import History from './pages/History';
 import { ScanRoute } from './pages/Scan';
-import QrDisplay from './pages/QrDisplay';
 import Profile from './pages/Profile';
 import Leave from './pages/Leave';
-import Department from './pages/hod/Department';
-import Dashboard from './pages/admin/Dashboard';
-import Reports from './pages/admin/Reports';
-import AdminLeave from './pages/admin/Leave';
-import AdminRegister from './pages/admin/Register';
-import Workers from './pages/admin/Workers';
-import Departments from './pages/admin/Departments';
-import Services from './pages/admin/Services';
-import Sessions from './pages/admin/Sessions';
-import Settings from './pages/admin/Settings';
-import Audit from './pages/admin/Audit';
+import Notices from './pages/Notices';
+import Record from './pages/Record';
+
+// The pages for heads of department and the office load when first opened,
+// so a worker's phone only fetches what a worker uses.
+const QrDisplay = lazyPage(() => import('./pages/QrDisplay'));
+const AdminNotices = lazyPage(() => import('./pages/admin/Notices'));
+const AdminTickets = lazyPage(() => import('./pages/admin/Tickets'));
+const Rewards = lazyPage(() => import('./pages/admin/Rewards'));
+const Department = lazyPage(() => import('./pages/hod/Department'));
+const Dashboard = lazyPage(() => import('./pages/admin/Dashboard'));
+const Reports = lazyPage(() => import('./pages/admin/Reports'));
+const AdminLeave = lazyPage(() => import('./pages/admin/Leave'));
+const AdminRegister = lazyPage(() => import('./pages/admin/Register'));
+const Workers = lazyPage(() => import('./pages/admin/Workers'));
+const Departments = lazyPage(() => import('./pages/admin/Departments'));
+const Services = lazyPage(() => import('./pages/admin/Services'));
+const Sessions = lazyPage(() => import('./pages/admin/Sessions'));
+const Settings = lazyPage(() => import('./pages/admin/Settings'));
+const Audit = lazyPage(() => import('./pages/admin/Audit'));
 
 export default function App() {
   const { worker, ready, unreachable, isAdmin, isHod } = useAuth();
@@ -75,17 +84,23 @@ export default function App() {
   return (
     <>
       <OfflineBanner />
+      <Suspense fallback={<div className="min-h-screen bg-mist flex items-center justify-center text-purple-brand"><Spinner size={22} /></div>}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/history" element={<History />} />
         <Route path="/q/:code" element={<ScanRoute />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/leave" element={<Leave />} />
+        <Route path="/notices" element={<Notices />} />
+        <Route path="/record" element={<Record />} />
         {isHod && <Route path="/department" element={<Department />} />}
         {(isAdmin || isHod) && <Route path="/display/:sessionId" element={<QrDisplay />} />}
         {isAdmin && <Route path="/admin" element={<Dashboard />} />}
         {isAdmin && <Route path="/admin/reports" element={<Reports />} />}
         {isAdmin && <Route path="/admin/leave" element={<AdminLeave />} />}
+        {isAdmin && <Route path="/admin/notices" element={<AdminNotices />} />}
+        {isAdmin && <Route path="/admin/tickets" element={<AdminTickets />} />}
+        {isAdmin && <Route path="/admin/rewards" element={<Rewards />} />}
         {isAdmin && <Route path="/admin/register/:sessionId" element={<AdminRegister />} />}
         {isAdmin && <Route path="/admin/workers" element={<Workers />} />}
         {isAdmin && <Route path="/admin/departments" element={<Departments />} />}
@@ -97,6 +112,7 @@ export default function App() {
         <Route path="/forgot-password" element={backTo} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronRight, RefreshCw, Plus, Ticket } from 'lucide-react';
 import AppShell from '../../components/AppShell';
 import ShowQrButton from '../../components/ShowQrButton';
 import { Alert, Empty, PageHeader, Spinner } from '../../components/ui';
@@ -8,6 +8,8 @@ import { PhaseChip } from '../../components/clock';
 import { Register, RegisterRows, countsLine } from '../../components/register';
 import { ReportView } from '../../components/report';
 import { LeaveReview } from '../../components/leave';
+import { TicketDesk } from '../../components/tickets';
+import { NoticeCard, NoticeDialog, DeleteNoticeDialog } from '../../components/notices';
 import Members from './Members';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -19,6 +21,8 @@ const TABS = [
   { key: 'report', label: 'Report' },
   { key: 'leave', label: 'Leave' },
   { key: 'members', label: 'Members' },
+  { key: 'tickets', label: 'Tickets' },
+  { key: 'notices', label: 'Notices' },
 ];
 
 // What a HOD may correct by hand: marks, never someone's own clock-in.
@@ -37,6 +41,29 @@ export default function Department() {
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.key === params.get('tab')) ? params.get('tab') : 'today';
   const dept = worker.department.name;
+  const go = (key) => setParams(key === 'today' ? {} : { tab: key }, { replace: true });
+  // A ticket started from a report row: the Tickets tab opens with it filled in.
+  const [issueFor, setIssueFor] = useState(null);
+  const ticketFor = (row, report) => {
+    const late = row.late + row.veryLate;
+    if (!row.absent && !late) return null;
+    const span = `between ${formatDay(report.from, { short: true })} and ${formatDay(report.to, { short: true })}`;
+    const absent = row.absent >= late;
+    const times = (n) => `${n} time${n === 1 ? '' : 's'}`;
+    return (
+      <button className="btn-ghost px-2 py-1 text-xs text-ink/50 hover:text-purple-brand" title={`Issue ${row.worker.name} a ticket`}
+        onClick={() => {
+          setIssueFor({
+            workerId: row.worker.id,
+            type:     absent ? 'ABSENCE' : 'LATENESS',
+            reason:   absent ? `Absent ${times(row.absent)} ${span}.` : `Late ${times(late)} ${span}.`,
+          });
+          go('tickets');
+        }}>
+        <Ticket size={13} /> Ticket
+      </button>
+    );
+  };
 
   return (
     <AppShell title="My department">
@@ -46,7 +73,7 @@ export default function Department() {
 
       <div className="flex gap-1 mb-5 overflow-x-auto -mx-1 px-1 print:hidden" role="tablist">
         {TABS.map((t) => (
-          <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setParams(t.key === 'today' ? {} : { tab: t.key }, { replace: true })}
+          <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => go(t.key)}
             className={`px-4 py-2 rounded-full text-sm font-body whitespace-nowrap border transition-colors ${
               tab === t.key ? 'bg-purple-deep text-white border-purple-deep' : 'bg-white text-ink/60 border-purple-brand/10 hover:border-purple-brand/30'}`}>
             {t.label}
@@ -56,9 +83,11 @@ export default function Department() {
 
       {tab === 'today' && <Today />}
       {tab === 'registers' && <Registers />}
-      {tab === 'report' && <ReportView url="/hod/report" csvUrl="/hod/report.csv" printTitle={`${dept} — attendance`} />}
+      {tab === 'report' && <ReportView url="/hod/report" csvUrl="/hod/report.csv" printTitle={`${dept} — attendance`} rowAction={ticketFor} />}
       {tab === 'leave' && <LeaveReview base="/hod" selfId={worker.id} />}
       {tab === 'members' && <Members />}
+      {tab === 'tickets' && <HodTickets selfId={worker.id} issueFor={issueFor} onIssueFor={setIssueFor} />}
+      {tab === 'notices' && <HodNotices selfId={worker.id} />}
     </AppShell>
   );
 }
@@ -162,6 +191,63 @@ function Registers() {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/** The department's tickets, with its members and recent services to issue them for. */
+function HodTickets({ selfId, issueFor, onIssueFor }) {
+  const [people, setPeople] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  useEffect(() => {
+    api.get('/hod/members?status=ACTIVE').then((r) => setPeople(r.members)).catch(() => setPeople([]));
+    api.get('/hod/sessions').then((r) => setSessions(r.sessions.filter((s) => !s.cancelled))).catch(() => {});
+  }, []);
+  return <TicketDesk base="/hod" selfId={selfId} people={people} sessions={sessions} issueFor={people ? issueFor : null} onIssueFor={onIssueFor} />;
+}
+
+/** Notices to the department: post one, see who has read them, take down one's own. */
+function HodNotices({ selfId }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [writing, setWriting] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const load = useCallback(async () => {
+    setError('');
+    try { setData(await api.get('/hod/notices')); } catch (err) { setError(err.message); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <div>
+      <div className="flex justify-between items-center gap-3 mb-4">
+        <p className="text-sm font-body text-ink/55">Notices to your department. The church office’s notices for everyone show under Notices.</p>
+        <button onClick={() => { setNotice(''); setWriting(true); }} className="btn-primary flex-shrink-0"><Plus size={16} /> New notice</button>
+      </div>
+      <div className="space-y-3 mb-4">
+        <Alert>{error}</Alert>
+        {notice && <Alert kind="success">{notice}</Alert>}
+      </div>
+      {!data ? (
+        !error && <div className="py-16 flex justify-center text-purple-brand"><Spinner size={22} /></div>
+      ) : data.notices.length === 0 ? (
+        <Empty>No notices to your department yet.</Empty>
+      ) : (
+        <div className="space-y-3 max-w-3xl">
+          {data.notices.map((n) => (
+            <NoticeCard key={n.id} notice={n} manage members={data.members} onDelete={n.authorId === selfId ? setDeleting : undefined} />
+          ))}
+        </div>
+      )}
+      {writing && (
+        <NoticeDialog url="/hod/notices" onClose={() => setWriting(false)}
+          onDone={async () => { setWriting(false); setNotice('Posted to your department.'); await load(); }} />
+      )}
+      {deleting && (
+        <DeleteNoticeDialog notice={deleting} url={`/hod/notices/${deleting.id}`} onClose={() => setDeleting(null)}
+          onDone={async () => { setDeleting(null); setNotice('Notice taken down.'); await load(); }} />
+      )}
     </div>
   );
 }

@@ -94,7 +94,7 @@ function Totals({ totals }) {
   );
 }
 
-function WorkerTable({ rows, showDepartment }) {
+function WorkerTable({ rows, showDepartment, rowAction, report }) {
   if (!rows.length) return <Empty>Nobody to report on.</Empty>;
   const th = 'px-3 py-2.5 text-[11px] font-body font-semibold uppercase tracking-wider text-ink/45 text-right whitespace-nowrap';
   const td = 'px-3 py-2.5 text-sm font-body text-ink/75 text-right tabular-nums';
@@ -112,6 +112,7 @@ function WorkerTable({ rows, showDepartment }) {
             <th className={th} title="Left more than the allowed minutes before the end">Left early</th>
             <th className={th} title="Clocked in but never clocked out">No clock-out</th>
             <th className={th}>Rate</th>
+            {rowAction && <th className="print:hidden"><span className="sr-only">Actions</span></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-purple-brand/5">
@@ -130,6 +131,7 @@ function WorkerTable({ rows, showDepartment }) {
               <td className={td}>{r.leftEarly || ''}</td>
               <td className={td}>{r.noClockOut || ''}</td>
               <td className="px-3 py-2.5"><RateCell rate={r.rate} /></td>
+              {rowAction && <td className="px-2 py-2.5 text-right print:hidden">{rowAction(r, report)}</td>}
             </tr>
           ))}
         </tbody>
@@ -183,7 +185,7 @@ export function RollupTable({ title, rows, nameLabel, extraColumn }) {
  * through `extra` — whatever else the page adds. `url` and `csvUrl` are the
  * API's; `filters` are added to both.
  */
-export function ReportView({ url, csvUrl, csvViews, filters = {}, printTitle, showDepartment = false, extra }) {
+export function ReportView({ url, csvUrl, csvViews, filters = {}, printTitle, showDepartment = false, extra, rowAction }) {
   const [period, setPeriod] = useState(thisMonth);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -248,7 +250,7 @@ export function ReportView({ url, csvUrl, csvViews, filters = {}, printTitle, sh
           <Totals totals={data.totals} />
           <WeeklyTrend weeks={data.weeks} />
           {extra?.(data)}
-          <WorkerTable rows={data.rows} showDepartment={showDepartment} />
+          <WorkerTable rows={data.rows} showDepartment={showDepartment} rowAction={rowAction} report={data} />
         </>
       )}
     </div>
