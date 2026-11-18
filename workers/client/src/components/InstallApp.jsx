@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import { Download, Share, SquarePlus, EllipsisVertical, X, CircleCheck } from 'lucide-react';
-import { useInstall } from '../lib/install';
-import { LOGO_URL } from './ui';
-
-const DISMISSED = 'hpc_workers_install_dismissed';
-const wasDismissed = () => { try { return Boolean(localStorage.getItem(DISMISSED)); } catch { return false; } };
-const dismiss = () => { try { localStorage.setItem(DISMISSED, new Date().toISOString()); } catch { /* private mode */ } };
+import { useInstall, snoozed, snooze } from '../lib/install';
 
 /** The steps for a phone with no install button of its own. */
-function Steps({ how }) {
+export function Steps({ how }) {
   const step = 'flex items-start gap-2.5';
   const num = 'w-5 h-5 rounded-full bg-gold/20 text-[#8a6d1f] text-[11px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5';
   if (how === 'ios') {
@@ -31,12 +26,13 @@ function Steps({ how }) {
 
 /**
  * "Install the app": a one-tap button where the phone offers it, the steps
- * where it doesn't. `dismissible` (on Home) can be closed for good on this
- * phone; on the Profile page it stays, for anyone who closed it.
+ * where it doesn't. `dismissible` (on Home) can be put off for a week, like
+ * the pop-up; on the Profile page it stays, for anyone who put it off.
  */
 export default function InstallApp({ dismissible = false, className = '' }) {
   const { how, install, installed } = useInstall();
-  const [hidden, setHidden] = useState(() => dismissible && wasDismissed());
+  const [closed, setClosed] = useState(false);
+  const hidden = dismissible && (closed || snoozed());
   const [showSteps, setShowSteps] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -60,15 +56,13 @@ export default function InstallApp({ dismissible = false, className = '' }) {
   return (
     <section className={`card p-5 relative overflow-hidden ${className}`}>
       {dismissible && (
-        <button onClick={() => { dismiss(); setHidden(true); }} className="absolute top-3 right-3 p-1.5 rounded text-ink/35 hover:text-ink/70 hover:bg-ink/5"
+        <button onClick={() => { snooze(); setClosed(true); }} className="absolute top-3 right-3 p-1.5 rounded text-ink/35 hover:text-ink/70 hover:bg-ink/5"
           aria-label="Not now">
           <X size={16} />
         </button>
       )}
       <div className="flex items-center gap-4 pr-6">
-        <div className="w-14 h-14 rounded-2xl bg-purple-deep flex items-center justify-center flex-shrink-0 shadow-md">
-          <img src={LOGO_URL} alt="" className="w-9 h-9 object-contain" />
-        </div>
+        <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-2xl flex-shrink-0 shadow-md" />
         <div className="min-w-0">
           <h2 className="font-display text-xl text-ink leading-tight">Install the app</h2>
           <p className="text-sm font-body text-ink/55 mt-0.5">Open HPC Workers from your home screen, full screen, like any other app.</p>

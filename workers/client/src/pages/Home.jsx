@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import InstallApp from '../components/InstallApp';
+import InstallPrompt from '../components/InstallPrompt';
 import { Alert, Modal, Spinner } from '../components/ui';
 import { AttendanceBadge, CodeDialog, MethodTag, PhaseChip, QrHint, phaseAt, useNow } from '../components/clock';
 import { api } from '../lib/api';
@@ -49,6 +50,7 @@ export default function Home() {
       <Today onTypeCode={() => setTypingCode(true)} onOffset={setOffset} />
 
       <InstallApp dismissible className="mb-4 sm:mb-6" />
+      <InstallPrompt />
 
       <section className="grid sm:grid-cols-2 gap-4">
         <ActionCard to="/history" icon={HistoryIcon} title="My attendance" text="Every service you’ve clocked in to, month by month" />

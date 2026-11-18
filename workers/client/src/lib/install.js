@@ -34,6 +34,22 @@ const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
 /** iPhone and iPad (which, on iPadOS, says it is a Mac with a touch screen). */
 const isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isAndroid = /Android/i.test(ua);
+/** A phone or tablet — where asking to install is worth it. */
+export const isPhone = isIos || isAndroid;
+
+// "Not now": no asking again on this phone for a week.
+const SNOOZE = 'hpc_workers_install_snoozed';
+const SNOOZE_DAYS = 7;
+export function snoozed() {
+  try {
+    const at = Date.parse(localStorage.getItem(SNOOZE) || '');
+    return Number.isFinite(at) && Date.now() - at < SNOOZE_DAYS * 864e5;
+  } catch { return false; }
+}
+export function snooze() {
+  try { localStorage.setItem(SNOOZE, new Date().toISOString()); } catch { /* private mode */ }
+  notify();
+}
 
 /**
  * Whether the app can be put on this device's home screen, and how:
@@ -64,6 +80,7 @@ export function useInstall() {
     event.prompt();
     const { outcome } = await event.userChoice.catch(() => ({ outcome: 'dismissed' }));
     if (outcome === 'accepted') installed = true;
+    else snooze();   // said no to the phone's own prompt: not again this week
     notify();
     return outcome === 'accepted';
   }
