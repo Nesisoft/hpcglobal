@@ -105,6 +105,7 @@ model Worker {
   resetFailuresInWindow Int       @default(0)
 
   attendance Attendance[]
+  leave      LeaveRequest[]
 
   lastLogin DateTime?
   /// When anything an admin's form shows last changed — details, status,
@@ -311,4 +312,43 @@ model QrScan {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ─── Leave (part 3) ──────────────────────────────────────────────────────────
+
+enum LeaveType {
+  SICK
+  PERSONAL
+  FAMILY
+  TRAVEL
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/// A worker asking to be excused for some days. Once approved, the expected
+/// services on those days count as excused, not absent, in reports.
+model LeaveRequest {
+  id             String      @id @default(uuid())
+  workerId       String
+  worker         Worker      @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  type           LeaveType
+  startDate      DateTime    @db.Date
+  endDate        DateTime    @db.Date
+  reason         String
+  status         LeaveStatus @default(PENDING)
+  reviewedById   String?
+  reviewedByName String?
+  reviewNote     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([workerId, startDate])
+  @@index([status])
 }

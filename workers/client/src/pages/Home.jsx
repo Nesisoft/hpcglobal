@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Clock, MapPin, LogIn, LogOut, UserCheck, UserCog, ChevronRight, CalendarDays, History as HistoryIcon,
-  CircleCheck, TriangleAlert, RotateCcw, QrCode, MapPinOff, Keyboard, Lock,
+  CircleCheck, TriangleAlert, RotateCcw, QrCode, MapPinOff, Keyboard, Lock, CalendarOff, LayoutDashboard,
 } from 'lucide-react';
 import AppShell from '../components/AppShell';
 import { Alert, Modal, Spinner } from '../components/ui';
@@ -27,13 +27,14 @@ import {
  */
 export default function Home() {
   const { worker, isHod, isAdmin } = useAuth();
-  const [waiting, setWaiting] = useState({ department: null, all: null });
+  const [waiting, setWaiting] = useState({ department: null, all: null, leave: null });
   const [typingCode, setTypingCode] = useState(false);
   const [offset, setOffset] = useState(0);   // server time − phone time, from /clock/today
 
   // People waiting for this person to approve them.
   useEffect(() => {
     if (isHod) api.get('/hod/members?status=PENDING').then((r) => setWaiting((w) => ({ ...w, department: r.counts.PENDING }))).catch(() => {});
+    if (isHod) api.get('/hod/leave?status=PENDING').then((r) => setWaiting((w) => ({ ...w, leave: r.waiting }))).catch(() => {});
     if (isAdmin) api.get('/admin/workers?status=PENDING&limit=1').then((r) => setWaiting((w) => ({ ...w, all: r.counts.PENDING }))).catch(() => {});
   }, [isHod, isAdmin]);
 
@@ -46,11 +47,20 @@ export default function Home() {
 
       <section className="grid sm:grid-cols-2 gap-4">
         <ActionCard to="/history" icon={HistoryIcon} title="My attendance" text="Every service you’ve clocked in to, month by month" />
+        <ActionCard to="/leave" icon={CalendarOff} title="My leave" text="Ask to be excused when you’re ill, travelling or away" />
         {isHod && (
-          <ActionCard to="/department" icon={UserCheck}
-            title={`${worker.department.name} members`}
-            text={waiting.department ? `${waiting.department} waiting for your approval` : 'Approve new members of your department'}
-            highlight={Boolean(waiting.department)} />
+          <ActionCard
+            to={waiting.department ? '/department?tab=members' : waiting.leave ? '/department?tab=leave' : '/department'}
+            icon={UserCheck}
+            title={worker.department.name}
+            text={[
+              waiting.department && `${waiting.department} sign-up${waiting.department === 1 ? '' : 's'} to approve`,
+              waiting.leave && `${waiting.leave} leave request${waiting.leave === 1 ? '' : 's'} to review`,
+            ].filter(Boolean).join(' · ') || 'Who came today, registers and your department’s report'}
+            highlight={Boolean(waiting.department || waiting.leave)} />
+        )}
+        {isAdmin && (
+          <ActionCard to="/admin" icon={LayoutDashboard} title="Dashboard" text="Today across the church, and this month’s attendance" />
         )}
         {isAdmin && (
           <ActionCard to="/admin/workers?status=PENDING" icon={UserCog}

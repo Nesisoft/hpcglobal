@@ -62,7 +62,9 @@ async function ensureSessions(db, { from = todayKey(), to = addDays(todayKey(), 
 async function closeFinished(db, settings, now = new Date()) {
   const cutoff = new Date(now.getTime() - settings.clockOutAfterMinutes * 60 * 1000);
   return db.attendance.updateMany({
-    where: { clockOutAt: null, autoClockedOut: false, session: { endsAt: { lt: cutoff } } },
+    // A record marked by hand isn't a forgotten clock-out: the HOD said when
+    // they came (and, if they knew, when they left).
+    where: { clockOutAt: null, autoClockedOut: false, method: { not: 'MANUAL' }, session: { endsAt: { lt: cutoff } } },
     data:  { autoClockedOut: true },
   });
 }

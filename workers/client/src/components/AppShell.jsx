@@ -2,16 +2,20 @@ import { useEffect, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   Home, Users, UserCog, Building2, ScrollText, CircleUser, LogOut, ExternalLink, History, Church, CalendarDays, Settings,
+  LayoutDashboard, CalendarOff, BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { LOGO_URL } from './ui';
 import { initials, ROLE_LABEL } from '../lib/format';
 
 const ADMIN_PAGES = [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { to: '/admin/workers', label: 'Workers', icon: UserCog },
   { to: '/admin/departments', label: 'Departments', icon: Building2 },
   { to: '/admin/services', label: 'Services', icon: Church },
   { to: '/admin/sessions', label: 'Sessions', icon: CalendarDays },
+  { to: '/admin/leave', label: 'Leave', icon: CalendarOff },
   { to: '/admin/settings', label: 'Settings', icon: Settings },
   { to: '/admin/audit', label: 'Audit log', icon: ScrollText },
 ];
@@ -27,7 +31,13 @@ export default function AppShell({ title, children }) {
   const { pathname } = useLocation();
 
   const sections = [
-    { items: [{ to: '/', label: 'Home', icon: Home, end: true }, { to: '/history', label: 'My attendance', icon: History }] },
+    {
+      items: [
+        { to: '/', label: 'Home', icon: Home, end: true },
+        { to: '/history', label: 'My attendance', icon: History },
+        { to: '/leave', label: 'My leave', icon: CalendarOff },
+      ],
+    },
     isHod && { heading: worker.department.name, items: [{ to: '/department', label: 'My department', icon: Users }] },
     isAdmin && { heading: 'Administration', items: ADMIN_PAGES },
     { items: [{ to: '/profile', label: 'My profile', icon: CircleUser }] },
@@ -41,7 +51,7 @@ export default function AppShell({ title, children }) {
     { to: '/', label: 'Home', icon: Home, end: true },
     { to: '/history', label: 'History', icon: History },
     isHod && !isAdmin && { to: '/department', label: 'Department', icon: Users },
-    isAdmin && { to: '/admin/workers', label: 'Admin', icon: UserCog, match: both ? ['/admin', '/department'] : ['/admin'] },
+    isAdmin && { to: '/admin', label: 'Admin', icon: UserCog, match: both ? ['/admin', '/department'] : ['/admin'] },
     { to: '/profile', label: 'Profile', icon: CircleUser },
   ].filter(Boolean);
   const showAdminTabs = isAdmin && (pathname.startsWith('/admin') || (both && pathname === '/department'));
@@ -50,9 +60,9 @@ export default function AppShell({ title, children }) {
   // draws under the status bar, so each bar's colour runs up behind it and
   // its contents start below it.
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex bg-mist">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden print:!h-auto print:!overflow-visible flex bg-mist print:bg-white">
       {/* Sidebar — computers */}
-      <aside className="hidden lg:flex w-64 bg-purple-deep flex-col flex-shrink-0 pt-safe">
+      <aside className="hidden lg:flex print:!hidden w-64 bg-purple-deep flex-col flex-shrink-0 pt-safe">
         <Link to="/" className="flex items-center gap-2.5 px-5 h-16 border-b border-white/10">
           <img src={LOGO_URL} alt="" className="h-8 w-auto object-contain" />
           <div className="leading-tight">
@@ -101,7 +111,7 @@ export default function AppShell({ title, children }) {
 
       <div className="flex-1 flex flex-col min-w-0 lg:overflow-hidden">
         {/* Top bar — phones */}
-        <header className="lg:hidden sticky top-0 z-30 bg-purple-deep pt-safe">
+        <header className="lg:hidden print:hidden sticky top-0 z-30 bg-purple-deep pt-safe">
           <div className="h-14 px-4 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
               <img src={LOGO_URL} alt="" className="h-7 w-auto object-contain" />
@@ -115,7 +125,7 @@ export default function AppShell({ title, children }) {
         </header>
 
         {/* Header — computers */}
-        <header className="hidden lg:block bg-white border-b border-purple-brand/10 flex-shrink-0 pt-safe">
+        <header className="hidden lg:block print:!hidden bg-white border-b border-purple-brand/10 flex-shrink-0 pt-safe">
           <div className="h-16 flex items-center justify-between px-8">
             <h2 className="font-display text-xl text-ink font-light">{title}</h2>
             <a href="https://www.hpcglobal.org" target="_blank" rel="noopener noreferrer"
@@ -125,7 +135,7 @@ export default function AppShell({ title, children }) {
           </div>
         </header>
 
-        <main className="flex-1 lg:overflow-y-auto px-4 py-6 sm:px-6 lg:p-8 pb-28 lg:pb-8">
+        <main className="flex-1 lg:overflow-y-auto print:!overflow-visible px-4 py-6 sm:px-6 lg:p-8 pb-28 lg:pb-8 print:!p-0">
           <div className="max-w-5xl mx-auto">
             {showAdminTabs && <AdminTabs department={both ? worker.department.name : null} />}
             {children}
@@ -133,7 +143,7 @@ export default function AppShell({ title, children }) {
         </main>
 
         {/* Bottom navigation — phones */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-purple-deep border-t border-white/10 pb-safe">
+        <nav className="lg:hidden print:hidden fixed bottom-0 inset-x-0 z-30 bg-purple-deep border-t border-white/10 pb-safe">
           <div className="flex">
             {bottom.map(({ to, label, icon: Icon, end, match }) => (
               <NavLink
@@ -176,12 +186,13 @@ function AdminTabs({ department }) {
 
   const pages = department ? [{ to: '/department', label: department, icon: Users }, ...ADMIN_PAGES] : ADMIN_PAGES;
   return (
-    <nav ref={navRef} aria-label="Administration" className="lg:hidden relative mb-5 -mx-1 px-1 overflow-x-auto">
+    <nav ref={navRef} aria-label="Administration" className="lg:hidden print:hidden relative mb-5 -mx-1 px-1 overflow-x-auto">
       <div className="flex min-w-max gap-1 bg-white border border-purple-brand/10 rounded-full p-1">
-        {pages.map(({ to, label, icon: Icon }) => (
+        {pages.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
+            end={end}
             className={({ isActive }) => `flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-body whitespace-nowrap transition-colors ${
               isActive ? 'bg-purple-deep text-white' : 'text-ink/60 hover:text-ink'}`}
           >

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, X, Phone, Mail } from 'lucide-react';
-import AppShell from '../../components/AppShell';
-import ShowQrButton from '../../components/ShowQrButton';
-import { Alert, Empty, Field, Modal, PageHeader, Spinner, StatusBadge } from '../../components/ui';
+import { Alert, Empty, Field, Modal, Spinner, StatusBadge } from '../../components/ui';
 import { api } from '../../lib/api';
-import { useAuth } from '../../lib/auth';
 import { formatDate } from '../../lib/format';
 
 const TABS = [
@@ -16,7 +13,6 @@ const TABS = [
 
 /** A head of department's members, starting with sign-ups waiting for them. */
 export default function Members() {
-  const { worker } = useAuth();
   const [tab, setTab] = useState('PENDING');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -53,11 +49,7 @@ export default function Members() {
   }
 
   return (
-    <AppShell title="My department">
-      <PageHeader title={worker.department.name} subtitle="Approve new members and see who is in your department.">
-        <ShowQrButton from="/department" />
-      </PageHeader>
-
+    <>
       <div className="flex gap-1 mb-5 overflow-x-auto -mx-1 px-1">
         {TABS.map((t) => (
           <button key={t.status} onClick={() => setTab(t.status)}
@@ -126,7 +118,7 @@ export default function Members() {
           onDone={async () => { setNotice(`${declining.name}’s registration was declined.`); setDeclining(null); await load(); }}
         />
       )}
-    </AppShell>
+    </>
   );
 }
 
