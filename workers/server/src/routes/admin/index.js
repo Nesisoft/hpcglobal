@@ -9,5 +9,7 @@ router.use(require('./workers'));
 router.use(require('./departments'));
 router.use(require('./audit'));
 router.use(require('./services'));
+router.use(require('./leave'));
+router.use(require('./reports'));
 
 module.exports = router;

@@ -122,7 +122,8 @@ function Record({ record: r }) {
           {r.minutesPresent !== null && r.minutesPresent !== undefined && !r.autoClockedOut && (
             <span className="text-ink/45"> · {formatDuration(r.minutesPresent)}</span>
           )}
-          {!r.clockOutAt && !r.autoClockedOut && <span className="text-ink/45"> · still clocked in</span>}
+          {!r.clockOutAt && !r.autoClockedOut && r.method !== 'MANUAL' && <span className="text-ink/45"> · still clocked in</span>}
+          {r.method === 'MANUAL' && r.markedByName && <span className="text-ink/45"> · marked present by {r.markedByName}</span>}
         </p>
         {notes.length > 0 && (
           <p className="text-xs font-body text-[#8a6d1f] mt-0.5 flex items-center gap-1.5">

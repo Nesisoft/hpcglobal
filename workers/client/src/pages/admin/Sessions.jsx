@@ -443,7 +443,7 @@ function WhosIn({ session, onClose }) {
   useEffect(() => { load(); }, [load]);
 
   const list = data?.attendance ?? [];
-  const stillIn = list.filter((a) => !a.clockOutAt && !a.autoClockedOut).length;
+  const stillIn = list.filter((a) => !a.clockOutAt && !a.autoClockedOut && a.method !== 'MANUAL').length;
   const late = list.filter((a) => a.status && a.status !== 'ON_TIME').length;
 
   return (
@@ -459,6 +459,9 @@ function WhosIn({ session, onClose }) {
           </button>
         </div>
         <Alert>{error}</Alert>
+        <Link to={`/admin/register/${session.id}`} className="inline-flex items-center gap-1.5 text-sm font-body text-purple-brand hover:underline">
+          Full register — who didn’t come, marking in and corrections <ChevronRight size={14} />
+        </Link>
         {!data ? (
           !error && <div className="py-10 flex justify-center text-purple-brand"><Spinner size={22} /></div>
         ) : list.length === 0 ? (
@@ -475,7 +478,8 @@ function WhosIn({ session, onClose }) {
                   In {formatTime(a.clockInAt)}
                   {a.autoClockedOut ? <span className="text-[#8a6d1f]"> · didn’t clock out</span>
                     : a.clockOutAt ? <> · Out {formatTime(a.clockOutAt)}</>
-                      : <span className="text-green-700"> · still in</span>}
+                      : a.method === 'MANUAL' ? null
+                        : <span className="text-green-700"> · still in</span>}
                 </p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <AttendanceBadge attendance={a} />

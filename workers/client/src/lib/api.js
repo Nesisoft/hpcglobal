@@ -81,3 +81,25 @@ export const qs = (params) => {
   const text = s.toString();
   return text ? `?${text}` : '';
 };
+
+/**
+ * Download a file the API makes (a CSV export) with the sign-in attached,
+ * which a plain link can't carry. Resolves once the browser has it.
+ */
+export async function download(path, fallbackName) {
+  const token = getToken();
+  let response;
+  try {
+    response = await fetch(`/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError(0);
+  }
+  if (!response.ok) throw new ApiError(response.status, await response.json().catch(() => ({})));
+  const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') || '')?.[1] || fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}

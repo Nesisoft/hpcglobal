@@ -15,7 +15,12 @@ import History from './pages/History';
 import { ScanRoute } from './pages/Scan';
 import QrDisplay from './pages/QrDisplay';
 import Profile from './pages/Profile';
-import Members from './pages/hod/Members';
+import Leave from './pages/Leave';
+import Department from './pages/hod/Department';
+import Dashboard from './pages/admin/Dashboard';
+import Reports from './pages/admin/Reports';
+import AdminLeave from './pages/admin/Leave';
+import AdminRegister from './pages/admin/Register';
 import Workers from './pages/admin/Workers';
 import Departments from './pages/admin/Departments';
 import Services from './pages/admin/Services';
@@ -75,8 +80,13 @@ export default function App() {
         <Route path="/history" element={<History />} />
         <Route path="/q/:code" element={<ScanRoute />} />
         <Route path="/profile" element={<Profile />} />
-        {isHod && <Route path="/department" element={<Members />} />}
+        <Route path="/leave" element={<Leave />} />
+        {isHod && <Route path="/department" element={<Department />} />}
         {(isAdmin || isHod) && <Route path="/display/:sessionId" element={<QrDisplay />} />}
+        {isAdmin && <Route path="/admin" element={<Dashboard />} />}
+        {isAdmin && <Route path="/admin/reports" element={<Reports />} />}
+        {isAdmin && <Route path="/admin/leave" element={<AdminLeave />} />}
+        {isAdmin && <Route path="/admin/register/:sessionId" element={<AdminRegister />} />}
         {isAdmin && <Route path="/admin/workers" element={<Workers />} />}
         {isAdmin && <Route path="/admin/departments" element={<Departments />} />}
         {isAdmin && <Route path="/admin/services" element={<Services />} />}
