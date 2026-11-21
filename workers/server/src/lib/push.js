@@ -8,18 +8,44 @@ const webpush = require('web-push');
  * doesn't offer reminders.
  */
 
+const DEFAULT_SUBJECT = 'https://workers.hpcglobal.org';
+
+/**
+ * The contact the push services are given: VAPID_SUBJECT, else APP_URL —
+ * but only an https: address or a mailto:, which is all they accept (a
+ * local http://localhost would be refused), else the app's own address.
+ */
+function subjectOf(env = process.env) {
+  for (const candidate of [env.VAPID_SUBJECT, env.APP_URL]) {
+    const value = (candidate || '').trim().replace(/\/$/, '');
+    if (/^https:\/\/[^/\s]+/i.test(value) || /^mailto:\S+@\S+$/i.test(value)) return value;
+  }
+  return DEFAULT_SUBJECT;
+}
+
 let configuredFor = null;
+let warnedFor = null;
+/**
+ * Whether reminders can be sent. Never throws: a key that isn't a valid
+ * VAPID key turns reminders off (with one line in the log) rather than
+ * taking the app down with it.
+ */
 function configure() {
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
-  const key = `${pub}:${priv}`;
-  if (configuredFor !== key) {
-    const subject = process.env.VAPID_SUBJECT || (process.env.APP_URL || 'https://workers.hpcglobal.org').replace(/\/$/, '');
-    webpush.setVapidDetails(subject, pub, priv);
+  const key = `${pub}:${priv}:${subjectOf()}`;
+  if (configuredFor === key) return true;
+  try {
+    webpush.setVapidDetails(subjectOf(), pub, priv);
     configuredFor = key;
+    return true;
+  } catch (err) {
+    if (warnedFor !== key) console.error('[push] reminders are off:', err.message);
+    warnedFor = key;
+    configuredFor = null;
+    return false;
   }
-  return true;
 }
 
 const publicKey = () => (configure() ? process.env.VAPID_PUBLIC_KEY : null);
@@ -63,4 +89,4 @@ async function sendPush(subscription, payload) {
   }
 }
 
-module.exports = { configure, publicKey, endpointProblem, sendPush };
+module.exports = { configure, publicKey, endpointProblem, sendPush, subjectOf };

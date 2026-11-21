@@ -67,13 +67,18 @@ const EVERY_MS = 60 * 1000;
 let lastTick = 0;
 function tick(db) {
   return async (_req, _res, next) => {
-    const now = Date.now();
-    if (now - lastTick >= EVERY_MS && push.configure()) {
-      lastTick = now;
-      await Promise.race([
-        sendDueReminders(db).catch((err) => console.error('[reminders]', err?.message || err)),
-        new Promise((resolve) => setTimeout(resolve, 4000)),
-      ]);
+    try {
+      const now = Date.now();
+      if (now - lastTick >= EVERY_MS && push.configure()) {
+        lastTick = now;
+        await Promise.race([
+          sendDueReminders(db).catch((err) => console.error('[reminders]', err?.message || err)),
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      }
+    } catch (err) {
+      // Reminders are an extra: whatever goes wrong, the request goes on.
+      console.error('[reminders]', err?.message || err);
     }
     next();
   };
