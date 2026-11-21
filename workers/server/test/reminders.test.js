@@ -128,3 +128,27 @@ test('the scheduler’s call needs the secret', async () => {
   assert.equal(res.status, 200);
   assert.equal((await res.json()).ok, true);
 });
+
+test('a bad setting turns reminders off — it never takes the app down', async () => {
+  const { subjectOf } = require('../src/lib/push');
+  assert.equal(subjectOf({ APP_URL: 'http://localhost:5174' }), 'https://workers.hpcglobal.org', 'push services refuse http');
+  assert.equal(subjectOf({ APP_URL: 'https://workers.hpcglobal.org/' }), 'https://workers.hpcglobal.org');
+  assert.equal(subjectOf({ VAPID_SUBJECT: 'mailto:office@hpcglobal.org', APP_URL: 'https://x.test' }), 'mailto:office@hpcglobal.org');
+  assert.equal(subjectOf({ VAPID_SUBJECT: 'office@hpcglobal.org' }), 'https://workers.hpcglobal.org', 'an email needs mailto:');
+
+  const w = await makeWorker(prisma);
+  const token = await signIn(api.call, w.email);
+  const appUrl = process.env.APP_URL;
+  process.env.APP_URL = 'http://localhost:5174';
+  process.env.VAPID_PUBLIC_KEY = 'not-a-key';
+  process.env.VAPID_PRIVATE_KEY = 'not-a-key-either';
+  try {
+    assert.deepEqual((await api.call('GET', '/push/key', undefined, { token })).body, { publicKey: null }, 'a broken key: no reminders offered');
+    const today = await api.call('GET', '/clock/today', undefined, { token });
+    assert.equal(today.status, 200, 'and the app carries on');
+  } finally {
+    process.env.APP_URL = appUrl;
+    delete process.env.VAPID_PUBLIC_KEY;
+    delete process.env.VAPID_PRIVATE_KEY;
+  }
+});
