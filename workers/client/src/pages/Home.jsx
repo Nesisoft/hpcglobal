@@ -374,6 +374,9 @@ function FocusCard({ session, now, acting, outcome, onClockIn, onClockOut, onTyp
         )}
       </div>
 
+      {/* What just happened — right under the button, where they are looking. */}
+      <OutcomeHere outcome={outcome} onTypeCode={onTypeCode} />
+
       {/* Where — the old app's "Service location" card. */}
       {session.service.venueName && (
         <div className="rounded-lg bg-mist px-4 py-3 flex items-center gap-3 mb-3">
@@ -415,8 +418,6 @@ function FocusCard({ session, now, acting, outcome, onClockIn, onClockOut, onTyp
             </button>
           </p>
         )}
-
-        <Outcome outcome={outcome} onTypeCode={onTypeCode} />
       </div>
     </article>
   );
@@ -497,6 +498,26 @@ function Stat({ label, value, live = false }) {
 }
 
 /** The answer to the last try, kindly — and the QR code whenever GPS was the trouble. */
+/**
+ * The answer to a clock-in or out, under the button. On a small phone it can
+ * still fall below the screen, so it is brought into view — clear of the
+ * bar along the top and the navigation along the bottom.
+ */
+function OutcomeHere({ outcome, onTypeCode }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!outcome || !ref.current) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    ref.current.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'nearest' });
+  }, [outcome]);
+  if (!outcome) return null;
+  return (
+    <div ref={ref} className="-mt-2 mb-4 scroll-mt-20 scroll-mb-28 lg:scroll-mb-6" aria-live="polite">
+      <Outcome outcome={outcome} onTypeCode={onTypeCode} />
+    </div>
+  );
+}
+
 function Outcome({ outcome, onTypeCode }) {
   if (!outcome) return null;
   if (outcome.kind === 'success') {
